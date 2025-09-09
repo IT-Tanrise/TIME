@@ -102,8 +102,12 @@ class Soils extends Component
     ];
 
     // Add mount method to handle business unit parameter
-    public function mount($businessUnit = null)
+    public function mount($businessUnit = null, $soilId = null)
     {
+        // If a soilId is provided, show the detail immediately
+        if ($soilId) {
+            $this->showDetail($soilId);
+        }
         // Initialize soil details with one empty detail (with display format)
         $this->soilDetails = [
             [

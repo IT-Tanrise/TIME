@@ -59,6 +59,13 @@ class SoilHistory extends Model
         return $this->created_at_gmt7->format('d/m/Y H:i') . ' (GMT+7)';
     }
 
+    public function getFormattedUpdatedAtAttribute()
+    {
+        if (!$this->updated_at) return null;
+        
+        return $this->updated_at_gmt7->format('d/m/Y H:i') . ' (GMT+7)';
+    }
+
     // Get action display name
     public function getActionDisplayAttribute()
     {
@@ -77,11 +84,31 @@ class SoilHistory extends Model
         return $this->user ? $this->user->name : 'System';
     }
 
-    // Get changes summary
+    // FIXED: Get changes summary
     public function getChangesSummaryAttribute()
     {
-        if (!$this->changes || !is_array($this->changes)) {
-            return 'No changes recorded';
+        // Check if changes exist, is array, and is not empty
+        if (!$this->changes || !is_array($this->changes) || empty($this->changes)) {
+            // Try to determine changes from old_values and new_values if available
+            if ($this->old_values && $this->new_values && is_array($this->old_values) && is_array($this->new_values)) {
+                $actualChanges = [];
+                
+                // Compare old and new values to find actual changes
+                foreach ($this->new_values as $field => $newValue) {
+                    $oldValue = $this->old_values[$field] ?? null;
+                    
+                    // Handle different value types
+                    if ($this->valuesAreDifferent($oldValue, $newValue)) {
+                        $actualChanges[] = $this->getFieldDisplayName($field);
+                    }
+                }
+                
+                if (!empty($actualChanges)) {
+                    return implode(', ', $actualChanges);
+                }
+            }
+            
+            return 'No changes detected';
         }
 
         $changesList = [];
@@ -90,6 +117,27 @@ class SoilHistory extends Model
         }
 
         return implode(', ', $changesList);
+    }
+
+    // Helper method to compare values properly
+    private function valuesAreDifferent($oldValue, $newValue)
+    {
+        // Handle null values
+        if (is_null($oldValue) && is_null($newValue)) {
+            return false;
+        }
+        
+        if (is_null($oldValue) || is_null($newValue)) {
+            return true;
+        }
+        
+        // Handle empty strings
+        if ($oldValue === '' && $newValue === '') {
+            return false;
+        }
+        
+        // Convert to string for comparison to handle different data types
+        return (string) $oldValue !== (string) $newValue;
     }
 
     // Helper method to get human readable field names

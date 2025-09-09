@@ -183,7 +183,7 @@
                                         <div class="grid grid-cols-3 md:grid-cols-6 gap-3">
                                             <!-- Seller Name -->
                                             <div class="relative">
-                                                <label class="block text-xs font-medium text-gray-700 mb-1">Seller Name</label>
+                                                <label class="block text-xs font-medium text-gray-700 mb-1">Seller Name *</label>
                                                 <input wire:model.live="sellerNameSearch.{{ $index }}" 
                                                     wire:focus="searchSellerNames({{ $index }})"
                                                     type="text" 
@@ -214,7 +214,7 @@
 
                                             <!-- Seller Address -->
                                             <div class="relative">
-                                                <label class="block text-xs font-medium text-gray-700 mb-1">Seller Address</label>
+                                                <label class="block text-xs font-medium text-gray-700 mb-1">Seller Address *</label>
                                                 <input wire:model.live="sellerAddressSearch.{{ $index }}" 
                                                     wire:focus="searchSellerAddresses({{ $index }})"
                                                     type="text" 
@@ -245,7 +245,7 @@
 
                                             <!-- PPJB Number -->
                                             <div>
-                                                <label class="block text-xs font-medium text-gray-700 mb-1">PPJB Number</label>
+                                                <label class="block text-xs font-medium text-gray-700 mb-1">PPJB/AJB Number *</label>
                                                 <input wire:model="soilDetails.{{ $index }}.nomor_ppjb" type="text" 
                                                     class="w-full px-2 py-1.5 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-xs @error('soilDetails.'.$index.'.nomor_ppjb') border-red-500 @enderror">
                                                 @error('soilDetails.'.$index.'.nomor_ppjb') 
@@ -255,7 +255,7 @@
 
                                             <!-- PPJB Date -->
                                             <div>
-                                                <label class="block text-xs font-medium text-gray-700 mb-1">PPJB Date</label>
+                                                <label class="block text-xs font-medium text-gray-700 mb-1">PPJB/ AJB Date *</label>
                                                 <input wire:model="soilDetails.{{ $index }}.tanggal_ppjb" type="date" 
                                                     class="w-full px-2 py-1.5 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-xs @error('soilDetails.'.$index.'.tanggal_ppjb') border-red-500 @enderror">
                                                 @error('soilDetails.'.$index.'.tanggal_ppjb') 
@@ -265,7 +265,7 @@
 
                                             <!-- Land Location -->
                                             <div>
-                                                <label class="block text-xs font-medium text-gray-700 mb-1">Land Location</label>
+                                                <label class="block text-xs font-medium text-gray-700 mb-1">Land Location *</label>
                                                 <input wire:model="soilDetails.{{ $index }}.letak_tanah" type="text" 
                                                     class="w-full px-2 py-1.5 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-xs @error('soilDetails.'.$index.'.letak_tanah') border-red-500 @enderror">
                                                 @error('soilDetails.'.$index.'.letak_tanah') 
@@ -275,7 +275,7 @@
 
                                             <!-- Area -->
                                             <div>
-                                                <label class="block text-xs font-medium text-gray-700 mb-1">Area (m²)</label>
+                                                <label class="block text-xs font-medium text-gray-700 mb-1">Area (m²) *</label>
                                                 <input wire:model.live="soilDetails.{{ $index }}.luas_display" 
                                                     type="text" 
                                                     class="w-full px-2 py-1.5 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-xs @error('soilDetails.'.$index.'.luas') border-red-500 @enderror"
@@ -297,7 +297,7 @@
 
                                             <!-- Price (with thousand separator) -->
                                             <div>
-                                                <label class="block text-xs font-medium text-gray-700 mb-1">Price (Rp)</label>
+                                                <label class="block text-xs font-medium text-gray-700 mb-1">Price (Rp) *</label>
                                                 <input wire:model.live="soilDetails.{{ $index }}.harga_display" 
                                                     type="text" 
                                                     class="w-full px-2 py-1.5 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-xs @error('soilDetails.'.$index.'.harga') border-red-500 @enderror"
@@ -319,7 +319,7 @@
 
                                             <!-- Ownership Proof -->
                                             <div>
-                                                <label class="block text-xs font-medium text-gray-700 mb-1">Ownership Proof</label>
+                                                <label class="block text-xs font-medium text-gray-700 mb-1">Ownership Proof *</label>
                                                 <select wire:model="soilDetails.{{ $index }}.bukti_kepemilikan" 
                                                         class="w-full px-2 py-1.5 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-xs @error('soilDetails.'.$index.'.bukti_kepemilikan') border-red-500 @enderror">
                                                     <option value="">Select Ownership Proof</option>
@@ -334,7 +334,7 @@
 
                                             <!-- Ownership Proof Details -->
                                             <div>
-                                                <label class="block text-xs font-medium text-gray-700 mb-1">Ownership Proof Details</label>
+                                                <label class="block text-xs font-medium text-gray-700 mb-1">Ownership Proof Details *</label>
                                                 <input wire:model="soilDetails.{{ $index }}.bukti_kepemilikan_details" type="text" 
                                                     placeholder="Certificate number, etc."
                                                     class="w-full px-2 py-1.5 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-xs @error('soilDetails.'.$index.'.bukti_kepemilikan_details') border-red-500 @enderror">
@@ -345,7 +345,7 @@
 
                                             <!-- Owner Name -->
                                             <div>
-                                                <label class="block text-xs font-medium text-gray-700 mb-1">Owner Name</label>
+                                                <label class="block text-xs font-medium text-gray-700 mb-1">Owner Name *</label>
                                                 <input wire:model="soilDetails.{{ $index }}.atas_nama" type="text" 
                                                     class="w-full px-2 py-1.5 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-xs @error('soilDetails.'.$index.'.atas_nama') border-red-500 @enderror">
                                                 @error('soilDetails.'.$index.'.atas_nama') 

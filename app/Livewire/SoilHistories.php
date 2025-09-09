@@ -18,12 +18,14 @@ class SoilHistories extends Component
     public $filterUser = '';
     public $filterDateFrom = '';
     public $filterDateTo = '';
+    public $filterColumn = ''; // New filter for updated columns
 
     protected $queryString = [
         'filterAction' => ['except' => ''],
         'filterUser' => ['except' => ''],
         'filterDateFrom' => ['except' => ''],
         'filterDateTo' => ['except' => ''],
+        'filterColumn' => ['except' => ''],
     ];
 
     public function mount($soilId)
@@ -49,6 +51,9 @@ class SoilHistories extends Component
             })
             ->when($this->filterDateTo, function($query) {
                 $query->whereDate('created_at', '<=', $this->filterDateTo);
+            })
+            ->when($this->filterColumn, function($query) {
+                $query->whereJsonContains('changes', $this->filterColumn);
             })
             ->orderBy('created_at', 'desc')
             ->paginate(10);
@@ -77,18 +82,16 @@ class SoilHistories extends Component
             ->unique()
             ->values();
 
-        return view('livewire.soil-histories.index', compact('histories', 'availableActions', 'availableUsers'));
+        // Get available columns that have been updated
+        $availableColumns = $this->getAvailableColumns();
+
+        return view('livewire.soil-histories.index', compact('histories', 'availableActions', 'availableUsers', 'availableColumns'));
     }
 
     public function backToSoil()
     {
-        // Check if this soil belongs to a business unit and redirect accordingly
-        if ($this->soil && $this->soil->businessUnit) {
-            return redirect()->route('soils.by-business-unit', $this->soil->business_unit_id);
-        }
-        
-        // Fallback to regular soils index
-        return redirect()->route('soils');
+        // Redirect back to soils page with the soil ID to show details
+        return redirect()->route('soils.show', ['soilId' => $this->soilId]);
     }
 
     public function resetFilters()
@@ -97,12 +100,17 @@ class SoilHistories extends Component
         $this->filterUser = '';
         $this->filterDateFrom = '';
         $this->filterDateTo = '';
+        $this->filterColumn = '';
         $this->resetPage();
     }
 
     public function updatingFilterAction()
     {
         $this->resetPage();
+        // Reset column filter when action changes
+        if ($this->filterAction !== 'updated') {
+            $this->filterColumn = '';
+        }
     }
 
     public function updatingFilterUser()
@@ -118,6 +126,34 @@ class SoilHistories extends Component
     public function updatingFilterDateTo()
     {
         $this->resetPage();
+    }
+
+    public function updatingFilterColumn()
+    {
+        $this->resetPage();
+    }
+
+    // Get available columns that have been updated in history
+    private function getAvailableColumns()
+    {
+        $columns = SoilHistory::where('soil_id', $this->soilId)
+            ->where('action', 'updated')
+            ->whereNotNull('changes')
+            ->get()
+            ->flatMap(function ($history) {
+                return $history->changes ?? [];
+            })
+            ->unique()
+            ->sort()
+            ->map(function ($column) {
+                return [
+                    'value' => $column,
+                    'label' => $this->getFieldDisplayName($column)
+                ];
+            })
+            ->values();
+
+        return $columns;
     }
 
     // Helper method to get change details
@@ -159,6 +195,14 @@ class SoilHistories extends Component
                 return is_numeric($value) ? number_format($value, 0, ',', '.') : $value;
             case 'tanggal_ppjb':
                 return $value ? \Carbon\Carbon::parse($value)->format('d/m/Y') : '-';
+            case 'created_at':
+            case 'updated_at':
+                // Handle datetime fields with GMT+7 timezone
+                if ($value) {
+                    $date = \Carbon\Carbon::parse($value)->setTimezone('Asia/Jakarta');
+                    return $date->format('d/m/Y H:i') . ' (GMT+7)';
+                }
+                return '-';
             case 'land_id':
                 $land = \App\Models\Land::find($value);
                 return $land ? $land->lokasi_lahan : "ID: {$value}";
@@ -188,6 +232,8 @@ class SoilHistories extends Component
             'keterangan' => 'Notes',
             'land_id' => 'Land',
             'business_unit_id' => 'Business Unit',
+            'created_at' => 'Created At',
+            'updated_at' => 'Updated At',
         ];
 
         return $fieldMap[$field] ?? ucfirst(str_replace('_', ' ', $field));

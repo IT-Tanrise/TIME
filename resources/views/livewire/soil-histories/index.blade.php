@@ -1,78 +1,169 @@
 {{-- resources/views/livewire/soil-histories/index.blade.php --}}
-<div>
-    <div class="bg-white overflow-hidden shadow-xl sm:rounded-lg">
-        <div class="p-6 bg-white border-b border-gray-200">
-            <!-- Header -->
-            <div class="flex justify-between items-center mb-6">
-                <div>
-                    <h2 class="text-2xl font-semibold text-gray-900">Soil Record History</h2>
-                    <p class="text-sm text-gray-600 mt-1">
-                        <span class="font-medium">{{ $soil->businessUnit->name ?? 'N/A' }}</span> - 
-                        <span class="font-medium">{{ $soil->land->lokasi_lahan ?? 'N/A' }}</span> - 
-                        <span class="text-blue-600">{{ $soil->nama_penjual }}</span>
-                    </p>
-                </div>
-                <button wire:click="backToSoil" 
-                        class="inline-flex items-center px-4 py-2 bg-gray-500 border border-transparent rounded-md font-semibold text-xs text-white uppercase tracking-widest hover:bg-gray-600 focus:outline-none focus:border-gray-700 focus:shadow-outline-gray active:bg-gray-600 transition ease-in-out duration-150">
-                    <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18"/>
-                    </svg>
-                    Back to List
-                </button>
-            </div>
-
-            <!-- Filters -->
-            <div class="bg-gray-50 p-4 rounded-lg mb-6">
-                <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
+<div class="min-h-screen bg-gray-50">
+    <!-- Sticky Header -->
+    <div class="bg-white border-b border-gray-200 sticky top-0 z-30 shadow-sm">
+        <div class="px-4 py-3">
+            <div class="flex justify-between items-center">
+                <div class="flex items-center space-x-3">
+                    <button wire:click="backToSoil" 
+                            class="inline-flex items-center px-3 py-1.5 bg-gray-500 border border-transparent rounded-md text-xs text-white font-medium hover:bg-gray-600 transition-colors duration-150">
+                        <svg class="w-3 h-3 mr-1.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18"/>
+                        </svg>
+                        Back
+                    </button>
                     <div>
-                        <label class="block text-sm font-medium text-gray-700 mb-1">Action</label>
-                        <select wire:model.live="filterAction" class="w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-300 focus:ring focus:ring-indigo-200 focus:ring-opacity-50">
-                            <option value="">All Actions</option>
-                            @foreach($availableActions as $action)
-                                <option value="{{ $action['value'] }}">{{ $action['label'] }}</option>
-                            @endforeach
-                        </select>
-                    </div>
-                    <div>
-                        <label class="block text-sm font-medium text-gray-700 mb-1">User</label>
-                        <input type="text" wire:model.live="filterUser" placeholder="Search by user name..."
-                               class="w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-300 focus:ring focus:ring-indigo-200 focus:ring-opacity-50">
-                    </div>
-                    <div>
-                        <label class="block text-sm font-medium text-gray-700 mb-1">Date From</label>
-                        <input type="date" wire:model.live="filterDateFrom"
-                               class="w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-300 focus:ring focus:ring-indigo-200 focus:ring-opacity-50">
-                    </div>
-                    <div>
-                        <label class="block text-sm font-medium text-gray-700 mb-1">Date To</label>
-                        <input type="date" wire:model.live="filterDateTo"
-                               class="w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-300 focus:ring focus:ring-indigo-200 focus:ring-opacity-50">
+                        <h2 class="text-lg font-semibold text-gray-900">Soil Record History</h2>
+                        <p class="text-xs text-gray-600">
+                            <span class="font-medium">{{ $soil->businessUnit->name ?? 'N/A' }}</span> • 
+                            <span class="font-medium">{{ $soil->land->lokasi_lahan ?? 'N/A' }}</span> • 
+                            <span class="text-blue-600">{{ $soil->nama_penjual }}</span>
+                        </p>
                     </div>
                 </div>
-                <div class="mt-4">
+                
+                <!-- Action Buttons -->
+                <div class="flex items-center space-x-2">
                     <button wire:click="resetFilters" 
-                            class="inline-flex items-center px-3 py-2 bg-gray-300 border border-transparent rounded-md font-semibold text-xs text-gray-700 uppercase tracking-widest hover:bg-gray-400 focus:outline-none transition ease-in-out duration-150">
+                            class="inline-flex items-center px-2 py-1.5 bg-gray-200 rounded-md text-xs font-medium text-gray-700 hover:bg-gray-300 transition-colors duration-150">
                         Reset Filters
+                    </button>
+                    <button onclick="expandAll()" 
+                            class="inline-flex items-center px-2 py-1.5 bg-blue-200 rounded-md text-xs font-medium text-blue-700 hover:bg-blue-300 transition-colors duration-150">
+                        <svg class="w-3 h-3 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 13l-7 7-7-7"/>
+                        </svg>
+                        Expand All
+                    </button>
+                    <button onclick="collapseAll()" 
+                            class="inline-flex items-center px-2 py-1.5 bg-gray-200 rounded-md text-xs font-medium text-gray-700 hover:bg-gray-300 transition-colors duration-150">
+                        <svg class="w-3 h-3 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 11l7-7 7 7"/>
+                        </svg>
+                        Collapse All
                     </button>
                 </div>
             </div>
+        </div>
+    </div>
 
+    <!-- Compact Filters -->
+    <div class="bg-gray-50 border-b border-gray-200">
+        <div class="px-4 py-3">
+            <div class="grid grid-cols-1 md:grid-cols-5 gap-3">
+                <!-- Action Filter -->
+                <div>
+                    <label class="block text-xs font-medium text-gray-700 mb-1">Action</label>
+                    <select wire:model.live="filterAction" class="w-full text-xs rounded-md border-gray-300 shadow-sm focus:border-indigo-300 focus:ring focus:ring-indigo-200 focus:ring-opacity-50">
+                        <option value="">All Actions</option>
+                        @foreach($availableActions as $action)
+                            <option value="{{ $action['value'] }}">{{ $action['label'] }}</option>
+                        @endforeach
+                    </select>
+                </div>
+                
+                <!-- Column Filter -->
+                <div class="{{ $filterAction === 'updated' ? '' : 'opacity-50' }}">
+                    <label class="block text-xs font-medium text-gray-700 mb-1">
+                        Updated Column
+                        @if($filterAction !== 'updated')
+                            <span class="text-xs text-gray-400">(Select "Updated" first)</span>
+                        @endif
+                    </label>
+                    <select wire:model.live="filterColumn" 
+                            {{ $filterAction !== 'updated' ? 'disabled' : '' }}
+                            class="w-full text-xs rounded-md border-gray-300 shadow-sm focus:border-indigo-300 focus:ring focus:ring-indigo-200 focus:ring-opacity-50 {{ $filterAction !== 'updated' ? 'bg-gray-100 cursor-not-allowed' : '' }}">
+                        <option value="">All Columns</option>
+                        @if($filterAction === 'updated')
+                            @foreach($availableColumns as $column)
+                                <option value="{{ $column['value'] }}">{{ $column['label'] }}</option>
+                            @endforeach
+                        @endif
+                    </select>
+                </div>
+                
+                <!-- User Filter -->
+                <div>
+                    <label class="block text-xs font-medium text-gray-700 mb-1">User</label>
+                    <input type="text" wire:model.live="filterUser" placeholder="Search by user name..."
+                           class="w-full text-xs rounded-md border-gray-300 shadow-sm focus:border-indigo-300 focus:ring focus:ring-indigo-200 focus:ring-opacity-50">
+                </div>
+                
+                <!-- Date From -->
+                <div>
+                    <label class="block text-xs font-medium text-gray-700 mb-1">Date From</label>
+                    <input type="date" wire:model.live="filterDateFrom"
+                           class="w-full text-xs rounded-md border-gray-300 shadow-sm focus:border-indigo-300 focus:ring focus:ring-indigo-200 focus:ring-opacity-50">
+                </div>
+                
+                <!-- Date To -->
+                <div>
+                    <label class="block text-xs font-medium text-gray-700 mb-1">Date To</label>
+                    <input type="date" wire:model.live="filterDateTo"
+                           class="w-full text-xs rounded-md border-gray-300 shadow-sm focus:border-indigo-300 focus:ring focus:ring-indigo-200 focus:ring-opacity-50">
+                </div>
+            </div>
+            
+            <!-- Active Filter Summary -->
+            @if($filterAction || $filterColumn || $filterUser || $filterDateFrom || $filterDateTo)
+                <div class="mt-3 p-2 bg-blue-50 rounded-md border border-blue-200">
+                    <div class="flex flex-wrap items-center gap-1">
+                        <span class="text-xs font-medium text-blue-800 mr-2">Active Filters:</span>
+                        @if($filterAction)
+                            <span class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
+                                Action: {{ collect($availableActions)->firstWhere('value', $filterAction)['label'] ?? $filterAction }}
+                                <button wire:click="$set('filterAction', '')" class="ml-1 text-blue-600 hover:text-blue-800">×</button>
+                            </span>
+                        @endif
+                        @if($filterColumn && $filterAction === 'updated')
+                            <span class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">
+                                Column: {{ collect($availableColumns)->firstWhere('value', $filterColumn)['label'] ?? $filterColumn }}
+                                <button wire:click="$set('filterColumn', '')" class="ml-1 text-green-600 hover:text-green-800">×</button>
+                            </span>
+                        @endif
+                        @if($filterUser)
+                            <span class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-purple-100 text-purple-800">
+                                User: {{ $filterUser }}
+                                <button wire:click="$set('filterUser', '')" class="ml-1 text-purple-600 hover:text-purple-800">×</button>
+                            </span>
+                        @endif
+                        @if($filterDateFrom)
+                            <span class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-orange-100 text-orange-800">
+                                From: {{ $filterDateFrom }}
+                                <button wire:click="$set('filterDateFrom', '')" class="ml-1 text-orange-600 hover:text-orange-800">×</button>
+                            </span>
+                        @endif
+                        @if($filterDateTo)
+                            <span class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-orange-100 text-orange-800">
+                                To: {{ $filterDateTo }}
+                                <button wire:click="$set('filterDateTo', '')" class="ml-1 text-orange-600 hover:text-orange-800">×</button>
+                            </span>
+                        @endif
+                    </div>
+                </div>
+            @endif
+        </div>
+    </div>
+
+    <!-- Main Content -->
+    <div class="overflow-y-auto" style="height: calc(100vh - 180px);">
+        <div class="px-4 py-3">
             <!-- History Timeline -->
-            <div class="space-y-6">
+            <div class="space-y-3">
                 @forelse($histories as $history)
                     <div class="relative">
-                        <!-- Timeline line -->
+                        <!-- Timeline vertical line -->
                         @if(!$loop->last)
-                            <div class="absolute left-4 top-12 w-0.5 h-full bg-gray-200"></div>
+                            <div class="absolute left-4 top-[48px] w-0.5 bg-gray-200 z-0" style="height: calc(100% + 12px);"></div>
                         @endif
                         
                         <div class="flex items-start">
-                            <!-- Timeline dot -->
-                            <div class="flex-shrink-0 w-8 h-8 rounded-full flex items-center justify-center
-                                @if($history->action === 'created') bg-green-100 text-green-600
-                                @elseif($history->action === 'updated') bg-blue-100 text-blue-600
-                                @elseif($history->action === 'deleted') bg-red-100 text-red-600
-                                @else bg-gray-100 text-gray-600 @endif">
+                            <!-- Timeline Icon -->
+                            <div class="relative flex-shrink-0 w-8 h-8 rounded-full flex items-center justify-center z-10 bg-white border-2 mt-2
+                                @if($history->action === 'created') border-green-200 bg-green-50 text-green-600
+                                @elseif($history->action === 'updated') border-blue-200 bg-blue-50 text-blue-600
+                                @elseif($history->action === 'deleted') border-red-200 bg-red-50 text-red-600
+                                @else border-gray-200 bg-gray-50 text-gray-600 @endif">
                                 @if($history->action === 'created')
                                     <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
                                         <path fill-rule="evenodd" d="M10 3a1 1 0 011 1v5h5a1 1 0 110 2h-5v5a1 1 0 11-2 0v-5H4a1 1 0 110-2h5V4a1 1 0 011-1z" clip-rule="evenodd"/>
@@ -93,83 +184,111 @@
                                 @endif
                             </div>
                             
-                            <!-- Content -->
-                            <div class="ml-4 flex-1">
-                                <div class="bg-white border border-gray-200 rounded-lg p-4 shadow-sm">
-                                    <!-- Header -->
-                                    <div class="flex items-center justify-between mb-2">
-                                        <div class="flex items-center space-x-3">
-                                            <h3 class="text-sm font-medium text-gray-900">{{ $history->action_display }}</h3>
-                                            <span class="inline-flex px-2 py-1 text-xs font-semibold rounded-full
-                                                @if($history->action === 'created') bg-green-100 text-green-800
-                                                @elseif($history->action === 'updated') bg-blue-100 text-blue-800
-                                                @elseif($history->action === 'deleted') bg-red-100 text-red-800
-                                                @else bg-gray-100 text-gray-800 @endif">
-                                                {{ ucfirst($history->action) }}
-                                            </span>
-                                        </div>
-                                        <div class="text-sm text-gray-500">
-                                            {{ $history->formatted_created_at }}
-                                        </div>
-                                    </div>
-                                    
-                                    <!-- User and IP info -->
-                                    <div class="flex items-center text-xs text-gray-600 mb-3">
-                                        <svg class="w-3 h-3 mr-1" fill="currentColor" viewBox="0 0 20 20">
-                                            <path fill-rule="evenodd" d="M10 9a3 3 0 100-6 3 3 0 000 6zm-7 9a7 7 0 1114 0H3z" clip-rule="evenodd"/>
-                                        </svg>
-                                        <span class="mr-4">{{ $history->user_display }}</span>
-                                        @if($history->ip_address)
-                                            <svg class="w-3 h-3 mr-1" fill="currentColor" viewBox="0 0 20 20">
-                                                <path fill-rule="evenodd" d="M5.05 4.05a7 7 0 119.9 9.9L10 18.9l-4.95-4.95a7 7 0 010-9.9zM10 11a2 2 0 100-4 2 2 0 000 4z" clip-rule="evenodd"/>
+                            <!-- Content Card -->
+                            <div class="ml-3 flex-1">
+                                <div class="bg-white border border-gray-200 rounded-lg shadow-sm hover:shadow-md transition-shadow duration-200">
+                                    <!-- Compact Header -->
+                                    <button type="button" 
+                                            onclick="toggleHistory('history-{{ $history->id }}')"
+                                            class="w-full p-3 text-left hover:bg-gray-50 focus:outline-none focus:bg-gray-50 transition duration-150 ease-in-out rounded-lg">
+                                        <div class="flex items-center justify-between">
+                                            <div class="flex items-center space-x-3 flex-1 min-w-0">
+                                                <h3 class="text-sm font-medium text-gray-900 truncate">{{ $history->action_display }}</h3>
+                                                <span class="inline-flex px-2 py-0.5 text-xs font-semibold rounded-full flex-shrink-0
+                                                    @if($history->action === 'created') bg-green-100 text-green-800
+                                                    @elseif($history->action === 'updated') bg-blue-100 text-blue-800
+                                                    @elseif($history->action === 'deleted') bg-red-100 text-red-800
+                                                    @else bg-gray-100 text-gray-800 @endif">
+                                                    {{ ucfirst($history->action) }}
+                                                </span>
+                                                <div class="text-xs text-gray-500 flex-shrink-0">
+                                                    {{ $history->formatted_created_at }}
+                                                </div>
+                                                <div class="text-xs text-gray-400 truncate">
+                                                    by {{ $history->user_display }}
+                                                </div>
+                                            </div>
+                                            <!-- Chevron Icon -->
+                                            <svg class="w-4 h-4 text-gray-400 transform transition-transform duration-200 chevron-icon flex-shrink-0"
+                                                 fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/>
                                             </svg>
-                                            <span>{{ $history->ip_address }}</span>
-                                        @endif
-                                    </div>
+                                        </div>
+                                    </button>
+                                    
+                                    <!-- Collapsible Content -->
+                                    <div id="history-{{ $history->id }}" class="history-content hidden border-t border-gray-100">
+                                        <div class="p-3 bg-gray-50">
+                                            <!-- User and IP info -->
+                                            <div class="flex items-center justify-between text-xs text-gray-600 mb-3">
+                                                <div class="flex items-center space-x-4">
+                                                    <span class="flex items-center">
+                                                        <svg class="w-3 h-3 mr-1" fill="currentColor" viewBox="0 0 20 20">
+                                                            <path fill-rule="evenodd" d="M10 9a3 3 0 100-6 3 3 0 000 6zm-7 9a7 7 0 1114 0H3z" clip-rule="evenodd"/>
+                                                        </svg>
+                                                        {{ $history->user_display }}
+                                                    </span>
+                                                    @if($history->ip_address)
+                                                        <span class="flex items-center">
+                                                            <svg class="w-3 h-3 mr-1" fill="currentColor" viewBox="0 0 20 20">
+                                                                <path fill-rule="evenodd" d="M5.05 4.05a7 7 0 119.9 9.9L10 18.9l-4.95-4.95a7 7 0 010-9.9zM10 11a2 2 0 100-4 2 2 0 000 4z" clip-rule="evenodd"/>
+                                                            </svg>
+                                                            {{ $history->ip_address }}
+                                                        </span>
+                                                    @endif
+                                                </div>
+                                                @if($history->updated_at != $history->created_at)
+                                                    <span class="text-orange-600">Modified: {{ $history->formatted_updated_at }}</span>
+                                                @endif
+                                            </div>
 
-                                    <!-- Changes details -->
-                                    @if($history->action === 'updated' && $history->changes)
-                                        <div class="bg-blue-50 border-l-4 border-blue-400 p-3 rounded">
-                                            <div class="text-sm font-medium text-blue-800 mb-2">Changes Made:</div>
-                                            <div class="text-sm text-blue-700">{{ $history->changes_summary }}</div>
-                                            
-                                            @php $changeDetails = $this->getChangeDetails($history) @endphp
-                                            @if($changeDetails)
-                                                <div class="mt-3 space-y-2">
-                                                    @foreach($changeDetails as $change)
-                                                        <div class="bg-white rounded p-2 border border-blue-200">
-                                                            <div class="font-medium text-gray-900 text-xs mb-1">{{ $change['field'] }}</div>
-                                                            <div class="grid grid-cols-2 gap-2 text-xs">
-                                                                <div>
-                                                                    <span class="text-red-600 font-medium">Before:</span>
-                                                                    <div class="text-gray-600 mt-1 break-words">{{ $change['old'] }}</div>
+                                            <!-- Changes details -->
+                                            @if($history->action === 'updated' && $history->changes)
+                                                <div class="bg-white border border-blue-200 rounded-lg p-3">
+                                                    <div class="text-sm font-medium text-blue-800 mb-2">Changes Made</div>
+                                                    <div class="text-sm text-blue-700 mb-3">{{ $history->changes_summary }}</div>
+                                                    
+                                                    @php $changeDetails = $this->getChangeDetails($history) @endphp
+                                                    @if($changeDetails)
+                                                        <div class="space-y-2">
+                                                            @foreach($changeDetails as $change)
+                                                                <div class="border border-gray-200 rounded p-2">
+                                                                    <div class="font-medium text-gray-900 text-xs mb-2">{{ $change['field'] }}</div>
+                                                                    <div class="grid grid-cols-2 gap-2 text-xs">
+                                                                        <div class="bg-red-50 p-2 rounded border border-red-200">
+                                                                            <div class="text-red-600 font-medium mb-1">Before:</div>
+                                                                            <div class="text-gray-700 break-words">{{ $change['old'] ?: 'Empty' }}</div>
+                                                                        </div>
+                                                                        <div class="bg-green-50 p-2 rounded border border-green-200">
+                                                                            <div class="text-green-600 font-medium mb-1">After:</div>
+                                                                            <div class="text-gray-700 break-words">{{ $change['new'] ?: 'Empty' }}</div>
+                                                                        </div>
+                                                                    </div>
                                                                 </div>
-                                                                <div>
-                                                                    <span class="text-green-600 font-medium">After:</span>
-                                                                    <div class="text-gray-600 mt-1 break-words">{{ $change['new'] }}</div>
-                                                                </div>
-                                                            </div>
+                                                            @endforeach
                                                         </div>
-                                                    @endforeach
+                                                    @endif
+                                                </div>
+                                            @elseif($history->action === 'created')
+                                                <div class="bg-green-50 border border-green-200 rounded-lg p-3">
+                                                    <div class="text-sm font-medium text-green-800 mb-1">Record Created</div>
+                                                    <div class="text-sm text-green-700">New soil record was successfully created in the system.</div>
+                                                </div>
+                                            @elseif($history->action === 'deleted')
+                                                <div class="bg-red-50 border border-red-200 rounded-lg p-3">
+                                                    <div class="text-sm font-medium text-red-800 mb-1">Record Deleted</div>
+                                                    <div class="text-sm text-red-700">Soil record was permanently removed from the system.</div>
                                                 </div>
                                             @endif
                                         </div>
-                                    @elseif($history->action === 'created')
-                                        <div class="bg-green-50 border-l-4 border-green-400 p-3 rounded">
-                                            <div class="text-sm text-green-700">New soil record was created</div>
-                                        </div>
-                                    @elseif($history->action === 'deleted')
-                                        <div class="bg-red-50 border-l-4 border-red-400 p-3 rounded">
-                                            <div class="text-sm text-red-700">Soil record was deleted</div>
-                                        </div>
-                                    @endif
+                                    </div>
                                 </div>
                             </div>
                         </div>
                     </div>
                 @empty
-                    <div class="text-center py-12">
-                        <svg class="mx-auto h-12 w-12 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <div class="text-center py-8">
+                        <svg class="mx-auto h-10 w-10 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v10a2 2 0 002 2h8a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"/>
                         </svg>
                         <h3 class="mt-2 text-sm font-medium text-gray-900">No history found</h3>
@@ -180,10 +299,43 @@
 
             <!-- Pagination -->
             @if($histories->hasPages())
-                <div class="mt-6">
+                <div class="mt-4 border-t border-gray-200 pt-4">
                     {{ $histories->links() }}
                 </div>
             @endif
         </div>
     </div>
+
+    <!-- JavaScript -->
+    <script>
+        function toggleHistory(elementId) {
+            const content = document.getElementById(elementId);
+            const button = content.previousElementSibling;
+            const chevron = button.querySelector('.chevron-icon');
+            
+            if (content.classList.contains('hidden')) {
+                content.classList.remove('hidden');
+                chevron.style.transform = 'rotate(180deg)';
+            } else {
+                content.classList.add('hidden');
+                chevron.style.transform = 'rotate(0deg)';
+            }
+        }
+        
+        function expandAll() {
+            const contents = document.querySelectorAll('.history-content');
+            const chevrons = document.querySelectorAll('.chevron-icon');
+            
+            contents.forEach(content => content.classList.remove('hidden'));
+            chevrons.forEach(chevron => chevron.style.transform = 'rotate(180deg)');
+        }
+        
+        function collapseAll() {
+            const contents = document.querySelectorAll('.history-content');
+            const chevrons = document.querySelectorAll('.chevron-icon');
+            
+            contents.forEach(content => content.classList.add('hidden'));
+            chevrons.forEach(chevron => chevron.style.transform = 'rotate(0deg)');
+        }
+    </script>
 </div>
