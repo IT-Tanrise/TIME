@@ -75,8 +75,7 @@
                 <div class="bg-gradient-to-br from-purple-500 to-purple-600 rounded-lg p-3 text-white">
                     <div>
                         <p class="text-purple-100 text-sm font-medium">Land Area</p>
-                        <p class="text-2xl font-bold">{{ number_format($soil->luas, 0) }}</p>
-                        <p class="text-purple-100 text-sm">square meters</p>
+                        <p class="text-2xl font-bold">{{ number_format($soil->luas, 0, ',', '.') }} m²</p>
                     </div>
                 </div>
             </div>
@@ -127,7 +126,7 @@
                                         <dt class="text-sm font-medium text-gray-500 flex-shrink-0 w-24">Ownership</dt>
                                         <dd class="text-sm text-gray-900 text-right">
                                             <span class="inline-flex px-2 py-1 text-xs font-semibold rounded-full bg-blue-100 text-blue-800">
-                                                {{ $soil->bukti_kepemilikan }}
+                                                {{ $soil->bukti_kepemilikan }} - {{ $soil->bukti_kepemilikan_details }}
                                             </span>
                                         </dd>
                                     </div>
@@ -135,8 +134,7 @@
                                         <dt class="text-sm font-medium text-gray-500 flex-shrink-0 w-24">Owner Details</dt>
                                         <dd class="text-sm text-gray-900 text-right">
                                             <span class="inline-flex px-2 py-1 text-xs font-semibold rounded-full bg-blue-100 text-blue-800">
-                                                {{ $soil->atas_nama }} - {{ $soil->bukti_kepemilikan_details }}
-                                            </span>
+                                                {{ $soil->atas_nama }} 
                                         </dd>
                                     </div>
                                 </div>
