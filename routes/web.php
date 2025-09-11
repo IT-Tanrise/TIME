@@ -43,9 +43,9 @@ Route::middleware(['permission:lands.access'])->group(function () {
 
     // Soil Routes
     Route::get('/soils', Soils::class)->name('soils');
-    Route::get('/soils/business-unit/{businessUnit}', Soils::class)->name('soils.by-business-unit')
-    ->where('businessUnit', '[0-9]+');
     Route::get('/soils/{soilId}/show', Soils::class)->name('soils.show');
+    Route::get('/soils/business-unit/{businessUnit}/{soilId?}', Soils::class)->name('soils.by-business-unit')
+    ->where('businessUnit', '[0-9]+');
 
 });
 

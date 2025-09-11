@@ -20,18 +20,37 @@ class SoilHistories extends Component
     public $filterDateTo = '';
     public $filterColumn = ''; // New filter for updated columns
 
+    // Add these properties to track navigation context
+    public $businessUnitId = null;
+    public $fromShow = false;
+
     protected $queryString = [
         'filterAction' => ['except' => ''],
         'filterUser' => ['except' => ''],
         'filterDateFrom' => ['except' => ''],
         'filterDateTo' => ['except' => ''],
         'filterColumn' => ['except' => ''],
+        'businessUnitId' => ['except' => null],
+        'fromShow' => ['except' => false],
     ];
 
     public function mount($soilId)
     {
         $this->soilId = $soilId;
         $this->soil = Soil::with(['land', 'businessUnit'])->findOrFail($soilId);
+        
+        // Check if we came from a business unit filtered view or show page
+        $referrer = request()->headers->get('referer');
+        if ($referrer && str_contains($referrer, '/business-unit/')) {
+            // Extract business unit ID from the referrer URL
+            preg_match('/\/business-unit\/(\d+)/', $referrer, $matches);
+            if (isset($matches[1])) {
+                $this->businessUnitId = (int)$matches[1];
+            }
+        } elseif ($referrer && str_contains($referrer, '/show')) {
+            // We came from the show page
+            $this->fromShow = true;
+        }
     }
 
     public function render()
@@ -90,8 +109,20 @@ class SoilHistories extends Component
 
     public function backToSoil()
     {
-        // Redirect back to soils page with the soil ID to show details
-        return redirect()->route('soils.show', ['soilId' => $this->soilId]);
+        // Determine the correct route based on context
+        if ($this->fromShow) {
+            // Go back to the show page
+            return redirect()->route('soils.show', ['soilId' => $this->soilId]);
+        } elseif ($this->businessUnitId) {
+            // Go back to the business unit filtered view and show this soil's detail
+            return redirect()->route('soils.by-business-unit', [
+                'businessUnit' => $this->businessUnitId,
+                'soilId' => $this->soilId
+            ]);
+        } else {
+            // Default: go back to soils show page
+            return redirect()->route('soils.show', ['soilId' => $this->soilId]);
+        }
     }
 
     public function resetFilters()
