@@ -37,10 +37,17 @@ Route::get('/lands/business-unit/{businessUnit}', Lands::class)->name('lands.by-
     ->where('businessUnit', '[0-9]+');
 
 Route::get('/projects', Projects::class)->name('projects');
-Route::get('/soils', Soils::class)->name('soils');
-Route::get('/soils/business-unit/{businessUnit}', Soils::class)->name('soils.by-business-unit')
+
+// Land Routes
+Route::middleware(['permission:lands.access'])->group(function () {
+
+    // Soil Routes
+    Route::get('/soils', Soils::class)->name('soils');
+    Route::get('/soils/business-unit/{businessUnit}', Soils::class)->name('soils.by-business-unit')
     ->where('businessUnit', '[0-9]+');
-Route::get('/soils/{soilId}/show', Soils::class)->name('soils.show');
+    Route::get('/soils/{soilId}/show', Soils::class)->name('soils.show');
+
+});
 
 // Rent Routes
 Route::prefix('rents')->name('rents.')->group(function () {
