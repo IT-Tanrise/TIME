@@ -12,11 +12,12 @@ class Partner extends Model
     protected $fillable = [
         'business_unit_id',
         'name',
-        'percentage'
+        'percentage',
+        'lembar_saham'
     ];
 
     protected $casts = [
-        'percentage' => 'decimal:2'
+        'percentage' => 'integer'
     ];
 
     public function businessUnit()
@@ -26,6 +27,11 @@ class Partner extends Model
 
     public function getFormattedPercentageAttribute()
     {
-        return number_format($this->percentage, 2) . '%';
+        return number_format($this->percentage, 0) . '%';
+    }
+
+    public function getFormattedLembarSahamAttribute()
+    {
+        return $this->lembar_saham ? number_format($this->lembar_saham, 0, ',', '.') : '-';
     }
 }
