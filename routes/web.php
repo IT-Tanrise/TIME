@@ -23,30 +23,31 @@ Route::get('/soils/{soilId}/history', SoilHistories::class)->name('soils.history
 Route::get('posts', Posts::class)->name('posts')->middleware('auth');
 Route::get('tasks', Tasks::class)->name('tasks')->middleware('auth');
 
-//Route::get('/business-units', BusinessUnits::class)->name('business-units');
-
-Route::get('/business-units/{view?}/{id?}', BusinessUnits::class)->name('business-units');
-
 // Partners Routes
 Route::get('/partners', Partners::class)->name('partners.index');
 Route::get('/partners/business-unit/{businessUnit}', Partners::class)->name('partners.by-business-unit')
     ->where('businessUnit', '[0-9]+');
 
-Route::get('/lands', Lands::class)->name('lands');
-Route::get('/lands/business-unit/{businessUnit}', Lands::class)->name('lands.by-business-unit')
-    ->where('businessUnit', '[0-9]+');
+// Land Routes
+Route::middleware(['permission:lands.access'])->group(function () {
+    Route::get('/lands', Lands::class)->name('lands');
+    Route::get('/lands/business-unit/{businessUnit}', Lands::class)->name('lands.by-business-unit')
+        ->where('businessUnit', '[0-9]+');
+});
 
 Route::get('/projects', Projects::class)->name('projects');
 
-// Land Routes
-Route::middleware(['permission:lands.access'])->group(function () {
+// Business Units Routes
+Route::middleware(['permission:business-units.access'])->group(function () {
+    Route::get('/business-units/{view?}/{id?}', BusinessUnits::class)->name('business-units');
+});
 
-    // Soil Routes
+// Soil Routes
+Route::middleware(['permission:soils.access'])->group(function () {
     Route::get('/soils', Soils::class)->name('soils');
     Route::get('/soils/{soilId}/show', Soils::class)->name('soils.show');
     Route::get('/soils/business-unit/{businessUnit}/{soilId?}', Soils::class)->name('soils.by-business-unit')
     ->where('businessUnit', '[0-9]+');
-
 });
 
 // Rent Routes

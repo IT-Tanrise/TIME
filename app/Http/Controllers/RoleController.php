@@ -29,7 +29,8 @@ class RoleController extends Controller
             'permissions.*' => 'exists:permissions,id'
         ]);
 
-        $role = Role::create(['name' => $request->name]);
+        $role = Role::create(['name' => $request->name,
+                            'guard_name' => 'web']);
         
         // 🔧 FIX: Convert permission IDs to permission names
         if ($request->permissions) {
