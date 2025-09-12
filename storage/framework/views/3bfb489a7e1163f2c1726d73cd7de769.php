@@ -202,7 +202,7 @@ unset($__errorArgs, $__bag); ?><!--[if ENDBLOCK]><![endif]-->
                                                 Soil Detail <?php echo e($index + 1); ?>
 
                                             </h4>
-                                            <!--[if BLOCK]><![endif]--><?php if($index > 0): ?>
+                                            <!--[if BLOCK]><![endif]--><?php if($index > 0 && !$isEdit): ?>
                                                 <button type="button" wire:click="removeSoilDetail(<?php echo e($index); ?>)" 
                                                         class="text-red-600 hover:text-red-800">
                                                     <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -377,10 +377,11 @@ endif;
 unset($__errorArgs, $__bag); ?><!--[if ENDBLOCK]><![endif]-->
                                             </div>
 
-                                            <!-- Area -->
+                                            <!-- Area (FIXED: Better number formatting) -->
                                             <div>
                                                 <label class="block text-xs font-medium text-gray-700 mb-1">Area (m²) *</label>
-                                                <input wire:model.live="soilDetails.<?php echo e($index); ?>.luas_display" 
+                                                <input 
+                                                    wire:model.live="soilDetails.<?php echo e($index); ?>.luas_display" 
                                                     type="text" 
                                                     class="w-full px-2 py-1.5 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-xs <?php $__errorArgs = ['soilDetails.'.$index.'.luas'];
 $__bag = $errors->getBag($__errorArgs[1] ?? 'default');
@@ -390,17 +391,33 @@ $message = $__bag->first($__errorArgs[0]); ?> border-red-500 <?php unset($messag
 if (isset($__messageOriginal)) { $message = $__messageOriginal; }
 endif;
 unset($__errorArgs, $__bag); ?>"
-                                                    x-data 
+                                                    placeholder="Enter area"
+                                                    x-data="{
+                                                        formatNumber(value) {
+                                                            // Remove all non-numeric characters
+                                                            let numericValue = value.replace(/[^\d]/g, '');
+                                                            if (numericValue) {
+                                                                // Format with thousand separators using Indonesian format (dot as thousand separator)
+                                                                return new Intl.NumberFormat('id-ID').format(parseInt(numericValue));
+                                                            }
+                                                            return '';
+                                                        }
+                                                    }"
                                                     x-on:input="
-                                                        let value = $event.target.value.replace(/[^\d]/g, '');
-                                                        if (value) {
-                                                            $event.target.value = new Intl.NumberFormat('id-ID').format(value);
-                                                            window.Livewire.find('<?php echo e($_instance->getId()); ?>').set('soilDetails.<?php echo e($index); ?>.luas', parseInt(value));
+                                                        let rawValue = $event.target.value;
+                                                        let numericValue = rawValue.replace(/[^\d]/g, '');
+                                                        if (numericValue) {
+                                                            let formattedValue = new Intl.NumberFormat('id-ID').format(parseInt(numericValue));
+                                                            $event.target.value = formattedValue;
+                                                            window.Livewire.find('<?php echo e($_instance->getId()); ?>').set('soilDetails.<?php echo e($index); ?>.luas', parseInt(numericValue));
+                                                            window.Livewire.find('<?php echo e($_instance->getId()); ?>').set('soilDetails.<?php echo e($index); ?>.luas_display', formattedValue);
                                                         } else {
                                                             $event.target.value = '';
                                                             window.Livewire.find('<?php echo e($_instance->getId()); ?>').set('soilDetails.<?php echo e($index); ?>.luas', '');
+                                                            window.Livewire.find('<?php echo e($_instance->getId()); ?>').set('soilDetails.<?php echo e($index); ?>.luas_display', '');
                                                         }
-                                                    ">
+                                                    "
+                                                >
                                                 <!--[if BLOCK]><![endif]--><?php $__errorArgs = ['soilDetails.'.$index.'.luas'];
 $__bag = $errors->getBag($__errorArgs[1] ?? 'default');
 if ($__bag->has($__errorArgs[0])) :
@@ -413,10 +430,11 @@ endif;
 unset($__errorArgs, $__bag); ?><!--[if ENDBLOCK]><![endif]-->
                                             </div>
 
-                                            <!-- Price (with thousand separator) -->
+                                            <!-- Price (FIXED: Better number formatting) -->
                                             <div>
                                                 <label class="block text-xs font-medium text-gray-700 mb-1">Price (Rp) *</label>
-                                                <input wire:model.live="soilDetails.<?php echo e($index); ?>.harga_display" 
+                                                <input 
+                                                    wire:model.live="soilDetails.<?php echo e($index); ?>.harga_display" 
                                                     type="text" 
                                                     class="w-full px-2 py-1.5 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-xs <?php $__errorArgs = ['soilDetails.'.$index.'.harga'];
 $__bag = $errors->getBag($__errorArgs[1] ?? 'default');
@@ -426,17 +444,33 @@ $message = $__bag->first($__errorArgs[0]); ?> border-red-500 <?php unset($messag
 if (isset($__messageOriginal)) { $message = $__messageOriginal; }
 endif;
 unset($__errorArgs, $__bag); ?>"
-                                                    x-data 
+                                                    placeholder="Enter price"
+                                                    x-data="{
+                                                        formatNumber(value) {
+                                                            // Remove all non-numeric characters
+                                                            let numericValue = value.replace(/[^\d]/g, '');
+                                                            if (numericValue) {
+                                                                // Format with thousand separators using Indonesian format (dot as thousand separator)
+                                                                return new Intl.NumberFormat('id-ID').format(parseInt(numericValue));
+                                                            }
+                                                            return '';
+                                                        }
+                                                    }"
                                                     x-on:input="
-                                                        let value = $event.target.value.replace(/[^\d]/g, '');
-                                                        if (value) {
-                                                            $event.target.value = new Intl.NumberFormat('id-ID').format(value);
-                                                            window.Livewire.find('<?php echo e($_instance->getId()); ?>').set('soilDetails.<?php echo e($index); ?>.harga', parseInt(value));
+                                                        let rawValue = $event.target.value;
+                                                        let numericValue = rawValue.replace(/[^\d]/g, '');
+                                                        if (numericValue) {
+                                                            let formattedValue = new Intl.NumberFormat('id-ID').format(parseInt(numericValue));
+                                                            $event.target.value = formattedValue;
+                                                            window.Livewire.find('<?php echo e($_instance->getId()); ?>').set('soilDetails.<?php echo e($index); ?>.harga', parseInt(numericValue));
+                                                            window.Livewire.find('<?php echo e($_instance->getId()); ?>').set('soilDetails.<?php echo e($index); ?>.harga_display', formattedValue);
                                                         } else {
                                                             $event.target.value = '';
                                                             window.Livewire.find('<?php echo e($_instance->getId()); ?>').set('soilDetails.<?php echo e($index); ?>.harga', '');
+                                                            window.Livewire.find('<?php echo e($_instance->getId()); ?>').set('soilDetails.<?php echo e($index); ?>.harga_display', '');
                                                         }
-                                                    ">
+                                                    "
+                                                >
                                                 <!--[if BLOCK]><![endif]--><?php $__errorArgs = ['soilDetails.'.$index.'.harga'];
 $__bag = $errors->getBag($__errorArgs[1] ?? 'default');
 if ($__bag->has($__errorArgs[0])) :
@@ -480,7 +514,7 @@ unset($__errorArgs, $__bag); ?><!--[if ENDBLOCK]><![endif]-->
 
                                             <!-- Ownership Proof Details -->
                                             <div>
-                                                <label class="block text-xs font-medium text-gray-700 mb-1">Ownership Proof Details *</label>
+                                                <label class="block text-xs font-medium text-gray-700 mb-1">Ownership Proof Details</label>
                                                 <input wire:model="soilDetails.<?php echo e($index); ?>.bukti_kepemilikan_details" type="text" 
                                                     placeholder="Certificate number, etc."
                                                     class="w-full px-2 py-1.5 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-xs <?php $__errorArgs = ['soilDetails.'.$index.'.bukti_kepemilikan_details'];
@@ -580,7 +614,7 @@ unset($__errorArgs, $__bag); ?><!--[if ENDBLOCK]><![endif]-->
 
                                         <!-- Notes (full width) -->
                                         <div>
-                                            <label class="block text-xs font-medium text-gray-700 mb-1">Notes</label>
+                                            <label class="block text-xs font-medium text-gray-700 mb-1">Notes *</label>
                                             <textarea wire:model="soilDetails.<?php echo e($index); ?>.keterangan" rows="2" 
                                                     class="w-full px-2 py-1.5 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-xs <?php $__errorArgs = ['soilDetails.'.$index.'.keterangan'];
 $__bag = $errors->getBag($__errorArgs[1] ?? 'default');
@@ -633,6 +667,16 @@ unset($__errorArgs, $__bag); ?><!--[if ENDBLOCK]><![endif]-->
     </div>
 </div>
 
+<!-- Click outside to close dropdowns -->
+<script>
+document.addEventListener('click', function(event) {
+    // Check if click is outside any dropdown
+    if (!event.target.closest('.relative')) {
+        window.Livewire.find('<?php echo e($_instance->getId()); ?>').call('closeDropdowns');
+    }
+});
+</script>
+
 <!-- Custom Styles for Scrollable Dropdowns -->
 <style>
 /* Ensure proper scrolling for dropdown containers */
@@ -672,5 +716,16 @@ unset($__errorArgs, $__bag); ?><!--[if ENDBLOCK]><![endif]-->
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
+}
+
+/* Improved number input styling */
+input[type="text"]:focus {
+    box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+}
+
+/* Better visual feedback for formatted numbers */
+input[wire\:model*="display"] {
+    font-family: 'Monaco', 'Menlo', 'Consolas', monospace;
+    letter-spacing: 0.025em;
 }
 </style><?php /**PATH C:\xampp\tanrise-portal2\resources\views/livewire/soils/form.blade.php ENDPATH**/ ?>
