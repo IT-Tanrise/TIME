@@ -16,9 +16,6 @@ use App\Http\Controllers\PermissionController;
 use App\Http\Controllers\UserController;
 
 use App\Livewire\SoilHistories;
-
-// Soil history routes
-Route::get('/soils/{soilId}/history', SoilHistories::class)->name('soils.history');
    
 Route::get('posts', Posts::class)->name('posts')->middleware('auth');
 Route::get('tasks', Tasks::class)->name('tasks')->middleware('auth');
@@ -38,9 +35,7 @@ Route::middleware(['permission:lands.access'])->group(function () {
 Route::get('/projects', Projects::class)->name('projects');
 
 // Business Units Routes
-Route::middleware(['permission:business-units.access'])->group(function () {
-    Route::get('/business-units/{view?}/{id?}', BusinessUnits::class)->name('business-units');
-});
+Route::get('/business-units/{view?}/{id?}', BusinessUnits::class)->name('business-units');
 
 // Soil Routes
 Route::middleware(['permission:soils.access'])->group(function () {
@@ -48,6 +43,8 @@ Route::middleware(['permission:soils.access'])->group(function () {
     Route::get('/soils/{soilId}/show', Soils::class)->name('soils.show');
     Route::get('/soils/business-unit/{businessUnit}/{soilId?}', Soils::class)->name('soils.by-business-unit')
     ->where('businessUnit', '[0-9]+');
+    // Soil history routes
+    Route::get('/soils/{soilId}/history', SoilHistories::class)->name('soils.history');
 });
 
 // Rent Routes
