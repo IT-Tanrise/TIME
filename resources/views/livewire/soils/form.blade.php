@@ -170,7 +170,7 @@
                                             <h4 class="text-xs font-medium text-gray-800">
                                                 Soil Detail {{ $index + 1 }}
                                             </h4>
-                                            @if($index > 0)
+                                            @if($index > 0 && !$isEdit)
                                                 <button type="button" wire:click="removeSoilDetail({{ $index }})" 
                                                         class="text-red-600 hover:text-red-800">
                                                     <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -273,45 +273,79 @@
                                                 @enderror
                                             </div>
 
-                                            <!-- Area -->
+                                            <!-- Area (FIXED: Better number formatting) -->
                                             <div>
                                                 <label class="block text-xs font-medium text-gray-700 mb-1">Area (m²) *</label>
-                                                <input wire:model.live="soilDetails.{{ $index }}.luas_display" 
+                                                <input 
+                                                    wire:model.live="soilDetails.{{ $index }}.luas_display" 
                                                     type="text" 
                                                     class="w-full px-2 py-1.5 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-xs @error('soilDetails.'.$index.'.luas') border-red-500 @enderror"
-                                                    x-data 
+                                                    placeholder="Enter area"
+                                                    x-data="{
+                                                        formatNumber(value) {
+                                                            // Remove all non-numeric characters
+                                                            let numericValue = value.replace(/[^\d]/g, '');
+                                                            if (numericValue) {
+                                                                // Format with thousand separators using Indonesian format (dot as thousand separator)
+                                                                return new Intl.NumberFormat('id-ID').format(parseInt(numericValue));
+                                                            }
+                                                            return '';
+                                                        }
+                                                    }"
                                                     x-on:input="
-                                                        let value = $event.target.value.replace(/[^\d]/g, '');
-                                                        if (value) {
-                                                            $event.target.value = new Intl.NumberFormat('id-ID').format(value);
-                                                            @this.set('soilDetails.{{ $index }}.luas', parseInt(value));
+                                                        let rawValue = $event.target.value;
+                                                        let numericValue = rawValue.replace(/[^\d]/g, '');
+                                                        if (numericValue) {
+                                                            let formattedValue = new Intl.NumberFormat('id-ID').format(parseInt(numericValue));
+                                                            $event.target.value = formattedValue;
+                                                            @this.set('soilDetails.{{ $index }}.luas', parseInt(numericValue));
+                                                            @this.set('soilDetails.{{ $index }}.luas_display', formattedValue);
                                                         } else {
                                                             $event.target.value = '';
                                                             @this.set('soilDetails.{{ $index }}.luas', '');
+                                                            @this.set('soilDetails.{{ $index }}.luas_display', '');
                                                         }
-                                                    ">
+                                                    "
+                                                >
                                                 @error('soilDetails.'.$index.'.luas') 
                                                     <span class="text-red-500 text-xs">{{ $message }}</span> 
                                                 @enderror
                                             </div>
 
-                                            <!-- Price (with thousand separator) -->
+                                            <!-- Price (FIXED: Better number formatting) -->
                                             <div>
                                                 <label class="block text-xs font-medium text-gray-700 mb-1">Price (Rp) *</label>
-                                                <input wire:model.live="soilDetails.{{ $index }}.harga_display" 
+                                                <input 
+                                                    wire:model.live="soilDetails.{{ $index }}.harga_display" 
                                                     type="text" 
                                                     class="w-full px-2 py-1.5 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-xs @error('soilDetails.'.$index.'.harga') border-red-500 @enderror"
-                                                    x-data 
+                                                    placeholder="Enter price"
+                                                    x-data="{
+                                                        formatNumber(value) {
+                                                            // Remove all non-numeric characters
+                                                            let numericValue = value.replace(/[^\d]/g, '');
+                                                            if (numericValue) {
+                                                                // Format with thousand separators using Indonesian format (dot as thousand separator)
+                                                                return new Intl.NumberFormat('id-ID').format(parseInt(numericValue));
+                                                            }
+                                                            return '';
+                                                        }
+                                                    }"
                                                     x-on:input="
-                                                        let value = $event.target.value.replace(/[^\d]/g, '');
-                                                        if (value) {
-                                                            $event.target.value = new Intl.NumberFormat('id-ID').format(value);
-                                                            @this.set('soilDetails.{{ $index }}.harga', parseInt(value));
+                                                        let rawValue = $event.target.value;
+                                                        let numericValue = rawValue.replace(/[^\d]/g, '');
+                                                        if (numericValue) {
+                                                            let formattedValue = new Intl.NumberFormat('id-ID').format(parseInt(numericValue));
+                                                            $event.target.value = formattedValue;
+                                                            @this.set('soilDetails.{{ $index }}.harga', parseInt(numericValue));
+                                                            @this.set('soilDetails.{{ $index }}.harga_display', formattedValue);
                                                         } else {
                                                             $event.target.value = '';
                                                             @this.set('soilDetails.{{ $index }}.harga', '');
+                                                            @this.set('soilDetails.{{ $index }}.harga_display', '');
                                                         }
-                                                    ">
+                                                    "
+                                                >
                                                 @error('soilDetails.'.$index.'.harga') 
                                                     <span class="text-red-500 text-xs">{{ $message }}</span> 
                                                 @enderror
@@ -334,7 +368,7 @@
 
                                             <!-- Ownership Proof Details -->
                                             <div>
-                                                <label class="block text-xs font-medium text-gray-700 mb-1">Ownership Proof Details *</label>
+                                                <label class="block text-xs font-medium text-gray-700 mb-1">Ownership Proof Details</label>
                                                 <input wire:model="soilDetails.{{ $index }}.bukti_kepemilikan_details" type="text" 
                                                     placeholder="Certificate number, etc."
                                                     class="w-full px-2 py-1.5 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-xs @error('soilDetails.'.$index.'.bukti_kepemilikan_details') border-red-500 @enderror">
@@ -378,7 +412,7 @@
 
                                         <!-- Notes (full width) -->
                                         <div>
-                                            <label class="block text-xs font-medium text-gray-700 mb-1">Notes</label>
+                                            <label class="block text-xs font-medium text-gray-700 mb-1">Notes *</label>
                                             <textarea wire:model="soilDetails.{{ $index }}.keterangan" rows="2" 
                                                     class="w-full px-2 py-1.5 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-xs @error('soilDetails.'.$index.'.keterangan') border-red-500 @enderror"></textarea>
                                             @error('soilDetails.'.$index.'.keterangan') 
@@ -416,6 +450,16 @@
         </div>
     </div>
 </div>
+
+<!-- Click outside to close dropdowns -->
+<script>
+document.addEventListener('click', function(event) {
+    // Check if click is outside any dropdown
+    if (!event.target.closest('.relative')) {
+        @this.call('closeDropdowns');
+    }
+});
+</script>
 
 <!-- Custom Styles for Scrollable Dropdowns -->
 <style>
@@ -456,5 +500,16 @@
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
+}
+
+/* Improved number input styling */
+input[type="text"]:focus {
+    box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+}
+
+/* Better visual feedback for formatted numbers */
+input[wire\:model*="display"] {
+    font-family: 'Monaco', 'Menlo', 'Consolas', monospace;
+    letter-spacing: 0.025em;
 }
 </style>

@@ -108,40 +108,9 @@ class Soils extends Component
         if ($soilId) {
             $this->showDetail($soilId);
         }
-        // Initialize soil details with one empty detail (with display format)
-        $this->soilDetails = [
-            [
-                'nama_penjual' => '',
-                'alamat_penjual' => '',
-                'nomor_ppjb' => '',
-                'tanggal_ppjb' => '',
-                'letak_tanah' => '',
-                'luas' => '',
-                'luas_display' => '',
-                'harga' => '',
-                'harga_display' => '',
-                'bukti_kepemilikan' => '',
-                'bukti_kepemilikan_details' => '',
-                'atas_nama' => '',
-                'nop_pbb' => '',
-                'nama_notaris_ppat' => '',
-                'keterangan' => ''
-            ]
-        ];
-
-        // Initialize seller search arrays
-        $this->sellerNameSearch = [''];
-        $this->sellerAddressSearch = [''];
-        $this->showSellerNameDropdown = [false];
-        $this->showSellerAddressDropdown = [false];
-
-        // Initialize land search
-        $this->landSearch = '';
-        $this->showLandDropdown = false;
-
-        // Initialize business unit search
-        $this->businessUnitSearch = '';
-        $this->showBusinessUnitDropdown = false;
+        
+        // Initialize with one empty soil detail
+        $this->initializeSoilDetails();
 
         // FIXED: Handle business unit parameter properly - support both ID and object
         if ($businessUnit) {
@@ -173,6 +142,68 @@ class Soils extends Component
             // No business unit parameter, allow normal dropdown behavior
             $this->allowBusinessUnitChange = true;
         }
+    }
+
+    // FIXED: Add helper method to initialize soil details with proper formatting
+    private function initializeSoilDetails()
+    {
+        $this->soilDetails = [
+            $this->createEmptySoilDetail()
+        ];
+
+        // Initialize corresponding search arrays
+        $this->sellerNameSearch = [''];
+        $this->sellerAddressSearch = [''];
+        $this->showSellerNameDropdown = [false];
+        $this->showSellerAddressDropdown = [false];
+
+        // Initialize land search
+        $this->landSearch = '';
+        $this->showLandDropdown = false;
+
+        // Initialize business unit search
+        $this->businessUnitSearch = '';
+        $this->showBusinessUnitDropdown = false;
+    }
+
+    // FIXED: Add helper method to create empty soil detail with proper structure
+    private function createEmptySoilDetail()
+    {
+        return [
+            'nama_penjual' => '',
+            'alamat_penjual' => '',
+            'nomor_ppjb' => '',
+            'tanggal_ppjb' => '',
+            'letak_tanah' => '',
+            'luas' => '',
+            'luas_display' => '',
+            'harga' => '',
+            'harga_display' => '',
+            'bukti_kepemilikan' => '',
+            'bukti_kepemilikan_details' => '',
+            'atas_nama' => '',
+            'nop_pbb' => '',
+            'nama_notaris_ppat' => '',
+            'keterangan' => ''
+        ];
+    }
+
+    // FIXED: Helper method to format numbers consistently
+    private function formatNumber($value)
+    {
+        if (empty($value) || $value === '' || $value === 0) {
+            return '';
+        }
+        return number_format((int) $value, 0, ',', '.');
+    }
+
+    // FIXED: Helper method to parse formatted numbers back to integers
+    private function parseFormattedNumber($value)
+    {
+        if (empty($value) || $value === '') {
+            return '';
+        }
+        return (int) preg_replace('/[^\d]/', '', $value);
     }
 
     public function render()
@@ -259,9 +290,9 @@ class Soils extends Component
                     'tanggal_ppjb' => $this->soil->tanggal_ppjb ? $this->soil->tanggal_ppjb->format('Y-m-d') : '',
                     'letak_tanah' => $this->soil->letak_tanah,
                     'luas' => $this->soil->luas,
-                    'luas_display' => number_format($this->soil->luas, 0, ',', '.'),
+                    'luas_display' => $this->formatNumber($this->soil->luas),
                     'harga' => $this->soil->harga,
-                    'harga_display' => number_format($this->soil->harga, 0, ',', '.'),
+                    'harga_display' => $this->formatNumber($this->soil->harga),
                     'bukti_kepemilikan' => $this->soil->bukti_kepemilikan,
                     'bukti_kepemilikan_details' => $this->soil->bukti_kepemilikan_details,
                     'atas_nama' => $this->soil->atas_nama,
@@ -289,7 +320,7 @@ class Soils extends Component
                     'id' => $biaya->id,
                     'description_id' => $biaya->description_id,
                     'harga' => $biaya->harga,
-                    'harga_display' => number_format($biaya->harga, 0, ',', '.'),
+                    'harga_display' => $this->formatNumber($biaya->harga),
                     'cost_type' => $biaya->cost_type,
                     'date_cost' => $biaya->date_cost ? $biaya->date_cost->format('Y-m-d') : '',
                 ];
@@ -331,8 +362,8 @@ class Soils extends Component
                 'nomor_ppjb' => $detail['nomor_ppjb'],
                 'tanggal_ppjb' => $detail['tanggal_ppjb'],
                 'letak_tanah' => $detail['letak_tanah'],
-                'luas' => $detail['luas'],
-                'harga' => $detail['harga'],
+                'luas' => $this->parseFormattedNumber($detail['luas']),
+                'harga' => $this->parseFormattedNumber($detail['harga']),
                 'bukti_kepemilikan' => $detail['bukti_kepemilikan'],
                 'bukti_kepemilikan_details' => $detail['bukti_kepemilikan_details'],
                 'atas_nama' => $detail['atas_nama'],
@@ -353,8 +384,8 @@ class Soils extends Component
                     'nomor_ppjb' => $detail['nomor_ppjb'],
                     'tanggal_ppjb' => $detail['tanggal_ppjb'],
                     'letak_tanah' => $detail['letak_tanah'],
-                    'luas' => $detail['luas'],
-                    'harga' => $detail['harga'],
+                    'luas' => $this->parseFormattedNumber($detail['luas']),
+                    'harga' => $this->parseFormattedNumber($detail['harga']),
                     'bukti_kepemilikan' => $detail['bukti_kepemilikan'],
                     'bukti_kepemilikan_details' => $detail['bukti_kepemilikan_details'],
                     'atas_nama' => $detail['atas_nama'],
@@ -411,9 +442,7 @@ class Soils extends Component
         foreach ($biayaTambahan as $biaya) {
             if (!empty($biaya['description_id']) && !empty($biaya['harga'])) {
                 // Convert harga from formatted string to integer
-                $harga = is_string($biaya['harga']) ? 
-                    (int) str_replace(['.', ','], ['', '.'], $biaya['harga']) : 
-                    (int) $biaya['harga'];
+                $harga = $this->parseFormattedNumber($biaya['harga']);
 
                 if (isset($biaya['id'])) {
                     // Update existing
@@ -457,7 +486,7 @@ class Soils extends Component
         $this->resetForm();
     }
 
-    // Update the resetForm method
+    // FIXED: Update the resetForm method
     public function resetForm()
     {
         $this->reset([
@@ -467,32 +496,8 @@ class Soils extends Component
             'landSearch', 'showLandDropdown', 'businessUnitSearch', 'showBusinessUnitDropdown'
         ]);
         
-        // Reset soil details with display format
-        $this->soilDetails = [
-            [
-                'nama_penjual' => '',
-                'alamat_penjual' => '',
-                'nomor_ppjb' => '',
-                'tanggal_ppjb' => '',
-                'letak_tanah' => '',
-                'luas' => '',
-                'luas_display' => '',
-                'harga' => '',
-                'harga_display' => '',
-                'bukti_kepemilikan' => '',
-                'bukti_kepemilikan_details' => '',
-                'atas_nama' => '',
-                'nop_pbb' => '',
-                'nama_notaris_ppat' => '',
-                'keterangan' => ''
-            ]
-        ];
-
-        // Reset seller search arrays
-        $this->sellerNameSearch = [''];
-        $this->sellerAddressSearch = [''];
-        $this->showSellerNameDropdown = [false];
-        $this->showSellerAddressDropdown = [false];
+        // Reset soil details with proper initialization
+        $this->initializeSoilDetails();
 
         // Handle business unit reset based on filter status
         if ($this->filterByBusinessUnit && $this->businessUnit) {
@@ -586,28 +591,13 @@ class Soils extends Component
         ];
     }
 
-    // Methods for managing soil details
+    // FIXED: Methods for managing soil details with proper number formatting
     public function addSoilDetail()
     {
         $index = count($this->soilDetails);
         
-        $this->soilDetails[] = [
-            'nama_penjual' => '',
-            'alamat_penjual' => '',
-            'nomor_ppjb' => '',
-            'tanggal_ppjb' => '',
-            'letak_tanah' => '',
-            'luas' => '',
-            'luas_display' => '',
-            'harga' => '',
-            'harga_display' => '',
-            'bukti_kepemilikan' => '',
-            'bukti_kepemilikan_details' => '',
-            'atas_nama' => '',
-            'nop_pbb' => '',
-            'nama_notaris_ppat' => '',
-            'keterangan' => ''
-        ];
+        // Add new soil detail with proper structure
+        $this->soilDetails[] = $this->createEmptySoilDetail();
 
         // Add corresponding search arrays
         $this->sellerNameSearch[$index] = '';
@@ -779,10 +769,7 @@ class Soils extends Component
         
         return collect($this->biayaTambahan)->sum(function($item) {
             if (isset($item['harga'])) {
-                // Convert formatted string to integer
-                return is_string($item['harga']) ? 
-                    (int) str_replace(['.', ','], ['', '.'], $item['harga']) : 
-                    (int) $item['harga'];
+                return $this->parseFormattedNumber($item['harga']);
             }
             return 0;
         });
@@ -928,38 +915,38 @@ class Soils extends Component
         return $query->orderBy('description')->limit(20)->get();
     }
 
-    // FIXED: Add the missing method for number formatting
+    // FIXED: Updated number formatting methods for biaya tambahan
     public function updatedBiayaTambahanHarga($value, $propertyName)
     {
         // Extract index from property name (e.g., "0.harga" -> 0)
         $parts = explode('.', $propertyName);
         $index = $parts[0];
         
-        // Remove all non-numeric characters
-        $numericValue = preg_replace('/[^\d]/', '', $value);
+        // Parse and format the number
+        $numericValue = $this->parseFormattedNumber($value);
         
         if ($numericValue) {
-            $this->biayaTambahan[$index]['harga'] = (int) $numericValue;
-            $this->biayaTambahan[$index]['harga_display'] = number_format((int) $numericValue, 0, ',', '.');
+            $this->biayaTambahan[$index]['harga'] = $numericValue;
+            $this->biayaTambahan[$index]['harga_display'] = $this->formatNumber($numericValue);
         } else {
             $this->biayaTambahan[$index]['harga'] = '';
             $this->biayaTambahan[$index]['harga_display'] = '';
         }
     }
 
-    // NEW: Methods for formatting soil details numbers
+    // FIXED: Updated number formatting methods for soil details
     public function updatedSoilDetailsLuas($value, $propertyName)
     {
-        // Extract index from property name (e.g., "0.luas" -> 0)
+        // Extract index from property name (e.g., "0.luas_display" -> 0)
         $parts = explode('.', $propertyName);
         $index = $parts[0];
         
-        // Remove all non-numeric characters except dots for decimal
-        $numericValue = preg_replace('/[^\d.]/', '', $value);
+        // Parse and format the number
+        $numericValue = $this->parseFormattedNumber($value);
         
         if ($numericValue) {
-            $this->soilDetails[$index]['luas'] = (int) $numericValue;
-            $this->soilDetails[$index]['luas_display'] = number_format((int) $numericValue, 0, ',', '.');
+            $this->soilDetails[$index]['luas'] = $numericValue;
+            $this->soilDetails[$index]['luas_display'] = $this->formatNumber($numericValue);
         } else {
             $this->soilDetails[$index]['luas'] = '';
             $this->soilDetails[$index]['luas_display'] = '';
@@ -968,34 +955,19 @@ class Soils extends Component
 
     public function updatedSoilDetailsHarga($value, $propertyName)
     {
-        // Extract index from property name (e.g., "0.harga" -> 0)
+        // Extract index from property name (e.g., "0.harga_display" -> 0)
         $parts = explode('.', $propertyName);
         $index = $parts[0];
         
-        // Remove all non-numeric characters
-        $numericValue = preg_replace('/[^\d]/', '', $value);
+        // Parse and format the number
+        $numericValue = $this->parseFormattedNumber($value);
         
         if ($numericValue) {
-            $this->soilDetails[$index]['harga'] = (int) $numericValue;
-            $this->soilDetails[$index]['harga_display'] = number_format((int) $numericValue, 0, ',', '.');
+            $this->soilDetails[$index]['harga'] = $numericValue;
+            $this->soilDetails[$index]['harga_display'] = $this->formatNumber($numericValue);
         } else {
             $this->soilDetails[$index]['harga'] = '';
             $this->soilDetails[$index]['harga_display'] = '';
-        }
-    }
-
-    // Update harga with number formatting (keep existing method for compatibility)
-    public function updateHarga($index, $value)
-    {
-        // Remove all non-numeric characters
-        $numericValue = preg_replace('/[^\d]/', '', $value);
-        
-        if ($numericValue) {
-            $this->biayaTambahan[$index]['harga'] = (int) $numericValue;
-            $this->biayaTambahan[$index]['harga_display'] = number_format((int) $numericValue, 0, ',', '.');
-        } else {
-            $this->biayaTambahan[$index]['harga'] = '';
-            $this->biayaTambahan[$index]['harga_display'] = '';
         }
     }
 
@@ -1086,7 +1058,7 @@ class Soils extends Component
         }
     }
 
-     public function allowBusinessUnitChangeFunc()
+    public function allowBusinessUnitChangeFunc()
     {
         $this->allowBusinessUnitChange = true;
         $this->showBusinessUnitDropdown = true;
@@ -1143,7 +1115,7 @@ class Soils extends Component
     {
         $total = 0;
         foreach ($this->soilDetails as $detail) {
-            $landPrice = isset($detail['harga']) ? (int)$detail['harga'] : 0;
+            $landPrice = $this->parseFormattedNumber($detail['harga'] ?? '');
             $total += $landPrice;
         }
         return $total;
@@ -1179,7 +1151,6 @@ class Soils extends Component
         $this->showBusinessUnitFilterDropdown = false;
         $this->resetPage();
     }
-
 
     public function getFilteredBusinessUnitsForFilter()
     {

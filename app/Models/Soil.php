@@ -54,10 +54,6 @@ class Soil extends Model
             $soil->logHistory('updated');
         });
 
-        static::deleted(function ($soil) {
-            $soil->logHistory('deleted');
-        });
-
         // Set created_by and updated_by automatically
         static::creating(function ($soil) {
             if (Auth::check()) {
