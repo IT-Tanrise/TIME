@@ -45,6 +45,9 @@ Route::middleware(['permission:soils.access'])->group(function () {
     ->where('businessUnit', '[0-9]+');
     // Soil history routes
     Route::get('/soils/{soilId}/history', SoilHistories::class)->name('soils.history');
+    //csv
+    Route::get('/soils/export', [App\Http\Controllers\SoilExportController::class, 'exportCsv'])
+    ->name('soils.export');
 });
 
 // Rent Routes

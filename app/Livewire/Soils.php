@@ -66,6 +66,12 @@ class Soils extends Component
     public $showBusinessUnitFilterDropdown = false;
     public $showLandFilterDropdown = false;
 
+    // Export properties
+    public $showExportModal = false;
+    public $exportDateFrom = '';
+    public $exportDateTo = '';
+    public $exportType = 'current'; // 'current', 'all', 'date_range'
+
     protected $rules = [
         'land_id' => 'required|exists:lands,id',
         'business_unit_id' => 'required|exists:business_units,id',
@@ -84,6 +90,16 @@ class Soils extends Component
         'soilDetails.*.keterangan' => 'required|string',
     ];
 
+    // Export validation rules
+    protected function getExportRules()
+    {
+        return [
+            'exportType' => 'required|in:current,all,date_range',
+            'exportDateFrom' => 'required_if:exportType,date_range|nullable|date',
+            'exportDateTo' => 'required_if:exportType,date_range|nullable|date|after_or_equal:exportDateFrom',
+        ];
+    }
+
     protected $messages = [
         'land_id.required' => 'Please select a land.',
         'business_unit_id.required' => 'Please select a business unit.',
@@ -100,6 +116,85 @@ class Soils extends Component
         'soilDetails.*.nama_notaris_ppat.max' => 'Notaris/PPAT name must not exceed 255 characters.',
         'soilDetails.*.keterangan.required' => 'Notes are required for all soil details.',
     ];
+
+    // Show export modal
+    public function showExportModalView()
+    {
+        $this->showExportModal = true;
+        $this->exportType = 'current';
+        $this->exportDateFrom = '';
+        $this->exportDateTo = '';
+    }
+
+    // Hide export modal
+    public function hideExportModalView()
+    {
+        $this->showExportModal = false;
+        $this->resetValidation(['exportType', 'exportDateFrom', 'exportDateTo']);
+    }
+
+    // Export to Excel
+    public function exportToExcel()
+    {
+        $this->validate($this->getExportRules());
+        
+        $params = [
+            'export_type' => $this->exportType,
+            'date_from' => $this->exportDateFrom,
+            'date_to' => $this->exportDateTo,
+            'search' => $this->search,
+            'business_unit_id' => $this->filterByBusinessUnit ?? $this->filterBusinessUnit,
+            'land_id' => $this->filterLand,
+        ];
+        
+        $this->hideExportModalView();
+        session()->flash('message', 'Export completed successfully!');
+        
+        return redirect()->route('soils.export', $params);
+    }
+
+    // Get export summary
+    public function getExportSummary()
+    {
+        $query = Soil::query();
+
+        switch ($this->exportType) {
+            case 'current':
+                $query->when($this->search, function($q) {
+                    $q->where('nama_penjual', 'like', '%' . $this->search . '%')
+                      ->orWhere('letak_tanah', 'like', '%' . $this->search . '%')
+                      ->orWhere('nomor_ppjb', 'like', '%' . $this->search . '%');
+                })
+                ->when($this->filterBusinessUnit, function($q) {
+                    $q->where('business_unit_id', $this->filterBusinessUnit);
+                })
+                ->when($this->filterByBusinessUnit, function($q) {
+                    $q->where('business_unit_id', $this->filterByBusinessUnit);
+                })
+                ->when($this->filterLand, function($q) {
+                    $q->where('land_id', $this->filterLand);
+                });
+                break;
+
+            case 'date_range':
+                if ($this->exportDateFrom && $this->exportDateTo) {
+                    $query->whereBetween('tanggal_ppjb', [$this->exportDateFrom, $this->exportDateTo]);
+                }
+                $query->when($this->filterByBusinessUnit, function($q) {
+                    $q->where('business_unit_id', $this->filterByBusinessUnit);
+                });
+                break;
+
+            case 'all':
+            default:
+                $query->when($this->filterByBusinessUnit, function($q) {
+                    $q->where('business_unit_id', $this->filterByBusinessUnit);
+                });
+                break;
+        }
+
+        return $query->count();
+    }
 
     // Add mount method to handle business unit parameter
     public function mount($businessUnit = null, $soilId = null)

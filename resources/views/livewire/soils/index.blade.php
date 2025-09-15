@@ -26,6 +26,13 @@
                                 Show All Soils
                             </button>
                         @endif
+                        <button wire:click="showExportModalView" 
+                                class="inline-flex items-center px-3 py-2 text-sm font-medium text-green-600 bg-white border border-green-300 rounded-md hover:bg-green-50">
+                            <svg class="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/>
+                            </svg>
+                            Export Excel
+                        </button>
                         @can('soils.edit')
                         <button wire:click="showCreateForm" 
                                 class="inline-flex items-center px-3 py-2 text-sm font-medium text-white bg-blue-600 border border-transparent rounded-md hover:bg-blue-700">
@@ -39,6 +46,133 @@
                 </div>
             </div>
         </div>
+
+        <!-- Export Modal -->
+        @if($showExportModal)
+        <div class="fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full z-50" 
+             x-data="{ show: @entangle('showExportModal') }" 
+             x-show="show" 
+             @click.self="$wire.hideExportModalView()">
+            <div class="relative top-20 mx-auto p-5 border w-full max-w-md shadow-lg rounded-md bg-white" 
+                 @click.stop>
+                <div class="mt-3">
+                    <!-- Modal Header -->
+                    <div class="flex items-center justify-between mb-4">
+                        <h3 class="text-lg font-medium text-gray-900">Export Soils to Excel</h3>
+                        <button wire:click="hideExportModalView" class="text-gray-400 hover:text-gray-600">
+                            <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+                            </svg>
+                        </button>
+                    </div>
+
+                    <!-- Export Options -->
+                    <div class="space-y-4">
+                        <!-- Export Type Selection -->
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-2">Export Type</label>
+                            <div class="space-y-2">
+                                <label class="flex items-center">
+                                    <input type="radio" wire:model.live="exportType" value="current" class="mr-2">
+                                    <span class="text-sm text-gray-700">Current View 
+                                        <span class="text-xs text-gray-500">({{ $soils->total() }} records with current filters)</span>
+                                    </span>
+                                </label>
+                                <label class="flex items-center">
+                                    <input type="radio" wire:model.live="exportType" value="all" class="mr-2">
+                                    <span class="text-sm text-gray-700">All Records
+                                        @if($businessUnit)
+                                            <span class="text-xs text-gray-500">(from {{ $businessUnit->name }})</span>
+                                        @endif
+                                    </span>
+                                </label>
+                                <label class="flex items-center">
+                                    <input type="radio" wire:model.live="exportType" value="date_range" class="mr-2">
+                                    <span class="text-sm text-gray-700">Date Range</span>
+                                </label>
+                            </div>
+                            @error('exportType')
+                                <p class="text-red-500 text-xs mt-1">{{ $message }}</p>
+                            @enderror
+                        </div>
+
+                        <!-- Date Range Inputs -->
+                        @if($exportType === 'date_range')
+                        <div class="space-y-3 border-t pt-3">
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 mb-1">From Date (PPJB Date)</label>
+                                <input type="date" wire:model.live="exportDateFrom" class="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500">
+                                @error('exportDateFrom')
+                                    <p class="text-red-500 text-xs mt-1">{{ $message }}</p>
+                                @enderror
+                            </div>
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 mb-1">To Date (PPJB Date)</label>
+                                <input type="date" wire:model.live="exportDateTo" class="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500">
+                                @error('exportDateTo')
+                                    <p class="text-red-500 text-xs mt-1">{{ $message }}</p>
+                                @enderror
+                            </div>
+                            @if($exportDateFrom && $exportDateTo)
+                                <div class="bg-blue-50 border border-blue-200 rounded p-2 text-sm text-blue-700">
+                                    Records count: {{ $this->getExportSummary() }}
+                                </div>
+                            @endif
+                        </div>
+                        @endif
+
+                        <!-- Export Preview Info -->
+                        @if($exportType)
+                        <div class="border-t pt-3">
+                            <div class="bg-gray-50 rounded p-3 text-sm">
+                                <div class="font-medium text-gray-700 mb-1">Export Preview:</div>
+                                @if($exportType === 'current')
+                                    <div class="text-gray-600">{{ $soils->total() }} records from current filtered view</div>
+                                    @if($search || $filterBusinessUnit || $filterByBusinessUnit || $filterLand)
+                                        <div class="text-xs text-blue-600 mt-1">
+                                            Applied filters:
+                                            @if($search) Search: "{{ $search }}" @endif
+                                            @if($filterBusinessUnit || $filterByBusinessUnit) Business Unit filter @endif
+                                            @if($filterLand) Land filter @endif
+                                        </div>
+                                    @endif
+                                @elseif($exportType === 'all')
+                                    <div class="text-gray-600">All soil records
+                                        @if($businessUnit) from {{ $businessUnit->name }} @endif
+                                    </div>
+                                @elseif($exportType === 'date_range' && $exportDateFrom && $exportDateTo)
+                                    <div class="text-gray-600">Records from {{ $exportDateFrom }} to {{ $exportDateTo }}</div>
+                                    <div class="text-xs text-gray-500">Estimated: {{ $this->getExportSummary() }} records</div>
+                                @endif
+                            </div>
+                        </div>
+                        @endif
+                    </div>
+
+                    <!-- Modal Footer -->
+                    <div class="flex justify-end space-x-3 mt-6 pt-4 border-t">
+                        <button wire:click="hideExportModalView" 
+                                class="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-md hover:bg-gray-50">
+                            Cancel
+                        </button>
+                        <button wire:click="exportToExcel" 
+                                wire:loading.attr="disabled"
+                                wire:target="exportToExcel"
+                                class="px-4 py-2 text-sm font-medium text-white bg-green-600 border border-transparent rounded-md hover:bg-green-700 disabled:opacity-50">
+                            <span wire:loading.remove wire:target="exportToExcel">Export Excel</span>
+                            <span wire:loading wire:target="exportToExcel" class="flex items-center">
+                                <svg class="animate-spin -ml-1 mr-2 h-4 w-4 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                                    <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                                    <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                                </svg>
+                                Exporting...
+                            </span>
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+        @endif
 
         <!-- Compact Filters Section -->
         <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
@@ -436,6 +570,10 @@ document.addEventListener('keydown', function(event) {
     // Handle Escape key to close search dropdowns only
     if (event.key === 'Escape' && window.Livewire) {
         window.Livewire.dispatch('closeDropdowns');
+        // Close export modal if open
+        if (document.querySelector('[wire\\:click="hideExportModalView"]')) {
+            window.Livewire.dispatch('hideExportModalView');
+        }
     }
 });
 </script>
