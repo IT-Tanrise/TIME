@@ -464,6 +464,30 @@
 </div>
 <!-- Enhanced JavaScript for Dropdown Behavior -->
 <script>
+document.addEventListener('livewire:initialized', () => {
+    Livewire.on('submit-export-form', (event) => {
+        const params = event.params;
+        
+        // Create a hidden form
+        const form = document.createElement('form');
+        form.method = 'POST';
+        form.action = '{{ route("soils.export") }}';
+        form.style.display = 'none';
+        
+        // Add parameters as hidden inputs
+        Object.keys(params).forEach(key => {
+            const input = document.createElement('input');
+            input.type = 'hidden';
+            input.name = key;
+            input.value = params[key];
+            form.appendChild(input);
+        });
+        
+        document.body.appendChild(form);
+        form.submit();
+        document.body.removeChild(form);
+    });
+});
 document.addEventListener('alpine:init', () => {
     Alpine.data('numberFormat', () => ({
         formatNumber(event) {

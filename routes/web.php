@@ -46,7 +46,7 @@ Route::middleware(['permission:soils.access'])->group(function () {
     // Soil history routes
     Route::get('/soils/{soilId}/history', SoilHistories::class)->name('soils.history');
     //csv
-    Route::get('/soils/export', [App\Http\Controllers\SoilExportController::class, 'exportCsv'])
+    Route::post('/soils/export', [App\Http\Controllers\SoilExportController::class, 'exportCsv'])
     ->name('soils.export');
 });
 

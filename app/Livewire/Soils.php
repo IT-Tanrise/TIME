@@ -145,12 +145,14 @@ class Soils extends Component
             'search' => $this->search,
             'business_unit_id' => $this->filterByBusinessUnit ?? $this->filterBusinessUnit,
             'land_id' => $this->filterLand,
+            '_token' => csrf_token(), // Add CSRF token
         ];
         
         $this->hideExportModalView();
         session()->flash('message', 'Export completed successfully!');
         
-        return redirect()->route('soils.export', $params);
+        // Use JavaScript to submit a POST form
+        $this->dispatch('submit-export-form', params: $params);
     }
 
     // Get export summary
