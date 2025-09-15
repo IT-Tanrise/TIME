@@ -178,7 +178,7 @@ class Soils extends Component
 
             case 'date_range':
                 if ($this->exportDateFrom && $this->exportDateTo) {
-                    $query->whereBetween('tanggal_ppjb', [$this->exportDateFrom, $this->exportDateTo]);
+                    $query->whereBetween('created_at', [$this->exportDateFrom, $this->exportDateTo]);
                 }
                 $query->when($this->filterByBusinessUnit, function($q) {
                     $q->where('business_unit_id', $this->filterByBusinessUnit);
