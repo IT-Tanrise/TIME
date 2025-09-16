@@ -66,7 +66,7 @@ class SoilHistory extends Model
         return $this->updated_at_gmt7->format('d/m/Y H:i') . ' (GMT+7)';
     }
 
-    // Get action display name
+    // FIXED: Get action display name - added additional cost actions
     public function getActionDisplayAttribute()
     {
         return match($this->action) {
@@ -74,7 +74,10 @@ class SoilHistory extends Model
             'updated' => 'Record Updated', 
             'deleted' => 'Record Deleted',
             'restored' => 'Record Restored',
-            default => ucfirst($this->action)
+            'additional_cost_added' => 'Additional Cost Added',
+            'additional_cost_updated' => 'Additional Cost Updated',
+            'additional_cost_deleted' => 'Additional Cost Deleted',
+            default => ucfirst(str_replace('_', ' ', $this->action))
         };
     }
 
@@ -87,6 +90,11 @@ class SoilHistory extends Model
     // FIXED: Get changes summary
     public function getChangesSummaryAttribute()
     {
+        // Handle additional cost actions specially
+        if (in_array($this->action, ['additional_cost_added', 'additional_cost_updated', 'additional_cost_deleted'])) {
+            return $this->getAdditionalCostChangesSummary();
+        }
+
         // Check if changes exist, is array, and is not empty
         if (!$this->changes || !is_array($this->changes) || empty($this->changes)) {
             // Try to determine changes from old_values and new_values if available
@@ -117,6 +125,35 @@ class SoilHistory extends Model
         }
 
         return implode(', ', $changesList);
+    }
+
+    // NEW: Handle additional cost changes summary
+    private function getAdditionalCostChangesSummary()
+    {
+        if ($this->action === 'additional_cost_added') {
+            $description = $this->new_values['description'] ?? 
+                          $this->new_values['additional_cost_description'] ?? 
+                          'Cost item';
+            return "Added: {$description}";
+        }
+
+        if ($this->action === 'additional_cost_deleted') {
+            $description = $this->old_values['description'] ?? 
+                          $this->old_values['additional_cost_description'] ?? 
+                          'Cost item';
+            return "Deleted: {$description}";
+        }
+
+        if ($this->action === 'additional_cost_updated') {
+            $description = $this->new_values['description'] ?? 
+                          $this->new_values['additional_cost_description'] ?? 
+                          $this->old_values['description'] ?? 
+                          $this->old_values['additional_cost_description'] ?? 
+                          'Cost item';
+            return "Updated: {$description}";
+        }
+
+        return 'Additional cost modified';
     }
 
     // Helper method to compare values properly
@@ -159,6 +196,10 @@ class SoilHistory extends Model
             'keterangan' => 'Notes',
             'land_id' => 'Land',
             'business_unit_id' => 'Business Unit',
+            'description' => 'Description',
+            'harga' => 'Amount',
+            'cost_type' => 'Cost Type',
+            'date_cost' => 'Cost Date',
         ];
 
         return $fieldMap[$field] ?? ucfirst(str_replace('_', ' ', $field));

@@ -9,7 +9,7 @@
                         Manage Additional Costs
                     </h2>
                     <p class="text-sm text-gray-600 mt-1">
-                        Soil Record: {{ $soil->nomor_ppjb }} - {{ $soil->nama_penjual }} to {{ $soil->nama_pembeli }}
+                        Soil Record: {{ $soil->nomor_ppjb }} - {{ $soil->nama_penjual }}
                     </p>
                 </div>
                 <button wire:click="backToIndex" 
@@ -31,7 +31,7 @@
                     </div>
                     <div>
                         <span class="font-medium text-gray-700">Area:</span>
-                        <span class="text-gray-900">{{ number_format($soil->luas, 0, ',', '.') }} m²</span>
+                        <span class="text-gray-900">{{ number_format($soil->luas, 0, ',', '.') }} mÂ²</span>
                     </div>
                     <div>
                         <span class="font-medium text-gray-700">Location:</span>
@@ -72,53 +72,7 @@
                                             </button>
                                         </div>
                                         
-                                        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
-                                            <!-- Category (with search dropdown) -->
-                                            <div class="relative">
-                                                <label class="block text-sm font-medium text-gray-700">Category *</label>
-                                                <input type="text" 
-                                                       wire:model.live.debounce.300ms="categorySearch.{{ $index }}"
-                                                       wire:focus="searchCategories({{ $index }})"
-                                                       placeholder="Search or select category..."
-                                                       class="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 sm:text-sm @error('biayaTambahan.'.$index.'.category_id') border-red-300 @enderror"
-                                                       autocomplete="off">
-                                                
-                                                @if(isset($showCategoryDropdown[$index]) && $showCategoryDropdown[$index])
-                                                    <div class="absolute z-50 mt-1 w-full bg-white shadow-lg max-h-60 rounded-md py-1 text-base ring-1 ring-black ring-opacity-5 overflow-auto focus:outline-none sm:text-sm"
-                                                         wire:click.stop>
-                                                        @php
-                                                            $categories = $this->getFilteredCategories($index);
-                                                        @endphp
-                                                        
-                                                        @if(empty($categorySearch[$index] ?? '') && $categories->count() > 0)
-                                                            <div class="px-4 py-2 text-xs text-blue-600 bg-blue-50 border-b border-blue-100">
-                                                                Showing all categories - start typing to filter
-                                                            </div>
-                                                        @endif
-                                                        
-                                                        @forelse($categories as $category)
-                                                            <button type="button"
-                                                                    wire:click.stop="selectCategory({{ $index }}, {{ $category->id }}, '{{ addslashes($category->category) }}')"
-                                                                    class="w-full text-left px-4 py-2 text-sm text-gray-900 hover:bg-gray-100">
-                                                                {{ $category->category }}
-                                                            </button>
-                                                        @empty
-                                                            <div class="px-4 py-2 text-sm text-gray-500">No categories found</div>
-                                                        @endforelse
-                                                        
-                                                        @if($categories->count() >= 20)
-                                                            <div class="px-4 py-2 text-xs text-gray-500 bg-gray-50 border-t border-gray-100">
-                                                                Showing first 20 results - type to search for more
-                                                            </div>
-                                                        @endif
-                                                    </div>
-                                                @endif
-                                                
-                                                @error('biayaTambahan.'.$index.'.category_id') 
-                                                    <span class="text-red-500 text-xs">{{ $message }}</span> 
-                                                @enderror
-                                            </div>
-
+                                        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
                                             <!-- Description (with search dropdown) -->
                                             <div class="relative">
                                                 <label class="block text-sm font-medium text-gray-700">Description *</label>
@@ -126,12 +80,11 @@
                                                        wire:model.live.debounce.300ms="descriptionSearch.{{ $index }}"
                                                        wire:focus="searchDescriptions({{ $index }})"
                                                        placeholder="Search or select description..."
-                                                       class="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 sm:text-sm @error('biayaTambahan.'.$index.'.description_id') border-red-300 @enderror
-                                                       @if(empty($categorySearch[$index] ?? '')) disabled @endif"
+                                                       class="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 sm:text-sm @error('biayaTambahan.'.$index.'.description_id') border-red-300 @enderror"
                                                        autocomplete="off">
                                                 
-                                                @if(isset($showDescriptionDropdown[$index]) && $showDescriptionDropdown[$index] && !empty($categorySearch[$index] ?? ''))
-                                                    <div class="absolute z-40 mt-1 w-full bg-white shadow-lg max-h-60 rounded-md py-1 text-base ring-1 ring-black ring-opacity-5 overflow-auto focus:outline-none sm:text-sm"
+                                                @if(isset($showDescriptionDropdown[$index]) && $showDescriptionDropdown[$index])
+                                                    <div class="absolute z-50 mt-1 w-full bg-white shadow-lg max-h-60 rounded-md py-1 text-base ring-1 ring-black ring-opacity-5 overflow-auto focus:outline-none sm:text-sm"
                                                          wire:click.stop>
                                                         @php
                                                             $descriptions = $this->getFilteredDescriptions($index);
@@ -139,7 +92,7 @@
                                                         
                                                         @if(empty($descriptionSearch[$index] ?? '') && $descriptions->count() > 0)
                                                             <div class="px-4 py-2 text-xs text-blue-600 bg-blue-50 border-b border-blue-100">
-                                                                Showing all descriptions for selected category - start typing to filter
+                                                                Showing all descriptions - start typing to filter
                                                             </div>
                                                         @endif
                                                         
@@ -150,7 +103,7 @@
                                                                 {{ $description->description }}
                                                             </button>
                                                         @empty
-                                                            <div class="px-4 py-2 text-sm text-gray-500">No descriptions found for this category</div>
+                                                            <div class="px-4 py-2 text-sm text-gray-500">No descriptions found</div>
                                                         @endforelse
                                                         
                                                         @if($descriptions->count() >= 20)
@@ -166,23 +119,31 @@
                                                 @enderror
                                             </div>
 
-                                            <!-- Amount (with thousand separator) - FIXED -->
+                                            <!-- Amount (with thousand separator) -->
                                             <div>
                                                 <label class="block text-sm font-medium text-gray-700">Amount (Rp) *</label>
                                                 <input type="text" 
                                                        wire:model.live="biayaTambahan.{{ $index }}.harga_display"
                                                        placeholder="0"
                                                        class="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 sm:text-sm @error('biayaTambahan.'.$index.'.harga') border-red-300 @enderror"
-                                                       x-data x-on:input="
-                                                           let value = $event.target.value.replace(/[^\d]/g, '');
-                                                           if (value) {
-                                                               $event.target.value = new Intl.NumberFormat('id-ID').format(value);
-                                                               @this.set('biayaTambahan.{{ $index }}.harga', parseInt(value));
-                                                           } else {
-                                                               $event.target.value = '';
-                                                               @this.set('biayaTambahan.{{ $index }}.harga', '');
+                                                       data-index="{{ $index }}"
+                                                       x-data="{ 
+                                                           formatInput(event) {
+                                                               let value = event.target.value.replace(/[^\d]/g, '');
+                                                               if (value) {
+                                                                   let formatted = new Intl.NumberFormat('id-ID').format(value);
+                                                                   event.target.value = formatted;
+                                                                   @this.set('biayaTambahan.{{ $index }}.harga', parseInt(value));
+                                                                   @this.set('biayaTambahan.{{ $index }}.harga_display', formatted);
+                                                               } else {
+                                                                   event.target.value = '';
+                                                                   @this.set('biayaTambahan.{{ $index }}.harga', '');
+                                                                   @this.set('biayaTambahan.{{ $index }}.harga_display', '');
+                                                               }
                                                            }
-                                                       ">
+                                                       }"
+                                                       x-on:input="formatInput($event)"
+                                                       value="{{ $biaya['harga_display'] ?? '' }}">
                                                 @error('biayaTambahan.'.$index.'.harga') 
                                                     <span class="text-red-500 text-xs">{{ $message }}</span> 
                                                 @enderror
@@ -231,7 +192,7 @@
                                     </div>
                                     <div class="flex justify-between border-t border-blue-200 pt-1">
                                         <span class="text-blue-900 font-semibold">Total Investment:</span>
-                                        <span class="text-blue-900 font-bold">Rp {{ number_format($soil->harga + $this->getTotalBiayaTambahan(), 0, ',', '.') }}</span>
+                                        <span class="text-blue-900 font-bold">Rp {{ number_format((int)$soil->harga + (int)$this->getTotalBiayaTambahan(), 0, ',', '.') }}</span>
                                     </div>
                                 </div>
                             </div>

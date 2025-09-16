@@ -9,7 +9,7 @@
                         Manage Additional Costs
                     </h2>
                     <p class="text-sm text-gray-600 mt-1">
-                        Soil Record: <?php echo e($soil->nomor_ppjb); ?> - <?php echo e($soil->nama_penjual); ?> to <?php echo e($soil->nama_pembeli); ?>
+                        Soil Record: <?php echo e($soil->nomor_ppjb); ?> - <?php echo e($soil->nama_penjual); ?>
 
                     </p>
                 </div>
@@ -32,7 +32,7 @@
                     </div>
                     <div>
                         <span class="font-medium text-gray-700">Area:</span>
-                        <span class="text-gray-900"><?php echo e(number_format($soil->luas, 0, ',', '.')); ?> m²</span>
+                        <span class="text-gray-900"><?php echo e(number_format($soil->luas, 0, ',', '.')); ?> mÂ²</span>
                     </div>
                     <div>
                         <span class="font-medium text-gray-700">Location:</span>
@@ -73,68 +73,7 @@
                                             </button>
                                         </div>
                                         
-                                        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
-                                            <!-- Category (with search dropdown) -->
-                                            <div class="relative">
-                                                <label class="block text-sm font-medium text-gray-700">Category *</label>
-                                                <input type="text" 
-                                                       wire:model.live.debounce.300ms="categorySearch.<?php echo e($index); ?>"
-                                                       wire:focus="searchCategories(<?php echo e($index); ?>)"
-                                                       placeholder="Search or select category..."
-                                                       class="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 sm:text-sm <?php $__errorArgs = ['biayaTambahan.'.$index.'.category_id'];
-$__bag = $errors->getBag($__errorArgs[1] ?? 'default');
-if ($__bag->has($__errorArgs[0])) :
-if (isset($message)) { $__messageOriginal = $message; }
-$message = $__bag->first($__errorArgs[0]); ?> border-red-300 <?php unset($message);
-if (isset($__messageOriginal)) { $message = $__messageOriginal; }
-endif;
-unset($__errorArgs, $__bag); ?>"
-                                                       autocomplete="off">
-                                                
-                                                <!--[if BLOCK]><![endif]--><?php if(isset($showCategoryDropdown[$index]) && $showCategoryDropdown[$index]): ?>
-                                                    <div class="absolute z-50 mt-1 w-full bg-white shadow-lg max-h-60 rounded-md py-1 text-base ring-1 ring-black ring-opacity-5 overflow-auto focus:outline-none sm:text-sm"
-                                                         wire:click.stop>
-                                                        <?php
-                                                            $categories = $this->getFilteredCategories($index);
-                                                        ?>
-                                                        
-                                                        <!--[if BLOCK]><![endif]--><?php if(empty($categorySearch[$index] ?? '') && $categories->count() > 0): ?>
-                                                            <div class="px-4 py-2 text-xs text-blue-600 bg-blue-50 border-b border-blue-100">
-                                                                Showing all categories - start typing to filter
-                                                            </div>
-                                                        <?php endif; ?><!--[if ENDBLOCK]><![endif]-->
-                                                        
-                                                        <!--[if BLOCK]><![endif]--><?php $__empty_1 = true; $__currentLoopData = $categories; $__env->addLoop($__currentLoopData); foreach($__currentLoopData as $category): $__env->incrementLoopIndices(); $loop = $__env->getLastLoop(); $__empty_1 = false; ?>
-                                                            <button type="button"
-                                                                    wire:click.stop="selectCategory(<?php echo e($index); ?>, <?php echo e($category->id); ?>, '<?php echo e(addslashes($category->category)); ?>')"
-                                                                    class="w-full text-left px-4 py-2 text-sm text-gray-900 hover:bg-gray-100">
-                                                                <?php echo e($category->category); ?>
-
-                                                            </button>
-                                                        <?php endforeach; $__env->popLoop(); $loop = $__env->getLastLoop(); if ($__empty_1): ?>
-                                                            <div class="px-4 py-2 text-sm text-gray-500">No categories found</div>
-                                                        <?php endif; ?><!--[if ENDBLOCK]><![endif]-->
-                                                        
-                                                        <!--[if BLOCK]><![endif]--><?php if($categories->count() >= 20): ?>
-                                                            <div class="px-4 py-2 text-xs text-gray-500 bg-gray-50 border-t border-gray-100">
-                                                                Showing first 20 results - type to search for more
-                                                            </div>
-                                                        <?php endif; ?><!--[if ENDBLOCK]><![endif]-->
-                                                    </div>
-                                                <?php endif; ?><!--[if ENDBLOCK]><![endif]-->
-                                                
-                                                <!--[if BLOCK]><![endif]--><?php $__errorArgs = ['biayaTambahan.'.$index.'.category_id'];
-$__bag = $errors->getBag($__errorArgs[1] ?? 'default');
-if ($__bag->has($__errorArgs[0])) :
-if (isset($message)) { $__messageOriginal = $message; }
-$message = $__bag->first($__errorArgs[0]); ?> 
-                                                    <span class="text-red-500 text-xs"><?php echo e($message); ?></span> 
-                                                <?php unset($message);
-if (isset($__messageOriginal)) { $message = $__messageOriginal; }
-endif;
-unset($__errorArgs, $__bag); ?><!--[if ENDBLOCK]><![endif]-->
-                                            </div>
-
+                                        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
                                             <!-- Description (with search dropdown) -->
                                             <div class="relative">
                                                 <label class="block text-sm font-medium text-gray-700">Description *</label>
@@ -149,12 +88,11 @@ if (isset($message)) { $__messageOriginal = $message; }
 $message = $__bag->first($__errorArgs[0]); ?> border-red-300 <?php unset($message);
 if (isset($__messageOriginal)) { $message = $__messageOriginal; }
 endif;
-unset($__errorArgs, $__bag); ?>
-                                                       <?php if(empty($categorySearch[$index] ?? '')): ?> disabled <?php endif; ?>"
+unset($__errorArgs, $__bag); ?>"
                                                        autocomplete="off">
                                                 
-                                                <!--[if BLOCK]><![endif]--><?php if(isset($showDescriptionDropdown[$index]) && $showDescriptionDropdown[$index] && !empty($categorySearch[$index] ?? '')): ?>
-                                                    <div class="absolute z-40 mt-1 w-full bg-white shadow-lg max-h-60 rounded-md py-1 text-base ring-1 ring-black ring-opacity-5 overflow-auto focus:outline-none sm:text-sm"
+                                                <!--[if BLOCK]><![endif]--><?php if(isset($showDescriptionDropdown[$index]) && $showDescriptionDropdown[$index]): ?>
+                                                    <div class="absolute z-50 mt-1 w-full bg-white shadow-lg max-h-60 rounded-md py-1 text-base ring-1 ring-black ring-opacity-5 overflow-auto focus:outline-none sm:text-sm"
                                                          wire:click.stop>
                                                         <?php
                                                             $descriptions = $this->getFilteredDescriptions($index);
@@ -162,7 +100,7 @@ unset($__errorArgs, $__bag); ?>
                                                         
                                                         <!--[if BLOCK]><![endif]--><?php if(empty($descriptionSearch[$index] ?? '') && $descriptions->count() > 0): ?>
                                                             <div class="px-4 py-2 text-xs text-blue-600 bg-blue-50 border-b border-blue-100">
-                                                                Showing all descriptions for selected category - start typing to filter
+                                                                Showing all descriptions - start typing to filter
                                                             </div>
                                                         <?php endif; ?><!--[if ENDBLOCK]><![endif]-->
                                                         
@@ -174,7 +112,7 @@ unset($__errorArgs, $__bag); ?>
 
                                                             </button>
                                                         <?php endforeach; $__env->popLoop(); $loop = $__env->getLastLoop(); if ($__empty_1): ?>
-                                                            <div class="px-4 py-2 text-sm text-gray-500">No descriptions found for this category</div>
+                                                            <div class="px-4 py-2 text-sm text-gray-500">No descriptions found</div>
                                                         <?php endif; ?>
                                                         
                                                         <!--[if BLOCK]><![endif]--><?php if($descriptions->count() >= 20): ?>
@@ -197,7 +135,7 @@ endif;
 unset($__errorArgs, $__bag); ?><!--[if ENDBLOCK]><![endif]-->
                                             </div>
 
-                                            <!-- Amount (with thousand separator) - FIXED -->
+                                            <!-- Amount (with thousand separator) -->
                                             <div>
                                                 <label class="block text-sm font-medium text-gray-700">Amount (Rp) *</label>
                                                 <input type="text" 
@@ -211,16 +149,24 @@ $message = $__bag->first($__errorArgs[0]); ?> border-red-300 <?php unset($messag
 if (isset($__messageOriginal)) { $message = $__messageOriginal; }
 endif;
 unset($__errorArgs, $__bag); ?>"
-                                                       x-data x-on:input="
-                                                           let value = $event.target.value.replace(/[^\d]/g, '');
-                                                           if (value) {
-                                                               $event.target.value = new Intl.NumberFormat('id-ID').format(value);
-                                                               window.Livewire.find('<?php echo e($_instance->getId()); ?>').set('biayaTambahan.<?php echo e($index); ?>.harga', parseInt(value));
-                                                           } else {
-                                                               $event.target.value = '';
-                                                               window.Livewire.find('<?php echo e($_instance->getId()); ?>').set('biayaTambahan.<?php echo e($index); ?>.harga', '');
+                                                       data-index="<?php echo e($index); ?>"
+                                                       x-data="{ 
+                                                           formatInput(event) {
+                                                               let value = event.target.value.replace(/[^\d]/g, '');
+                                                               if (value) {
+                                                                   let formatted = new Intl.NumberFormat('id-ID').format(value);
+                                                                   event.target.value = formatted;
+                                                                   window.Livewire.find('<?php echo e($_instance->getId()); ?>').set('biayaTambahan.<?php echo e($index); ?>.harga', parseInt(value));
+                                                                   window.Livewire.find('<?php echo e($_instance->getId()); ?>').set('biayaTambahan.<?php echo e($index); ?>.harga_display', formatted);
+                                                               } else {
+                                                                   event.target.value = '';
+                                                                   window.Livewire.find('<?php echo e($_instance->getId()); ?>').set('biayaTambahan.<?php echo e($index); ?>.harga', '');
+                                                                   window.Livewire.find('<?php echo e($_instance->getId()); ?>').set('biayaTambahan.<?php echo e($index); ?>.harga_display', '');
+                                                               }
                                                            }
-                                                       ">
+                                                       }"
+                                                       x-on:input="formatInput($event)"
+                                                       value="<?php echo e($biaya['harga_display'] ?? ''); ?>">
                                                 <!--[if BLOCK]><![endif]--><?php $__errorArgs = ['biayaTambahan.'.$index.'.harga'];
 $__bag = $errors->getBag($__errorArgs[1] ?? 'default');
 if ($__bag->has($__errorArgs[0])) :
@@ -304,7 +250,7 @@ unset($__errorArgs, $__bag); ?><!--[if ENDBLOCK]><![endif]-->
                                     </div>
                                     <div class="flex justify-between border-t border-blue-200 pt-1">
                                         <span class="text-blue-900 font-semibold">Total Investment:</span>
-                                        <span class="text-blue-900 font-bold">Rp <?php echo e(number_format($soil->harga + $this->getTotalBiayaTambahan(), 0, ',', '.')); ?></span>
+                                        <span class="text-blue-900 font-bold">Rp <?php echo e(number_format((int)$soil->harga + (int)$this->getTotalBiayaTambahan(), 0, ',', '.')); ?></span>
                                     </div>
                                 </div>
                             </div>

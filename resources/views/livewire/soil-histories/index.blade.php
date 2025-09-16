@@ -163,6 +163,7 @@
                                 @if($history->action === 'created') border-green-200 bg-green-50 text-green-600
                                 @elseif($history->action === 'updated') border-blue-200 bg-blue-50 text-blue-600
                                 @elseif($history->action === 'deleted') border-red-200 bg-red-50 text-red-600
+                                @elseif(in_array($history->action, ['additional_cost_added', 'additional_cost_updated', 'additional_cost_deleted'])) border-orange-200 bg-orange-50 text-orange-600
                                 @else border-gray-200 bg-gray-50 text-gray-600 @endif">
                                 @if($history->action === 'created')
                                     <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
@@ -176,6 +177,10 @@
                                     <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
                                         <path fill-rule="evenodd" d="M9 2a1 1 0 000 2h2a1 1 0 100-2H9z" clip-rule="evenodd"/>
                                         <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8 7a1 1 0 012 0v4a1 1 0 11-2 0V7zM12 7a1 1 0 012 0v4a1 1 0 11-2 0V7z" clip-rule="evenodd"/>
+                                    </svg>
+                                @elseif(in_array($history->action, ['additional_cost_added', 'additional_cost_updated', 'additional_cost_deleted']))
+                                    <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
+                                        <path d="M4 4a2 2 0 00-2 2v4a2 2 0 002 2V6h10a2 2 0 00-2-2H4zm2 6a2 2 0 012-2h8a2 2 0 012 2v4a2 2 0 01-2 2H8a2 2 0 01-2-2v-4zm6 4a2 2 0 100-4 2 2 0 000 4z"/>
                                     </svg>
                                 @else
                                     <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
@@ -198,8 +203,17 @@
                                                     @if($history->action === 'created') bg-green-100 text-green-800
                                                     @elseif($history->action === 'updated') bg-blue-100 text-blue-800
                                                     @elseif($history->action === 'deleted') bg-red-100 text-red-800
+                                                    @elseif(in_array($history->action, ['additional_cost_added', 'additional_cost_updated', 'additional_cost_deleted'])) bg-orange-100 text-orange-800
                                                     @else bg-gray-100 text-gray-800 @endif">
-                                                    {{ ucfirst($history->action) }}
+                                                    @if($history->action === 'additional_cost_added')
+                                                        Cost Added
+                                                    @elseif($history->action === 'additional_cost_updated')  
+                                                        Cost Updated
+                                                    @elseif($history->action === 'additional_cost_deleted')
+                                                        Cost Deleted
+                                                    @else
+                                                        {{ ucfirst($history->action) }}
+                                                    @endif
                                                 </span>
                                                 <div class="text-xs text-gray-500 flex-shrink-0">
                                                     {{ $history->formatted_created_at }}
@@ -266,6 +280,55 @@
                                                                     </div>
                                                                 </div>
                                                             @endforeach
+                                                        </div>
+                                                    @endif
+                                                </div>
+                                            @elseif(in_array($history->action, ['additional_cost_added', 'additional_cost_updated', 'additional_cost_deleted']))
+                                                @php $changeDetails = $this->getChangeDetails($history) @endphp
+                                                <div class="bg-white border border-orange-200 rounded-lg p-3">
+                                                    <div class="text-sm font-medium text-orange-800 mb-2">
+                                                        @if($history->action === 'additional_cost_added')
+                                                            Additional Cost Added
+                                                        @elseif($history->action === 'additional_cost_updated')
+                                                            Additional Cost Updated
+                                                        @else
+                                                            Additional Cost Deleted
+                                                        @endif
+                                                    </div>
+                                                    
+                                                    @if($changeDetails)
+                                                        <div class="space-y-2">
+                                                            @foreach($changeDetails as $change)
+                                                                <div class="border border-gray-200 rounded p-2">
+                                                                    <div class="font-medium text-gray-900 text-xs mb-2">{{ $change['field'] }}</div>
+                                                                    <div class="grid grid-cols-2 gap-2 text-xs">
+                                                                        @if($history->action === 'additional_cost_added')
+                                                                            <div class="col-span-2 bg-green-50 p-2 rounded border border-green-200">
+                                                                                <div class="text-green-600 font-medium mb-1">New Value:</div>
+                                                                                <div class="text-gray-700 break-words">{{ $change['new'] ?: 'Empty' }}</div>
+                                                                            </div>
+                                                                        @elseif($history->action === 'additional_cost_deleted')
+                                                                            <div class="col-span-2 bg-red-50 p-2 rounded border border-red-200">
+                                                                                <div class="text-red-600 font-medium mb-1">Deleted Value:</div>
+                                                                                <div class="text-gray-700 break-words">{{ $change['old'] ?: 'Empty' }}</div>
+                                                                            </div>
+                                                                        @else
+                                                                            <div class="bg-red-50 p-2 rounded border border-red-200">
+                                                                                <div class="text-red-600 font-medium mb-1">Before:</div>
+                                                                                <div class="text-gray-700 break-words">{{ $change['old'] ?: 'Empty' }}</div>
+                                                                            </div>
+                                                                            <div class="bg-green-50 p-2 rounded border border-green-200">
+                                                                                <div class="text-green-600 font-medium mb-1">After:</div>
+                                                                                <div class="text-gray-700 break-words">{{ $change['new'] ?: 'Empty' }}</div>
+                                                                            </div>
+                                                                        @endif
+                                                                    </div>
+                                                                </div>
+                                                            @endforeach
+                                                        </div>
+                                                    @else
+                                                        <div class="text-sm text-orange-700">
+                                                            No additional cost details available
                                                         </div>
                                                     @endif
                                                 </div>

@@ -12,7 +12,6 @@ class DescriptionBiayaTambahanSoil extends Model
     protected $table = 'description_biaya_tambahan_soils';
 
     protected $fillable = [
-        'category_id',
         'description'
     ];
 
@@ -20,12 +19,6 @@ class DescriptionBiayaTambahanSoil extends Model
         'created_at' => 'datetime',
         'updated_at' => 'datetime',
     ];
-
-    // Relationship to Category
-    public function category()
-    {
-        return $this->belongsTo(CategoryBiayaTambahanSoil::class, 'category_id');
-    }
 
     // Relationship to BiayaTambahanSoil
     public function biayaTambahanSoils()
@@ -37,11 +30,5 @@ class DescriptionBiayaTambahanSoil extends Model
     public function scopeSearch($query, $term)
     {
         return $query->where('description', 'like', '%' . $term . '%');
-    }
-
-    // Scope to filter by category
-    public function scopeByCategory($query, $categoryId)
-    {
-        return $query->where('category_id', $categoryId);
     }
 }

@@ -21,7 +21,7 @@ class SoilExportController extends Controller
         ]);
 
         // Build query
-        $query = Soil::with(['land', 'businessUnit', 'biayaTambahanSoils.description.category', 'createdBy', 'updatedBy']);
+        $query = Soil::with(['land', 'businessUnit', 'biayaTambahanSoils.description', 'createdBy', 'updatedBy']);
 
         // Apply filters based on export type
         switch ($request->export_type) {
@@ -115,11 +115,10 @@ class SoilExportController extends Controller
             if ($soil->biayaTambahanSoils->count() > 0) {
                 $details = [];
                 foreach ($soil->biayaTambahanSoils as $cost) {
-                    $categoryName = $cost->description->category->category ?? 'N/A';
                     $descriptionName = $cost->description->description ?? 'N/A';
                     $formattedPrice = 'Rp ' . number_format($cost->harga, 0, ',', '.');
                     $costType = ucfirst($cost->cost_type);
-                    $details[] = "{$categoryName} - {$descriptionName}: {$formattedPrice} ({$costType})";
+                    $details[] = "{$descriptionName}: {$formattedPrice} ({$costType})";
                 }
                 $additionalCostsDetails = implode('; ', $details);
             }

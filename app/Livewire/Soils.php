@@ -5,12 +5,12 @@ namespace App\Livewire;
 use App\Models\Soil;
 use App\Models\Land;
 use App\Models\BusinessUnit;
-use App\Models\CategoryBiayaTambahanSoil;
 use App\Models\DescriptionBiayaTambahanSoil;
 use Livewire\Component;
 use Livewire\WithPagination;
 use App\Models\BiayaTambahanSoil;
 use Livewire\Attributes\On;
+use Illuminate\Support\Facades\DB;
 
 class Soils extends Component
 {
@@ -37,10 +37,8 @@ class Soils extends Component
     public $filterByBusinessUnit = null;
     public $businessUnit = null;
 
-    // Properties for category and description search
-    public $categorySearch = [];
+    // Properties for description search (removed category)
     public $descriptionSearch = [];
-    public $showCategoryDropdown = [];
     public $showDescriptionDropdown = [];
 
     // Properties for seller name and address search
@@ -72,6 +70,8 @@ class Soils extends Component
     public $exportDateTo = '';
     public $exportType = 'current'; // 'current', 'all', 'date_range'
 
+    public $editSource = 'index';
+
     protected $rules = [
         'land_id' => 'required|exists:lands,id',
         'business_unit_id' => 'required|exists:business_units,id',
@@ -80,8 +80,8 @@ class Soils extends Component
         'soilDetails.*.nomor_ppjb' => 'required|string|max:255',
         'soilDetails.*.tanggal_ppjb' => 'required|date',
         'soilDetails.*.letak_tanah' => 'required|string|max:255',
-        'soilDetails.*.luas' => 'required|numeric|min:0',
-        'soilDetails.*.harga' => 'required|numeric|min:0',
+        'soilDetails.*.luas' => 'required|numeric|min:0.01', // Changed from min:0 to min:0.01
+        'soilDetails.*.harga' => 'required|numeric|min:0.01', // Changed from min:0 to min:0.01
         'soilDetails.*.bukti_kepemilikan' => 'required|string|max:255',
         'soilDetails.*.bukti_kepemilikan_details' => 'nullable|string|max:255',
         'soilDetails.*.atas_nama' => 'required|string|max:255',
@@ -145,13 +145,12 @@ class Soils extends Component
             'search' => $this->search,
             'business_unit_id' => $this->filterByBusinessUnit ?? $this->filterBusinessUnit,
             'land_id' => $this->filterLand,
-            '_token' => csrf_token(), // Add CSRF token
+            '_token' => csrf_token(),
         ];
         
         $this->hideExportModalView();
         session()->flash('message', 'Export completed successfully!');
         
-        // Use JavaScript to submit a POST form
         $this->dispatch('submit-export-form', params: $params);
     }
 
@@ -198,18 +197,21 @@ class Soils extends Component
         return $query->count();
     }
 
-    // Add mount method to handle business unit parameter
     public function mount($businessUnit = null, $soilId = null)
     {
-        // If a soilId is provided, show the detail immediately
         if ($soilId) {
             $this->showDetail($soilId);
         }
-        
-        // Initialize with one empty soil detail
-        $this->initializeSoilDetails();
 
-        // FIXED: Handle business unit parameter properly - support both ID and object
+        // Initialize BEFORE setting business unit data
+        $this->initializeSoilDetails();
+        
+        \Log::info('Mount called', [
+            'businessUnit' => $businessUnit,
+            'soilId' => $soilId,
+            'soilDetails_count' => count($this->soilDetails)
+        ]);
+
         if ($businessUnit) {
             if (is_numeric($businessUnit)) {
                 $this->businessUnit = BusinessUnit::find($businessUnit);
@@ -217,7 +219,7 @@ class Soils extends Component
                     $this->filterByBusinessUnit = $this->businessUnit->id;
                     $this->business_unit_id = $this->businessUnit->id;
                     $this->businessUnitSearch = $this->businessUnit->name;
-                    $this->allowBusinessUnitChange = false; // Default to locked when filtered
+                    $this->allowBusinessUnitChange = false;
                 }
             } elseif ($businessUnit instanceof BusinessUnit) {
                 $this->filterByBusinessUnit = $businessUnit->id;
@@ -226,7 +228,6 @@ class Soils extends Component
                 $this->businessUnitSearch = $businessUnit->name;
                 $this->allowBusinessUnitChange = false;
             } elseif (is_string($businessUnit)) {
-                // Handle string IDs from route parameters
                 $this->businessUnit = BusinessUnit::find((int)$businessUnit);
                 if ($this->businessUnit) {
                     $this->filterByBusinessUnit = $this->businessUnit->id;
@@ -236,34 +237,30 @@ class Soils extends Component
                 }
             }
         } else {
-            // No business unit parameter, allow normal dropdown behavior
             $this->allowBusinessUnitChange = true;
         }
     }
 
-    // FIXED: Add helper method to initialize soil details with proper formatting
     private function initializeSoilDetails()
     {
+        // Make sure we start with exactly one empty detail
         $this->soilDetails = [
             $this->createEmptySoilDetail()
         ];
 
-        // Initialize corresponding search arrays
+        // Reset search arrays to match
         $this->sellerNameSearch = [''];
         $this->sellerAddressSearch = [''];
         $this->showSellerNameDropdown = [false];
         $this->showSellerAddressDropdown = [false];
 
-        // Initialize land search
         $this->landSearch = '';
         $this->showLandDropdown = false;
 
-        // Initialize business unit search
         $this->businessUnitSearch = '';
         $this->showBusinessUnitDropdown = false;
     }
 
-    // FIXED: Add helper method to create empty soil detail with proper structure
     private function createEmptySoilDetail()
     {
         return [
@@ -285,7 +282,6 @@ class Soils extends Component
         ];
     }
 
-    // FIXED: Helper method to format numbers consistently
     private function formatNumber($value)
     {
         if (empty($value) || $value === '' || $value === 0) {
@@ -294,13 +290,13 @@ class Soils extends Component
         return number_format((int) $value, 0, ',', '.');
     }
 
-    // FIXED: Helper method to parse formatted numbers back to integers
     private function parseFormattedNumber($value)
     {
         if (empty($value) || $value === '') {
-            return '';
+            return 0;
         }
-        return (int) preg_replace('/[^\d]/', '', $value);
+        $cleaned = preg_replace('/[^\d]/', '', $value);
+        return $cleaned ? (int) $cleaned : 0;
     }
 
     public function render()
@@ -323,14 +319,12 @@ class Soils extends Component
             ->orderBy('created_at', 'desc')
             ->paginate(10);
 
-        // FIXED: Add missing variables for the index view
         $businessUnits = BusinessUnit::orderBy('name')->get();
         $lands = Land::orderBy('lokasi_lahan')->get();
 
         return view('livewire.soils.index', compact('soils', 'businessUnits', 'lands'));
     }
 
-    // FIXED: Add method to handle direct business unit ID from route
     public function setBusinessUnitFilter($businessUnitId)
     {
         $businessUnit = BusinessUnit::find($businessUnitId);
@@ -342,12 +336,10 @@ class Soils extends Component
         }
     }
 
-    // Update the showCreateForm method
     public function showCreateForm()
     {
         $this->resetForm();
         
-        // Set business unit behavior for create form
         if ($this->filterByBusinessUnit && $this->businessUnit) {
             $this->business_unit_id = $this->filterByBusinessUnit;
             $this->businessUnitSearch = $this->businessUnit->name;
@@ -360,18 +352,17 @@ class Soils extends Component
         $this->isEdit = false;
     }
 
-    public function showEditForm($id, $mode = 'details')
+    public function showEditForm($id, $mode = 'details', $source = 'index')
     {
         $this->soil = Soil::findOrFail($id);
         $this->soilId = $this->soil->id;
         $this->editMode = $mode;
+        $this->editSource = $source; // NEW: Store the source of the edit
         
         if ($mode === 'details') {
-            // Load soil details for editing
             $this->land_id = $this->soil->land_id;
             $this->business_unit_id = $this->soil->business_unit_id;
 
-            // Set land and business unit search values for edit mode
             if ($this->soil->land) {
                 $this->landSearch = $this->soil->land->lokasi_lahan;
             }
@@ -399,7 +390,6 @@ class Soils extends Component
                 ]
             ];
 
-            // Initialize seller search for edit mode
             $this->sellerNameSearch = [$this->soil->nama_penjual];
             $this->sellerAddressSearch = [$this->soil->alamat_penjual];
             $this->showSellerNameDropdown = [false];
@@ -407,9 +397,7 @@ class Soils extends Component
             
             $this->showForm = true;
         } elseif ($mode === 'costs') {
-            // Load additional costs for editing
             $this->biayaTambahan = [];
-            $this->categorySearch = [];
             $this->descriptionSearch = [];
             
             foreach ($this->soil->biayaTambahanSoils as $index => $biaya) {
@@ -422,9 +410,6 @@ class Soils extends Component
                     'date_cost' => $biaya->date_cost ? $biaya->date_cost->format('Y-m-d') : '',
                 ];
                 
-                // Get category through description relationship
-                $category = $biaya->description->category ?? null;
-                $this->categorySearch[$index] = $category ? $category->category : '';
                 $this->descriptionSearch[$index] = $biaya->description->description ?? '';
             }
             
@@ -440,14 +425,20 @@ class Soils extends Component
         $this->showDetailForm = true;
     }
 
-    public $biayaTambahan = []; // For managing additional costs separately
+    public $biayaTambahan = [];
 
     public function save()
     {
         $this->validate();
 
+        // DEBUG: Log what's in soilDetails
+        \Log::info('soilDetails content:', [
+            'count' => count($this->soilDetails),
+            'data' => $this->soilDetails
+        ]);
+
         if ($this->isEdit && $this->editMode === 'details') {
-            // Update existing record details only
+            // Update logic - this seems fine
             $soil = Soil::findOrFail($this->soilId);
             $detail = $this->soilDetails[0];
             
@@ -470,33 +461,70 @@ class Soils extends Component
             ]);
             
             session()->flash('message', 'Soil record details updated successfully.');
-        } else {
-            // Create multiple records from soil details (no additional costs)
-            foreach ($this->soilDetails as $detail) {
-                Soil::create([
-                    'land_id' => $this->land_id,
-                    'business_unit_id' => $this->business_unit_id,
-                    'nama_penjual' => $detail['nama_penjual'],
-                    'alamat_penjual' => $detail['alamat_penjual'],
-                    'nomor_ppjb' => $detail['nomor_ppjb'],
-                    'tanggal_ppjb' => $detail['tanggal_ppjb'],
-                    'letak_tanah' => $detail['letak_tanah'],
-                    'luas' => $this->parseFormattedNumber($detail['luas']),
-                    'harga' => $this->parseFormattedNumber($detail['harga']),
-                    'bukti_kepemilikan' => $detail['bukti_kepemilikan'],
-                    'bukti_kepemilikan_details' => $detail['bukti_kepemilikan_details'],
-                    'atas_nama' => $detail['atas_nama'],
-                    'nop_pbb' => $detail['nop_pbb'],
-                    'nama_notaris_ppat' => $detail['nama_notaris_ppat'],
-                    'keterangan' => $detail['keterangan'],
-                ]);
+            
+            if ($this->editSource === 'detail') {
+                $this->showForm = false;
+                $this->showDetailForm = true;
+                $this->isEdit = false;
+            } else {
+                $this->resetForm();
+                $this->showForm = false;
             }
             
-            session()->flash('message', count($this->soilDetails) . ' soil records created successfully.');
+        } else {
+            // CREATE NEW RECORDS - This is where the double entry happens
+            
+            // PROBLEM: Your soilDetails array might have empty or duplicate entries
+            // SOLUTION: Filter and validate before creating
+            
+            $validDetails = collect($this->soilDetails)->filter(function($detail) {
+                // Only process details that have required fields filled
+                return !empty($detail['nama_penjual']) && 
+                    !empty($detail['alamat_penjual']) && 
+                    !empty($detail['nomor_ppjb']) &&
+                    !empty($detail['letak_tanah']);
+            })->values()->all();
+            
+            \Log::info('Valid details after filtering:', [
+                'original_count' => count($this->soilDetails),
+                'valid_count' => count($validDetails),
+                'valid_data' => $validDetails
+            ]);
+            
+            if (empty($validDetails)) {
+                session()->flash('error', 'No valid soil details to save.');
+                return;
+            }
+            
+            foreach ($validDetails as $detail) {
+                // Validate each field before creating
+                $createData = [
+                    'land_id' => $this->land_id,
+                    'business_unit_id' => $this->business_unit_id,
+                    'nama_penjual' => trim($detail['nama_penjual']),
+                    'alamat_penjual' => trim($detail['alamat_penjual']),
+                    'nomor_ppjb' => trim($detail['nomor_ppjb']),
+                    'tanggal_ppjb' => $detail['tanggal_ppjb'],
+                    'letak_tanah' => trim($detail['letak_tanah']),
+                    'luas' => $this->parseFormattedNumber($detail['luas'] ?? ''),
+                    'harga' => $this->parseFormattedNumber($detail['harga'] ?? ''),
+                    'bukti_kepemilikan' => trim($detail['bukti_kepemilikan'] ?? ''),
+                    'bukti_kepemilikan_details' => trim($detail['bukti_kepemilikan_details'] ?? ''),
+                    'atas_nama' => trim($detail['atas_nama'] ?? ''),
+                    'nop_pbb' => trim($detail['nop_pbb'] ?? ''),
+                    'nama_notaris_ppat' => trim($detail['nama_notaris_ppat'] ?? ''),
+                    'keterangan' => trim($detail['keterangan'] ?? ''),
+                ];
+                
+                \Log::info('Creating soil record:', $createData);
+                
+                Soil::create($createData);
+            }
+            
+            session()->flash('message', count($validDetails) . ' soil records created successfully.');
+            $this->resetForm();
+            $this->showForm = false;
         }
-
-        $this->resetForm();
-        $this->showForm = false;
     }
 
     public function saveAdditionalCosts()
@@ -512,65 +540,148 @@ class Soils extends Component
         $this->updateBiayaTambahan($soil, $this->biayaTambahan);
         
         session()->flash('message', 'Additional costs updated successfully.');
-        $this->showAdditionalCostsForm = false;
-        $this->resetForm();
+        
+        // NEW: Return based on where the edit was initiated from
+        if ($this->editSource === 'detail') {
+            // Return to detail view
+            $this->showAdditionalCostsForm = false;
+            $this->showDetailForm = true;
+            $this->isEdit = false;
+            // Keep soilId to stay on the detail page
+        } else {
+            // Return to index view
+            $this->showAdditionalCostsForm = false;
+            $this->resetForm();
+        }
     }
 
     private function updateBiayaTambahan($soil, $biayaTambahan)
     {
-        if (empty($biayaTambahan) || !is_array($biayaTambahan)) {
-            // Delete all existing if no biayaTambahan
-            $soil->biayaTambahanSoils()->delete();
-            return;
-        }
+        // Use database transaction to prevent partial updates
+        DB::transaction(function () use ($soil, $biayaTambahan) {
+            
+            // Set history logging flag to prevent automatic history creation
+            $soil->historyLogging = true;
+            
+            if (empty($biayaTambahan) || !is_array($biayaTambahan)) {
+                // Delete all existing costs
+                $existingCosts = $soil->biayaTambahanSoils()->with('description')->get();
+                foreach ($existingCosts as $cost) {
+                    $description = $cost->description->description ?? 'Unknown';
+                    $oldCostData = [
+                        'description' => $description,
+                        'harga' => $cost->harga,
+                        'cost_type' => $cost->cost_type,
+                        'date_cost' => $cost->date_cost,
+                    ];
+                    
+                    $soil->logAdditionalCostHistory('deleted', [], $oldCostData);
+                }
+                
+                $soil->biayaTambahanSoils()->delete();
+                
+                // Reset history logging flag
+                $soil->historyLogging = false;
+                return;
+            }
 
-        // Get existing IDs
-        $existingIds = collect($biayaTambahan)
-            ->filter(function($item) { return isset($item['id']); })
-            ->pluck('id')
-            ->toArray();
+            $existingIds = collect($biayaTambahan)
+                ->filter(function($item) { return isset($item['id']); })
+                ->pluck('id')
+                ->toArray();
 
-        // Delete removed items
-        $soil->biayaTambahanSoils()
-            ->whereNotIn('id', $existingIds)
-            ->delete();
+            // Delete costs that are no longer in the array
+            $costsToDelete = $soil->biayaTambahanSoils()
+                ->whereNotIn('id', $existingIds)
+                ->with('description')
+                ->get();
+                
+            foreach ($costsToDelete as $cost) {
+                $description = $cost->description->description ?? 'Unknown';
+                $oldCostData = [
+                    'description' => $description,
+                    'harga' => $cost->harga,
+                    'cost_type' => $cost->cost_type,
+                    'date_cost' => $cost->date_cost,
+                ];
+                
+                $soil->logAdditionalCostHistory('deleted', [], $oldCostData);
+            }
+            
+            $soil->biayaTambahanSoils()->whereNotIn('id', $existingIds)->delete();
 
-        // Update or create items
-        foreach ($biayaTambahan as $biaya) {
-            if (!empty($biaya['description_id']) && !empty($biaya['harga'])) {
-                // Convert harga from formatted string to integer
-                $harga = $this->parseFormattedNumber($biaya['harga']);
-
-                if (isset($biaya['id'])) {
-                    // Update existing
-                    BiayaTambahanSoil::where('id', $biaya['id'])->update([
-                        'description_id' => $biaya['description_id'],
+            foreach ($biayaTambahan as $biaya) {
+                if (!empty($biaya['description_id']) && !empty($biaya['harga'])) {
+                    $harga = $this->parseFormattedNumber($biaya['harga']);
+                    
+                    $description = \App\Models\DescriptionBiayaTambahanSoil::find($biaya['description_id']);
+                    $descriptionName = $description->description ?? 'Unknown';
+                    
+                    $costData = [
+                        'description' => $descriptionName,
                         'harga' => $harga,
                         'cost_type' => $biaya['cost_type'],
                         'date_cost' => $biaya['date_cost'],
-                    ]);
-                } else {
-                    // Create new
-                    BiayaTambahanSoil::create([
-                        'soil_id' => $soil->id,
-                        'description_id' => $biaya['description_id'],
-                        'harga' => $harga,
-                        'cost_type' => $biaya['cost_type'],
-                        'date_cost' => $biaya['date_cost'],
-                    ]);
+                    ];
+
+                    if (isset($biaya['id'])) {
+                        // UPDATE EXISTING COST
+                        $existingCost = BiayaTambahanSoil::with('description')->find($biaya['id']);
+                        
+                        if ($existingCost) {
+                            $oldCostData = [
+                                'description' => $existingCost->description->description ?? 'Unknown',
+                                'harga' => $existingCost->harga,
+                                'cost_type' => $existingCost->cost_type,
+                                'date_cost' => $existingCost->date_cost,
+                            ];
+                            
+                            $hasChanges = (
+                                $existingCost->description_id != $biaya['description_id'] ||
+                                $existingCost->harga != $harga ||
+                                $existingCost->cost_type != $biaya['cost_type'] ||
+                                $existingCost->date_cost != $biaya['date_cost']
+                            );
+                            
+                            if ($hasChanges) {
+                                // SOLUTION: Use updateQuietly to bypass model events
+                                $existingCost->updateQuietly([
+                                    'description_id' => $biaya['description_id'],
+                                    'harga' => $harga,
+                                    'cost_type' => $biaya['cost_type'],
+                                    'date_cost' => $biaya['date_cost']
+                                ]);
+                                
+                                // Only create our custom history entry
+                                $soil->logAdditionalCostHistory('updated', $costData, $oldCostData);
+                            }
+                        }
+                    } else {
+                        // CREATE NEW COST
+                        BiayaTambahanSoil::create([
+                            'soil_id' => $soil->id,
+                            'description_id' => $biaya['description_id'],
+                            'harga' => $harga,
+                            'cost_type' => $biaya['cost_type'],
+                            'date_cost' => $biaya['date_cost'],
+                        ]);
+                        
+                        $soil->logAdditionalCostHistory('added', $costData);
+                    }
                 }
             }
-        }
+            
+            // Reset history logging flag
+            $soil->historyLogging = false;
+        });
     }
 
     public function delete($id)
     {
         $soil = Soil::findOrFail($id);
         
-        // Delete related additional costs first
         $soil->biayaTambahanSoils()->delete();
         
-        // Delete the soil record
         $soil->delete();
         session()->flash('message', 'Soil record deleted successfully.');
     }
@@ -583,27 +694,23 @@ class Soils extends Component
         $this->resetForm();
     }
 
-    // FIXED: Update the resetForm method
     public function resetForm()
     {
         $this->reset([
-            'soil', 'soilId', 'land_id', 'editMode', 'biayaTambahan',
-            'categorySearch', 'descriptionSearch', 'showCategoryDropdown', 'showDescriptionDropdown',
+            'soil', 'soilId', 'land_id', 'editMode', 'editSource', 'biayaTambahan',
+            'descriptionSearch', 'showDescriptionDropdown',
             'sellerNameSearch', 'sellerAddressSearch', 'showSellerNameDropdown', 'showSellerAddressDropdown',
             'landSearch', 'showLandDropdown', 'businessUnitSearch', 'showBusinessUnitDropdown'
         ]);
         
-        // Reset soil details with proper initialization
+        // Reinitialize with clean state
         $this->initializeSoilDetails();
 
-        // Handle business unit reset based on filter status
         if ($this->filterByBusinessUnit && $this->businessUnit) {
-            // Keep the filtered business unit
             $this->business_unit_id = $this->businessUnit->id;
             $this->businessUnitSearch = $this->businessUnit->name;
             $this->allowBusinessUnitChange = false;
         } else {
-            // Reset everything for normal mode
             $this->business_unit_id = '';
             $this->businessUnitSearch = '';
             $this->allowBusinessUnitChange = true;
@@ -612,14 +719,12 @@ class Soils extends Component
         $this->resetValidation();
     }
 
-    // Update the existing resetFilters method to clear search values
     public function resetFilters()
     {
         $this->filterBusinessUnit = '';
         $this->filterLand = '';
         $this->search = '';
         
-        // Clear dropdown search values
         $this->filterBusinessUnitSearch = '';
         $this->filterLandSearch = '';
         $this->showBusinessUnitFilterDropdown = false;
@@ -643,7 +748,6 @@ class Soils extends Component
         $this->resetPage();
     }
 
-    // Add method to clear business unit filter
     public function clearBusinessUnitFilter()
     {
         $this->filterByBusinessUnit = null;
@@ -652,19 +756,16 @@ class Soils extends Component
         return redirect()->route('soils');
     }
 
-    // Helper method to get the current business unit name for display
     public function getCurrentBusinessUnitName()
     {
         return $this->businessUnit ? $this->businessUnit->name : null;
     }
 
-    // Helper method to check if we're currently filtering
     public function isFiltered()
     {
         return !is_null($this->filterByBusinessUnit);
     }
 
-    // Method to go back to the business unit detail page
     public function backToBusinessUnit()
     {
         if ($this->businessUnit) {
@@ -673,7 +774,6 @@ class Soils extends Component
         return redirect()->route('business-units');
     }
 
-    // Helper method to get bukti kepemilikan options
     public function getBuktiKepemilikanOptions()
     {
         return [
@@ -688,30 +788,29 @@ class Soils extends Component
         ];
     }
 
-    // FIXED: Methods for managing soil details with proper number formatting
     public function addSoilDetail()
     {
-        $index = count($this->soilDetails);
-        
-        // Add new soil detail with proper structure
         $this->soilDetails[] = $this->createEmptySoilDetail();
-
-        // Add corresponding search arrays
-        $this->sellerNameSearch[$index] = '';
-        $this->sellerAddressSearch[$index] = '';
-        $this->showSellerNameDropdown[$index] = false;
-        $this->showSellerAddressDropdown[$index] = false;
+        
+        $newIndex = count($this->soilDetails) - 1;
+        
+        $this->sellerNameSearch[$newIndex] = '';
+        $this->sellerAddressSearch[$newIndex] = '';
+        $this->showSellerNameDropdown[$newIndex] = false;
+        $this->showSellerAddressDropdown[$newIndex] = false;
     }
 
     public function removeSoilDetail($index)
     {
         if (count($this->soilDetails) > 1) {
-            unset($this->soilDetails[$index]);
-            unset($this->sellerNameSearch[$index]);
-            unset($this->sellerAddressSearch[$index]);
-            unset($this->showSellerNameDropdown[$index]);
-            unset($this->showSellerAddressDropdown[$index]);
+            // Remove the specific index
+            array_splice($this->soilDetails, $index, 1);
+            array_splice($this->sellerNameSearch, $index, 1);
+            array_splice($this->sellerAddressSearch, $index, 1);
+            array_splice($this->showSellerNameDropdown, $index, 1);
+            array_splice($this->showSellerAddressDropdown, $index, 1);
             
+            // Re-index arrays to prevent gaps
             $this->soilDetails = array_values($this->soilDetails);
             $this->sellerNameSearch = array_values($this->sellerNameSearch);
             $this->sellerAddressSearch = array_values($this->sellerAddressSearch);
@@ -723,7 +822,6 @@ class Soils extends Component
     // Seller name search methods
     public function updatedSellerNameSearch($value, $key)
     {
-        // Update the actual soil detail
         if (isset($this->soilDetails[$key])) {
             $this->soilDetails[$key]['nama_penjual'] = $value;
         }
@@ -731,7 +829,6 @@ class Soils extends Component
 
     public function searchSellerNames($index)
     {
-        // Initialize arrays if not set
         if (!is_array($this->showSellerNameDropdown)) {
             $this->showSellerNameDropdown = [];
         }
@@ -739,13 +836,11 @@ class Soils extends Component
             $this->showSellerAddressDropdown = [];
         }
         
-        // Only show the current dropdown, hide others
         for ($i = 0; $i < count($this->soilDetails); $i++) {
             $this->showSellerNameDropdown[$i] = ($i === $index);
             $this->showSellerAddressDropdown[$i] = false;
         }
         
-        // Ensure the dropdown stays open
         $this->showSellerNameDropdown[$index] = true;
     }
 
@@ -765,7 +860,6 @@ class Soils extends Component
             ->whereNotNull('nama_penjual')
             ->where('nama_penjual', '!=', '');
         
-        // Only filter if there's search text, otherwise show all
         if (!empty(trim($search))) {
             $query->where('nama_penjual', 'like', '%' . $search . '%');
         }
@@ -776,7 +870,6 @@ class Soils extends Component
     // Seller address search methods
     public function updatedSellerAddressSearch($value, $key)
     {
-        // Update the actual soil detail
         if (isset($this->soilDetails[$key])) {
             $this->soilDetails[$key]['alamat_penjual'] = $value;
         }
@@ -784,7 +877,6 @@ class Soils extends Component
 
     public function searchSellerAddresses($index)
     {
-        // Initialize arrays if not set
         if (!is_array($this->showSellerNameDropdown)) {
             $this->showSellerNameDropdown = [];
         }
@@ -792,13 +884,11 @@ class Soils extends Component
             $this->showSellerAddressDropdown = [];
         }
         
-        // Only show the current dropdown, hide others
         for ($i = 0; $i < count($this->soilDetails); $i++) {
             $this->showSellerNameDropdown[$i] = false;
             $this->showSellerAddressDropdown[$i] = ($i === $index);
         }
         
-        // Ensure the dropdown stays open
         $this->showSellerAddressDropdown[$index] = true;
     }
 
@@ -818,7 +908,6 @@ class Soils extends Component
             ->whereNotNull('alamat_penjual')
             ->where('alamat_penjual', '!=', '');
         
-        // Only filter if there's search text, otherwise show all
         if (!empty(trim($search))) {
             $query->where('alamat_penjual', 'like', '%' . $search . '%');
         }
@@ -826,7 +915,7 @@ class Soils extends Component
         return $query->orderBy('alamat_penjual')->limit(20)->get();
     }
 
-    // Additional costs methods (for separate management)
+    // Additional costs methods
     public function addBiayaTambahan()
     {
         $index = count($this->biayaTambahan);
@@ -837,24 +926,18 @@ class Soils extends Component
             'cost_type' => 'standard',
             'date_cost' => '',
         ];
-        $this->categorySearch[$index] = '';
         $this->descriptionSearch[$index] = '';
-        $this->showCategoryDropdown[$index] = false;
         $this->showDescriptionDropdown[$index] = false;
     }
 
     public function removeBiayaTambahan($index)
     {
         unset($this->biayaTambahan[$index]);
-        unset($this->categorySearch[$index]);
         unset($this->descriptionSearch[$index]);
-        unset($this->showCategoryDropdown[$index]);
         unset($this->showDescriptionDropdown[$index]);
         
         $this->biayaTambahan = array_values($this->biayaTambahan);
-        $this->categorySearch = array_values($this->categorySearch);
         $this->descriptionSearch = array_values($this->descriptionSearch);
-        $this->showCategoryDropdown = array_values($this->showCategoryDropdown);
         $this->showDescriptionDropdown = array_values($this->showDescriptionDropdown);
     }
 
@@ -866,7 +949,8 @@ class Soils extends Component
         
         return collect($this->biayaTambahan)->sum(function($item) {
             if (isset($item['harga'])) {
-                return $this->parseFormattedNumber($item['harga']);
+                $parsed = $this->parseFormattedNumber($item['harga']);
+                return is_numeric($parsed) ? (int)$parsed : 0;
             }
             return 0;
         });
@@ -877,109 +961,24 @@ class Soils extends Component
         return BiayaTambahanSoil::getCostTypeOptions();
     }
 
-    // FIXED: Category search methods - improved to prevent auto-closing
-    public function updatedCategorySearch($value, $key)
-    {
-        // Don't close dropdowns during typing - just update the search
-        if (!isset($this->showCategoryDropdown[$key])) {
-            $this->showCategoryDropdown[$key] = false;
-        }
-        if (!isset($this->showDescriptionDropdown[$key])) {
-            $this->showDescriptionDropdown[$key] = false;
-        }
-        
-        // Reset description when category search changes
-        $this->descriptionSearch[$key] = '';
-        if (isset($this->biayaTambahan[$key])) {
-            $this->biayaTambahan[$key]['description_id'] = '';
-        }
-    }
-
-    public function searchCategories($index)
-    {
-        // Initialize arrays if not set
-        if (!is_array($this->showCategoryDropdown)) {
-            $this->showCategoryDropdown = [];
-        }
-        if (!is_array($this->showDescriptionDropdown)) {
-            $this->showDescriptionDropdown = [];
-        }
-        
-        // Only show the current dropdown, hide others
-        for ($i = 0; $i < count($this->biayaTambahan); $i++) {
-            $this->showCategoryDropdown[$i] = ($i === $index);
-            $this->showDescriptionDropdown[$i] = false;
-        }
-        
-        // Ensure the dropdown stays open
-        $this->showCategoryDropdown[$index] = true;
-    }
-
-    public function selectCategory($index, $categoryId, $categoryName)
-    {
-        // Set the selected category
-        $this->categorySearch[$index] = $categoryName;
-        $this->showCategoryDropdown[$index] = false;
-        
-        // Reset description when category changes
-        $this->descriptionSearch[$index] = '';
-        $this->showDescriptionDropdown[$index] = false;
-        
-        // Clear the description_id since category changed
-        if (isset($this->biayaTambahan[$index])) {
-            $this->biayaTambahan[$index]['description_id'] = '';
-        }
-    }
-
-    public function getFilteredCategories($index)
-    {
-        $search = $this->categorySearch[$index] ?? '';
-        
-        $query = CategoryBiayaTambahanSoil::query();
-        
-        // Only filter if there's search text, otherwise show all
-        if (!empty(trim($search))) {
-            $query->where('category', 'like', '%' . $search . '%');
-        }
-        
-        return $query->orderBy('category')->limit(20)->get();
-    }
-
-    // FIXED: Description search methods - improved to prevent auto-closing
+    // Description search methods (removed category)
     public function updatedDescriptionSearch($value, $key)
     {
-        // Don't auto-close during typing - just update search
-        $categorySearch = $this->categorySearch[$key] ?? '';
-        if (!empty($categorySearch)) {
-            if (!isset($this->showDescriptionDropdown[$key])) {
-                $this->showDescriptionDropdown[$key] = false;
-            }
+        if (!isset($this->showDescriptionDropdown[$key])) {
+            $this->showDescriptionDropdown[$key] = false;
         }
     }
 
     public function searchDescriptions($index)
     {
-        // Only show if category is selected
-        $categorySearch = $this->categorySearch[$index] ?? '';
-        if (empty($categorySearch)) {
-            return;
-        }
-        
-        // Initialize arrays if not set
-        if (!is_array($this->showCategoryDropdown)) {
-            $this->showCategoryDropdown = [];
-        }
         if (!is_array($this->showDescriptionDropdown)) {
             $this->showDescriptionDropdown = [];
         }
         
-        // Only show the current dropdown, hide others
         for ($i = 0; $i < count($this->biayaTambahan); $i++) {
-            $this->showCategoryDropdown[$i] = false;
             $this->showDescriptionDropdown[$i] = ($i === $index);
         }
         
-        // Ensure the dropdown stays open
         $this->showDescriptionDropdown[$index] = true;
     }
 
@@ -993,18 +992,9 @@ class Soils extends Component
     public function getFilteredDescriptions($index)
     {
         $search = $this->descriptionSearch[$index] ?? '';
-        $categorySearch = $this->categorySearch[$index] ?? '';
         
-        $query = DescriptionBiayaTambahanSoil::with('category');
+        $query = DescriptionBiayaTambahanSoil::query();
         
-        // Filter by category first (this is always required)
-        if (!empty($categorySearch)) {
-            $query->whereHas('category', function($q) use ($categorySearch) {
-                $q->where('category', 'like', '%' . $categorySearch . '%');
-            });
-        }
-        
-        // Only filter by description search if there's search text
         if (!empty(trim($search))) {
             $query->where('description', 'like', '%' . $search . '%');
         }
@@ -1012,14 +1002,11 @@ class Soils extends Component
         return $query->orderBy('description')->limit(20)->get();
     }
 
-    // FIXED: Updated number formatting methods for biaya tambahan
     public function updatedBiayaTambahanHarga($value, $propertyName)
     {
-        // Extract index from property name (e.g., "0.harga" -> 0)
         $parts = explode('.', $propertyName);
         $index = $parts[0];
         
-        // Parse and format the number
         $numericValue = $this->parseFormattedNumber($value);
         
         if ($numericValue) {
@@ -1031,14 +1018,11 @@ class Soils extends Component
         }
     }
 
-    // FIXED: Updated number formatting methods for soil details
     public function updatedSoilDetailsLuas($value, $propertyName)
     {
-        // Extract index from property name (e.g., "0.luas_display" -> 0)
         $parts = explode('.', $propertyName);
         $index = $parts[0];
         
-        // Parse and format the number
         $numericValue = $this->parseFormattedNumber($value);
         
         if ($numericValue) {
@@ -1052,11 +1036,9 @@ class Soils extends Component
 
     public function updatedSoilDetailsHarga($value, $propertyName)
     {
-        // Extract index from property name (e.g., "0.harga_display" -> 0)
         $parts = explode('.', $propertyName);
         $index = $parts[0];
         
-        // Parse and format the number
         $numericValue = $this->parseFormattedNumber($value);
         
         if ($numericValue) {
@@ -1068,20 +1050,15 @@ class Soils extends Component
         }
     }
 
-    // FIXED: Close dropdowns when clicking outside - use event listener
     #[On('closeDropdowns')]
     public function closeDropdowns()
     {
-        // Close additional costs dropdowns
         if (is_array($this->biayaTambahan) && count($this->biayaTambahan) > 0) {
-            $this->showCategoryDropdown = array_fill(0, count($this->biayaTambahan), false);
             $this->showDescriptionDropdown = array_fill(0, count($this->biayaTambahan), false);
         } else {
-            $this->showCategoryDropdown = [];
             $this->showDescriptionDropdown = [];
         }
 
-        // Close seller search dropdowns
         if (is_array($this->soilDetails) && count($this->soilDetails) > 0) {
             $this->showSellerNameDropdown = array_fill(0, count($this->soilDetails), false);
             $this->showSellerAddressDropdown = array_fill(0, count($this->soilDetails), false);
@@ -1090,13 +1067,8 @@ class Soils extends Component
             $this->showSellerAddressDropdown = [];
         }
 
-        // Close land search dropdown
         $this->showLandDropdown = false;
-
-        // Close business unit search dropdown
         $this->showBusinessUnitDropdown = false;
-
-        // Close filter dropdowns
         $this->showBusinessUnitFilterDropdown = false;
         $this->showLandFilterDropdown = false;
     }
@@ -1104,7 +1076,6 @@ class Soils extends Component
     // Land search methods
     public function updatedLandSearch($value)
     {
-        // Don't auto-select if typing
         if (!$this->showLandDropdown) {
             $this->land_id = '';
         }
@@ -1129,7 +1100,6 @@ class Soils extends Component
         
         $query = Land::query();
         
-        // Only filter if there's search text, otherwise show all
         if (!empty(trim($search))) {
             $query->where('lokasi_lahan', 'like', '%' . $search . '%');
         }
@@ -1137,10 +1107,9 @@ class Soils extends Component
         return $query->orderBy('lokasi_lahan')->limit(20)->get();
     }
 
-    // FIXED: Business Unit search methods - add missing updater method
+    // Business Unit search methods
     public function updatedBusinessUnitSearch($value)
     {
-        // Don't auto-select if typing (unless we're in filter mode)
         if (!$this->showBusinessUnitDropdown && !$this->filterByBusinessUnit) {
             $this->business_unit_id = '';
         }
@@ -1148,7 +1117,6 @@ class Soils extends Component
 
     public function searchBusinessUnits()
     {
-        // Allow search if business unit change is allowed OR not filtering by business unit
         if ($this->allowBusinessUnitChange || !$this->filterByBusinessUnit) {
             $this->showBusinessUnitDropdown = true;
             $this->showLandDropdown = false;
@@ -1166,7 +1134,6 @@ class Soils extends Component
         $this->allowBusinessUnitChange = false;
         $this->showBusinessUnitDropdown = false;
         
-        // If we have a filtered business unit, revert to it
         if ($this->filterByBusinessUnit && $this->businessUnit) {
             $this->business_unit_id = $this->businessUnit->id;
             $this->businessUnitSearch = $this->businessUnit->name;
@@ -1179,10 +1146,7 @@ class Soils extends Component
         $this->businessUnitSearch = $businessUnitName;
         $this->showBusinessUnitDropdown = false;
 
-        // If we're in filter mode and user changed business unit, 
-        // we might want to update the filter or warn them
         if ($this->filterByBusinessUnit && $businessUnitId != $this->filterByBusinessUnit) {
-            // Optionally, you can add a warning or confirmation here
             session()->flash('warning', 'You have changed the business unit from the filtered selection.');
         }
     }
@@ -1193,12 +1157,9 @@ class Soils extends Component
         
         $query = BusinessUnit::query();
         
-        // If we're filtering by business unit and change is not allowed,
-        // only show the filtered business unit
         if ($this->filterByBusinessUnit && !$this->allowBusinessUnitChange) {
             $query->where('id', $this->filterByBusinessUnit);
         } else {
-            // Normal search behavior
             if (!empty(trim($search))) {
                 $query->where('name', 'like', '%' . $search . '%');
             }
@@ -1207,7 +1168,6 @@ class Soils extends Component
         return $query->orderBy('name')->limit(20)->get();
     }
 
-    // Get grand total of all soil details
     public function getGrandTotal()
     {
         $total = 0;
@@ -1221,7 +1181,6 @@ class Soils extends Component
     // Business Unit Filter Dropdown Methods
     public function updatedFilterBusinessUnitSearch($value)
     {
-        // Don't auto-select if typing
         if (!$this->showBusinessUnitFilterDropdown) {
             $this->filterBusinessUnit = '';
         }
@@ -1238,7 +1197,7 @@ class Soils extends Component
         $this->filterBusinessUnit = $businessUnitId;
         $this->filterBusinessUnitSearch = $businessUnitName;
         $this->showBusinessUnitFilterDropdown = false;
-        $this->resetPage(); // Reset pagination when filter changes
+        $this->resetPage();
     }
 
     public function clearBusinessUnitFilterSearch()
@@ -1255,7 +1214,6 @@ class Soils extends Component
         
         $query = BusinessUnit::query();
         
-        // Only filter if there's search text, otherwise show all
         if (!empty(trim($search))) {
             $query->where('name', 'like', '%' . $search . '%')
                 ->orWhere('code', 'like', '%' . $search . '%');
@@ -1267,7 +1225,6 @@ class Soils extends Component
     // Land Filter Dropdown Methods
     public function updatedFilterLandSearch($value)
     {
-        // Don't auto-select if typing
         if (!$this->showLandFilterDropdown) {
             $this->filterLand = '';
         }
@@ -1284,7 +1241,7 @@ class Soils extends Component
         $this->filterLand = $landId;
         $this->filterLandSearch = $landName;
         $this->showLandFilterDropdown = false;
-        $this->resetPage(); // Reset pagination when filter changes
+        $this->resetPage();
     }
 
     public function clearLandFilter()
@@ -1301,7 +1258,6 @@ class Soils extends Component
         
         $query = Land::query();
         
-        // Only filter if there's search text, otherwise show all
         if (!empty(trim($search))) {
             $query->where('lokasi_lahan', 'like', '%' . $search . '%');
         }

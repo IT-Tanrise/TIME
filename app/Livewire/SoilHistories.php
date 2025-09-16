@@ -72,7 +72,9 @@ class SoilHistories extends Component
                 $query->whereDate('created_at', '<=', $this->filterDateTo);
             })
             ->when($this->filterColumn, function($query) {
-                $query->whereJsonContains('changes', $this->filterColumn);
+                // Only apply column filter for 'updated' actions, not additional cost actions
+                $query->where('action', 'updated')
+                      ->whereJsonContains('changes', $this->filterColumn);
             })
             ->orderBy('created_at', 'desc')
             ->paginate(10);
@@ -88,6 +90,10 @@ class SoilHistories extends Component
                         'created' => 'Record Created',
                         'updated' => 'Record Updated',
                         'deleted' => 'Record Deleted',
+                        'restored' => 'Record Restored',
+                        'additional_cost_added' => 'Additional Cost Added',
+                        'additional_cost_updated' => 'Additional Cost Updated',
+                        'additional_cost_deleted' => 'Additional Cost Deleted',
                         default => ucfirst($action)
                     }
                 ];
@@ -101,7 +107,7 @@ class SoilHistories extends Component
             ->unique()
             ->values();
 
-        // Get available columns that have been updated
+        // Get available columns that have been updated (only for 'updated' actions)
         $availableColumns = $this->getAvailableColumns();
 
         return view('livewire.soil-histories.index', compact('histories', 'availableActions', 'availableUsers', 'availableColumns'));
@@ -138,7 +144,9 @@ class SoilHistories extends Component
     public function updatingFilterAction()
     {
         $this->resetPage();
+        
         // Reset column filter when action changes
+        // Column filter only applies to 'updated' actions, not additional cost actions
         if ($this->filterAction !== 'updated') {
             $this->filterColumn = '';
         }
@@ -190,12 +198,24 @@ class SoilHistories extends Component
     // Helper method to get change details
     public function getChangeDetails($history)
     {
+        // Special handling for additional cost actions
+        if (in_array($history->action, ['additional_cost_added', 'additional_cost_updated', 'additional_cost_deleted'])) {
+            return $this->getAdditionalCostDetails($history);
+        }
+
         if (!$history->old_values || !$history->new_values) {
             return null;
         }
 
         $changes = [];
-        foreach ($history->changes as $field) {
+        
+        // If changes array is empty or null, determine from old/new values
+        $fieldsToCheck = $history->changes ?? array_keys(array_merge(
+            $history->old_values ?? [],
+            $history->new_values ?? []
+        ));
+
+        foreach ($fieldsToCheck as $field) {
             $oldValue = $history->old_values[$field] ?? '';
             $newValue = $history->new_values[$field] ?? '';
             
@@ -213,6 +233,122 @@ class SoilHistories extends Component
         return $changes;
     }
 
+    // New method to handle additional cost details
+    private function getAdditionalCostDetails($history)
+    {
+        $details = [];
+        
+        if ($history->action === 'additional_cost_added' && $history->new_values) {
+            // For added costs, show the new values
+            $details[] = [
+                'field' => 'Cost Description',
+                'old' => '',
+                'new' => $history->new_values['additional_cost_description'] ?? 
+                        $history->new_values['description'] ?? 
+                        'N/A'
+            ];
+            $details[] = [
+                'field' => 'Amount',
+                'old' => '',
+                'new' => $this->formatValue('additional_cost_amount', 
+                        $history->new_values['additional_cost_amount'] ?? 
+                        $history->new_values['amount'] ?? 
+                        $history->new_values['additional_cost_harga'] ?? 
+                        $history->new_values['harga'] ?? 
+                        0)
+            ];
+            $details[] = [
+                'field' => 'Cost Type',
+                'old' => '',
+                'new' => $this->formatValue('additional_cost_type',
+                        $history->new_values['additional_cost_type'] ?? 
+                        $history->new_values['additional_cost_cost_type'] ?? 
+                        $history->new_values['cost_type'] ?? 
+                        $history->new_values['type'] ?? 
+                        'standard')
+            ];
+            if (isset($history->new_values['additional_cost_date']) || isset($history->new_values['additional_cost_date_cost']) || isset($history->new_values['date'])) {
+                $details[] = [
+                    'field' => 'Date',
+                    'old' => '',
+                    'new' => $this->formatValue('additional_cost_date',
+                            $history->new_values['additional_cost_date'] ?? 
+                            $history->new_values['additional_cost_date_cost'] ?? 
+                            $history->new_values['date'] ?? 
+                            null)
+                ];
+            }
+        } elseif ($history->action === 'additional_cost_updated' && $history->old_values && $history->new_values) {
+            // For updated costs, show what changed
+            $costFields = [
+                'description' => ['additional_cost_description', 'description'],
+                'amount' => ['additional_cost_amount', 'additional_cost_harga', 'amount', 'harga'],
+                'type' => ['additional_cost_type', 'additional_cost_cost_type', 'cost_type', 'type'],
+                'date' => ['additional_cost_date', 'additional_cost_date_cost', 'date']
+            ];
+            
+            foreach ($costFields as $displayName => $possibleKeys) {
+                $oldValue = null;
+                $newValue = null;
+                $foundKey = null;
+                
+                // Find which key exists in the data
+                foreach ($possibleKeys as $key) {
+                    if (isset($history->new_values[$key]) || isset($history->old_values[$key])) {
+                        $foundKey = $key;
+                        $oldValue = $history->old_values[$key] ?? null;
+                        $newValue = $history->new_values[$key] ?? null;
+                        break;
+                    }
+                }
+                
+                if ($foundKey && $oldValue !== $newValue) {
+                    $fieldName = match($displayName) {
+                        'description' => 'Cost Description',
+                        'amount' => 'Amount',
+                        'type' => 'Cost Type',
+                        'date' => 'Date',
+                        default => ucfirst($displayName)
+                    };
+                    
+                    $formattingKey = match($displayName) {
+                        'amount' => 'additional_cost_amount',
+                        'type' => 'additional_cost_type',
+                        'date' => 'additional_cost_date',
+                        default => $foundKey
+                    };
+                    
+                    $details[] = [
+                        'field' => $fieldName,
+                        'old' => $this->formatValue($formattingKey, $oldValue),
+                        'new' => $this->formatValue($formattingKey, $newValue)
+                    ];
+                }
+            }
+        } elseif ($history->action === 'additional_cost_deleted' && $history->old_values) {
+            // For deleted costs, show what was deleted
+            $details[] = [
+                'field' => 'Cost Description',
+                'old' => $history->old_values['additional_cost_description'] ?? 
+                        $history->old_values['description'] ?? 
+                        'N/A',
+                'new' => 'Deleted'
+            ];
+            $details[] = [
+                'field' => 'Amount',
+                'old' => $this->formatValue('additional_cost_amount',
+                        $history->old_values['additional_cost_amount'] ?? 
+                        $history->old_values['amount'] ?? 
+                        $history->old_values['additional_cost_harga'] ?? 
+                        $history->old_values['harga'] ?? 
+                        0),
+                'new' => 'Deleted'
+            ];
+        }
+        
+        return !empty($details) ? $details : null;
+    }
+
     private function formatValue($field, $value)
     {
         if (is_null($value) || $value === '') {
@@ -223,8 +359,14 @@ class SoilHistories extends Component
         switch ($field) {
             case 'harga':
             case 'luas':
-                return is_numeric($value) ? number_format($value, 0, ',', '.') : $value;
+            case 'additional_cost_amount':
+            case 'additional_cost_harga':
+            case 'amount':
+                return is_numeric($value) ? 'Rp ' . number_format($value, 0, ',', '.') : $value;
             case 'tanggal_ppjb':
+            case 'additional_cost_date':
+            case 'additional_cost_date_cost':
+            case 'date':
                 return $value ? \Carbon\Carbon::parse($value)->format('d/m/Y') : '-';
             case 'created_at':
             case 'updated_at':
@@ -240,6 +382,11 @@ class SoilHistories extends Component
             case 'business_unit_id':
                 $businessUnit = \App\Models\BusinessUnit::find($value);
                 return $businessUnit ? $businessUnit->name : "ID: {$value}";
+            case 'additional_cost_type':
+            case 'additional_cost_cost_type':
+            case 'cost_type':
+            case 'type':
+                return $value === 'standard' ? 'Standard' : 'Non Standard';
             default:
                 return $value;
         }
@@ -265,6 +412,22 @@ class SoilHistories extends Component
             'business_unit_id' => 'Business Unit',
             'created_at' => 'Created At',
             'updated_at' => 'Updated At',
+            'additional_cost_added' => 'Additional Cost Added',
+            'additional_cost_updated' => 'Additional Cost Updated', 
+            'additional_cost_deleted' => 'Additional Cost Deleted',
+            'additional_cost_description' => 'Cost Description',
+            'additional_cost_amount' => 'Cost Amount',
+            'additional_cost_harga' => 'Cost Amount',
+            'additional_cost_type' => 'Cost Type',
+            'additional_cost_cost_type' => 'Cost Type',
+            'additional_cost_date' => 'Cost Date',
+            'additional_cost_date_cost' => 'Cost Date',
+            'description' => 'Description',
+            'amount' => 'Amount',
+            'harga' => 'Amount',
+            'type' => 'Type',
+            'cost_type' => 'Cost Type',
+            'date' => 'Date',
         ];
 
         return $fieldMap[$field] ?? ucfirst(str_replace('_', ' ', $field));

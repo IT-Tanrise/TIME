@@ -4,7 +4,7 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
-use Illuminate\Support\Facades\Auth; // Add this import
+use Illuminate\Support\Facades\Auth;
 
 use App\Models\User;
 use App\Models\SoilHistory;
@@ -41,20 +41,39 @@ class Soil extends Model
         'updated_at' => 'datetime',
     ];
 
+    private $historyLogging = false;
+
+    public function isHistoryLogging()
+    {
+        return $this->historyLogging;
+    }
+
     // Add these boot events to automatically log history
     protected static function boot()
     {
         parent::boot();
 
-        static::created(function ($soil) {
-            $soil->logHistory('created');
+        static::created(function ($soil) {;
+            // Only log if not already in history logging process
+            if (!$soil->isHistoryLogging()) {
+                $soil->logHistory('created');
+            }
         });
 
         static::updated(function ($soil) {
-            $soil->logHistory('updated');
+            // Only log history if there are actual meaningful changes 
+            // AND we're not already in a history logging process
+            if ($soil->isDirty() && !$soil->isHistoryLogging()) {
+                // Additional check: don't log if only timestamps or user tracking fields changed
+                $dirtyFields = $soil->getDirty();
+                unset($dirtyFields['updated_at'], $dirtyFields['updated_by'], $dirtyFields['created_at'], $dirtyFields['created_by']);
+                
+                if (!empty($dirtyFields)) {
+                    $soil->logHistory('updated');
+                }
+            }
         });
 
-        // Set created_by and updated_by automatically
         static::creating(function ($soil) {
             if (Auth::check()) {
                 $soil->created_by = Auth::id();
@@ -171,28 +190,131 @@ class Soil extends Model
                ($this->updatedBy ? ' - ' . $this->updatedBy->name : '');
     }
 
-    // Method to log history
+    // ENHANCED: Method to log history
     public function logHistory($action, $changes = null)
     {
-        $oldValues = null;
-        $newValues = null;
-        $changedFields = [];
+        // Prevent recursive calls
+        if ($this->historyLogging) {
+            return;
+        }
+        
+        $this->historyLogging = true;
+        
+        try {
+            $oldValues = null;
+            $newValues = null;
+            $changedFields = [];
 
-        if ($action === 'updated' && $this->isDirty()) {
-            $changedFields = array_keys($this->getDirty());
-            $oldValues = $this->getOriginal();
-            $newValues = $this->getAttributes();
+            if ($action === 'updated') {
+                // For updated action, check if we have meaningful changes
+                $dirtyFields = $this->getDirty();
+                
+                // Remove timestamps and user tracking fields from changes
+                unset($dirtyFields['updated_at'], $dirtyFields['updated_by']);
+                
+                if (empty($dirtyFields)) {
+                    return; // No meaningful changes to track
+                }
+                
+                $changedFields = array_keys($dirtyFields);
+                $oldValues = [];
+                $newValues = [];
+                
+                foreach ($changedFields as $field) {
+                    $oldValues[$field] = $this->getOriginal($field);
+                    $newValues[$field] = $this->getAttribute($field);
+                }
+            } elseif ($action === 'created') {
+                $newValues = $this->getAttributes();
+            }
+
+            SoilHistory::create([
+                'soil_id' => $this->id,
+                'user_id' => Auth::id(),
+                'action' => $action,
+                'changes' => $changedFields,
+                'old_values' => $oldValues,
+                'new_values' => $newValues,
+                'ip_address' => request()->ip(),
+                'user_agent' => request()->userAgent(),
+            ]);
+            
+        } catch (\Exception $e) {
+            \Log::error('Failed to create soil history: ' . $e->getMessage(), [
+                'soil_id' => $this->id,
+                'action' => $action,
+                'error' => $e->getMessage()
+            ]);
+        } finally {
+            $this->historyLogging = false;
+        }
+    }
+
+    // NEW: Create history for additional cost changes
+    public function logAdditionalCostHistory($action, $costData = [], $oldCostData = [])
+    {
+        $historyAction = 'additional_cost_' . $action;
+        
+        $newValues = [];
+        $oldValues = [];
+        
+        if ($action === 'added' && $costData) {
+            $newValues = [
+                'description' => $costData['description'] ?? '',
+                'harga' => $costData['harga'] ?? 0,
+                'cost_type' => $costData['cost_type'] ?? 'standard',
+                'date_cost' => $costData['date_cost'] ?? null,
+            ];
+        } elseif ($action === 'updated' && $costData && $oldCostData) {
+            $newValues = [
+                'description' => $costData['description'] ?? '',
+                'harga' => $costData['harga'] ?? 0,
+                'cost_type' => $costData['cost_type'] ?? 'standard',
+                'date_cost' => $costData['date_cost'] ?? null,
+            ];
+            $oldValues = [
+                'description' => $oldCostData['description'] ?? '',
+                'harga' => $oldCostData['harga'] ?? 0,
+                'cost_type' => $oldCostData['cost_type'] ?? 'standard',
+                'date_cost' => $oldCostData['date_cost'] ?? null,
+            ];
+        } elseif ($action === 'deleted' && $oldCostData) {
+            $oldValues = [
+                'description' => $oldCostData['description'] ?? '',
+                'harga' => $oldCostData['harga'] ?? 0,
+                'cost_type' => $oldCostData['cost_type'] ?? 'standard',
+                'date_cost' => $oldCostData['date_cost'] ?? null,
+            ];
         }
 
-        SoilHistory::create([
-            'soil_id' => $this->id,
-            'user_id' => Auth::id(),
-            'action' => $action,
-            'changes' => $changedFields,
-            'old_values' => $oldValues,
-            'new_values' => $newValues,
-            'ip_address' => request()->ip(),
-            'user_agent' => request()->userAgent(),
-        ]);
+        try {
+            SoilHistory::create([
+                'soil_id' => $this->id,
+                'user_id' => Auth::id(),
+                'action' => $historyAction,
+                'changes' => [],
+                'old_values' => $oldValues,
+                'new_values' => $newValues,
+                'ip_address' => request()->ip(),
+                'user_agent' => request()->userAgent(),
+            ]);
+            \Log::info('Soil History '. $action . ': ', [
+                'soil_id' => $this->id,
+                'user_id' => Auth::id(),
+                'action' => $historyAction,
+                'changes' => [],
+                'old_values' => $oldValues,
+                'new_values' => $newValues,
+                'ip_address' => request()->ip(),
+                'user_agent' => request()->userAgent(),
+            ]);
+        } catch (\Exception $e) {
+            // Log the error but don't prevent the main operation
+            \Log::error('Failed to create additional cost history: ' . $e->getMessage(), [
+                'soil_id' => $this->id,
+                'action' => $historyAction,
+                'error' => $e->getMessage()
+            ]);
+        }
     }
 }
