@@ -55,29 +55,35 @@ class SoilHistories extends Component
 
     public function render()
     {
-        $histories = SoilHistory::with(['user'])
-            ->where('soil_id', $this->soilId)
-            ->when($this->filterAction, function($query) {
-                $query->where('action', $this->filterAction);
+        $histories = SoilHistory::where('soil_id', $this->soilId)
+            ->with(['user'])
+            ->when($this->filterAction, function($q) {
+                $q->where('action', $this->filterAction);
             })
-            ->when($this->filterUser, function($query) {
-                $query->whereHas('user', function($q) {
-                    $q->where('name', 'like', '%' . $this->filterUser . '%');
+            ->when($this->filterUser, function($q) {
+                $q->whereHas('user', function($userQuery) {
+                    $userQuery->where('name', 'like', '%' . $this->filterUser . '%');
                 });
             })
-            ->when($this->filterDateFrom, function($query) {
-                $query->whereDate('created_at', '>=', $this->filterDateFrom);
+            ->when($this->filterDateFrom, function($q) {
+                $q->whereDate('created_at', '>=', $this->filterDateFrom);
             })
-            ->when($this->filterDateTo, function($query) {
-                $query->whereDate('created_at', '<=', $this->filterDateTo);
-            })
-            ->when($this->filterColumn, function($query) {
-                // Only apply column filter for 'updated' actions, not additional cost actions
-                $query->where('action', 'updated')
-                      ->whereJsonContains('changes', $this->filterColumn);
+            ->when($this->filterDateTo, function($q) {
+                $q->whereDate('created_at', '<=', $this->filterDateTo);
             })
             ->orderBy('created_at', 'desc')
             ->paginate(10);
+
+        // Filter out additional_cost_updated entries with no meaningful changes
+        $histories->getCollection()->transform(function($history) {
+            if (!$this->hasMeaningfulChanges($history)) {
+                return null; // Mark for removal
+            }
+            return $history;
+        });
+
+        $filteredItems = $histories->getCollection()->filter()->values();
+        $histories->setCollection($filteredItems);
 
         // Get available actions and users for filters
         $availableActions = SoilHistory::where('soil_id', $this->soilId)
@@ -111,6 +117,16 @@ class SoilHistories extends Component
         $availableColumns = $this->getAvailableColumns();
 
         return view('livewire.soil-histories.index', compact('histories', 'availableActions', 'availableUsers', 'availableColumns'));
+    }
+
+    private function hasMeaningfulChanges($history)
+    {
+        if ($history->action !== 'additional_cost_updated') {
+            return true; // Always show non-update actions
+        }
+        
+        $changeDetails = $this->getChangeDetails($history);
+        return !empty($changeDetails); // Only show if there are actual changes
     }
 
     public function backToSoil()
@@ -229,7 +245,6 @@ class SoilHistories extends Component
                 'new' => $newValue
             ];
         }
-
         return $changes;
     }
 

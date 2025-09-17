@@ -26,22 +26,22 @@ class BiayaTambahanSoil extends Model
     ];
 
     // Add boot method to log history when additional costs change
-    protected static function boot()
-    {
-        parent::boot();
+    // protected static function boot()
+    // {
+    //     parent::boot();
 
-        static::created(function ($biayaTambahan) {
-            $biayaTambahan->logSoilHistory('additional_cost_added');
-        });
+    //     static::created(function ($biayaTambahan) {
+    //         $biayaTambahan->logSoilHistory('additional_cost_added');
+    //     });
 
-        static::updated(function ($biayaTambahan) {
-            $biayaTambahan->logSoilHistory('additional_cost_updated');
-        });
+    //     static::updated(function ($biayaTambahan) {
+    //         $biayaTambahan->logSoilHistory('additional_cost_updated');
+    //     });
 
-        static::deleted(function ($biayaTambahan) {
-            $biayaTambahan->logSoilHistory('additional_cost_deleted');
-        });
-    }
+    //     static::deleted(function ($biayaTambahan) {
+    //         $biayaTambahan->logSoilHistory('additional_cost_deleted');
+    //     });
+    // }
 
     // Relationship to Soil
     public function soil()

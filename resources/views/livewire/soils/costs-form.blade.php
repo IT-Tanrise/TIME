@@ -31,7 +31,7 @@
                     </div>
                     <div>
                         <span class="font-medium text-gray-700">Area:</span>
-                        <span class="text-gray-900">{{ number_format($soil->luas, 0, ',', '.') }} mÂ²</span>
+                        <span class="text-gray-900">{{ number_format($soil->luas, 0, ',', '.') }} m²</span>
                     </div>
                     <div>
                         <span class="font-medium text-gray-700">Location:</span>

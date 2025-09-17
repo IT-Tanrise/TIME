@@ -205,12 +205,6 @@ class Soils extends Component
 
         // Initialize BEFORE setting business unit data
         $this->initializeSoilDetails();
-        
-        \Log::info('Mount called', [
-            'businessUnit' => $businessUnit,
-            'soilId' => $soilId,
-            'soilDetails_count' => count($this->soilDetails)
-        ]);
 
         if ($businessUnit) {
             if (is_numeric($businessUnit)) {
@@ -431,12 +425,6 @@ class Soils extends Component
     {
         $this->validate();
 
-        // DEBUG: Log what's in soilDetails
-        \Log::info('soilDetails content:', [
-            'count' => count($this->soilDetails),
-            'data' => $this->soilDetails
-        ]);
-
         if ($this->isEdit && $this->editMode === 'details') {
             // Update logic - this seems fine
             $soil = Soil::findOrFail($this->soilId);
@@ -484,12 +472,6 @@ class Soils extends Component
                     !empty($detail['nomor_ppjb']) &&
                     !empty($detail['letak_tanah']);
             })->values()->all();
-            
-            \Log::info('Valid details after filtering:', [
-                'original_count' => count($this->soilDetails),
-                'valid_count' => count($validDetails),
-                'valid_data' => $validDetails
-            ]);
             
             if (empty($validDetails)) {
                 session()->flash('error', 'No valid soil details to save.');

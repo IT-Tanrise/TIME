@@ -298,28 +298,80 @@
                                                     
                                                     @if($changeDetails)
                                                         <div class="space-y-2">
+                                                            {{-- Show cost description first for context --}}
+                                                            @php
+                                                                $description = '';
+                                                                if ($history->action === 'additional_cost_added' && isset($history->new_values['description'])) {
+                                                                    $description = $history->new_values['description'];
+                                                                } elseif ($history->action === 'additional_cost_deleted' && isset($history->old_values['description'])) {
+                                                                    $description = $history->old_values['description'];
+                                                                } elseif ($history->action === 'additional_cost_updated') {
+                                                                    if (isset($history->new_values['description'])) {
+                                                                        $description = $history->new_values['description'];
+                                                                    } elseif (isset($history->old_values['description'])) {
+                                                                        $description = $history->old_values['description'];
+                                                                    }
+                                                                }
+                                                            @endphp
+                                                            
                                                             @foreach($changeDetails as $change)
                                                                 <div class="border border-gray-200 rounded p-2">
-                                                                    <div class="font-medium text-gray-900 text-xs mb-2">{{ $change['field'] }}</div>
+                                                                    <div class="font-medium text-gray-900 text-xs mb-2">
+                                                                        @if($change['field'] === 'Description')
+                                                                            {{ $change['field'] }}
+                                                                        @elseif($change['field'] === 'Amount')
+                                                                            Amount {{ $description ? 'for "' . $description . '"' : '' }}
+                                                                        @elseif($change['field'] === 'Cost Type')
+                                                                            Cost Type {{ $description ? 'for "' . $description . '"' : '' }}
+                                                                        @elseif($change['field'] === 'Date')
+                                                                            Date {{ $description ? 'for "' . $description . '"' : '' }}
+                                                                        @else
+                                                                            {{ $change['field'] }} {{ $description ? 'for "' . $description . '"' : '' }}
+                                                                        @endif
+                                                                    </div>
                                                                     <div class="grid grid-cols-2 gap-2 text-xs">
                                                                         @if($history->action === 'additional_cost_added')
                                                                             <div class="col-span-2 bg-green-50 p-2 rounded border border-green-200">
                                                                                 <div class="text-green-600 font-medium mb-1">New Value:</div>
-                                                                                <div class="text-gray-700 break-words">{{ $change['new'] ?: 'Empty' }}</div>
+                                                                                <div class="text-gray-700 break-words">
+                                                                                    @if($change['field'] === 'Amount' && is_numeric($change['new']))
+                                                                                        Rp {{ number_format($change['new'], 0, ',', '.') }}
+                                                                                    @else
+                                                                                        {{ $change['new'] ?: 'Empty' }}
+                                                                                    @endif
+                                                                                </div>
                                                                             </div>
                                                                         @elseif($history->action === 'additional_cost_deleted')
                                                                             <div class="col-span-2 bg-red-50 p-2 rounded border border-red-200">
                                                                                 <div class="text-red-600 font-medium mb-1">Deleted Value:</div>
-                                                                                <div class="text-gray-700 break-words">{{ $change['old'] ?: 'Empty' }}</div>
+                                                                                <div class="text-gray-700 break-words">
+                                                                                    @if($change['field'] === 'Amount' && is_numeric($change['old']))
+                                                                                        Rp {{ number_format($change['old'], 0, ',', '.') }}
+                                                                                    @else
+                                                                                        {{ $change['old'] ?: 'Empty' }}
+                                                                                    @endif
+                                                                                </div>
                                                                             </div>
                                                                         @else
                                                                             <div class="bg-red-50 p-2 rounded border border-red-200">
                                                                                 <div class="text-red-600 font-medium mb-1">Before:</div>
-                                                                                <div class="text-gray-700 break-words">{{ $change['old'] ?: 'Empty' }}</div>
+                                                                                <div class="text-gray-700 break-words">
+                                                                                    @if($change['field'] === 'Amount' && is_numeric($change['old']))
+                                                                                        Rp {{ number_format($change['old'], 0, ',', '.') }}
+                                                                                    @else
+                                                                                        {{ $change['old'] ?: 'Empty' }}
+                                                                                    @endif
+                                                                                </div>
                                                                             </div>
                                                                             <div class="bg-green-50 p-2 rounded border border-green-200">
                                                                                 <div class="text-green-600 font-medium mb-1">After:</div>
-                                                                                <div class="text-gray-700 break-words">{{ $change['new'] ?: 'Empty' }}</div>
+                                                                                <div class="text-gray-700 break-words">
+                                                                                    @if($change['field'] === 'Amount' && is_numeric($change['new']))
+                                                                                        Rp {{ number_format($change['new'], 0, ',', '.') }}
+                                                                                    @else
+                                                                                        {{ $change['new'] ?: 'Empty' }}
+                                                                                    @endif
+                                                                                </div>
                                                                             </div>
                                                                         @endif
                                                                     </div>

@@ -309,28 +309,93 @@
                                                     
                                                     <!--[if BLOCK]><![endif]--><?php if($changeDetails): ?>
                                                         <div class="space-y-2">
+                                                            
+                                                            <?php
+                                                                $description = '';
+                                                                if ($history->action === 'additional_cost_added' && isset($history->new_values['description'])) {
+                                                                    $description = $history->new_values['description'];
+                                                                } elseif ($history->action === 'additional_cost_deleted' && isset($history->old_values['description'])) {
+                                                                    $description = $history->old_values['description'];
+                                                                } elseif ($history->action === 'additional_cost_updated') {
+                                                                    if (isset($history->new_values['description'])) {
+                                                                        $description = $history->new_values['description'];
+                                                                    } elseif (isset($history->old_values['description'])) {
+                                                                        $description = $history->old_values['description'];
+                                                                    }
+                                                                }
+                                                            ?>
+                                                            
                                                             <!--[if BLOCK]><![endif]--><?php $__currentLoopData = $changeDetails; $__env->addLoop($__currentLoopData); foreach($__currentLoopData as $change): $__env->incrementLoopIndices(); $loop = $__env->getLastLoop(); ?>
                                                                 <div class="border border-gray-200 rounded p-2">
-                                                                    <div class="font-medium text-gray-900 text-xs mb-2"><?php echo e($change['field']); ?></div>
+                                                                    <div class="font-medium text-gray-900 text-xs mb-2">
+                                                                        <!--[if BLOCK]><![endif]--><?php if($change['field'] === 'Description'): ?>
+                                                                            <?php echo e($change['field']); ?>
+
+                                                                        <?php elseif($change['field'] === 'Amount'): ?>
+                                                                            Amount <?php echo e($description ? 'for "' . $description . '"' : ''); ?>
+
+                                                                        <?php elseif($change['field'] === 'Cost Type'): ?>
+                                                                            Cost Type <?php echo e($description ? 'for "' . $description . '"' : ''); ?>
+
+                                                                        <?php elseif($change['field'] === 'Date'): ?>
+                                                                            Date <?php echo e($description ? 'for "' . $description . '"' : ''); ?>
+
+                                                                        <?php else: ?>
+                                                                            <?php echo e($change['field']); ?> <?php echo e($description ? 'for "' . $description . '"' : ''); ?>
+
+                                                                        <?php endif; ?><!--[if ENDBLOCK]><![endif]-->
+                                                                    </div>
                                                                     <div class="grid grid-cols-2 gap-2 text-xs">
                                                                         <!--[if BLOCK]><![endif]--><?php if($history->action === 'additional_cost_added'): ?>
                                                                             <div class="col-span-2 bg-green-50 p-2 rounded border border-green-200">
                                                                                 <div class="text-green-600 font-medium mb-1">New Value:</div>
-                                                                                <div class="text-gray-700 break-words"><?php echo e($change['new'] ?: 'Empty'); ?></div>
+                                                                                <div class="text-gray-700 break-words">
+                                                                                    <!--[if BLOCK]><![endif]--><?php if($change['field'] === 'Amount' && is_numeric($change['new'])): ?>
+                                                                                        Rp <?php echo e(number_format($change['new'], 0, ',', '.')); ?>
+
+                                                                                    <?php else: ?>
+                                                                                        <?php echo e($change['new'] ?: 'Empty'); ?>
+
+                                                                                    <?php endif; ?><!--[if ENDBLOCK]><![endif]-->
+                                                                                </div>
                                                                             </div>
                                                                         <?php elseif($history->action === 'additional_cost_deleted'): ?>
                                                                             <div class="col-span-2 bg-red-50 p-2 rounded border border-red-200">
                                                                                 <div class="text-red-600 font-medium mb-1">Deleted Value:</div>
-                                                                                <div class="text-gray-700 break-words"><?php echo e($change['old'] ?: 'Empty'); ?></div>
+                                                                                <div class="text-gray-700 break-words">
+                                                                                    <!--[if BLOCK]><![endif]--><?php if($change['field'] === 'Amount' && is_numeric($change['old'])): ?>
+                                                                                        Rp <?php echo e(number_format($change['old'], 0, ',', '.')); ?>
+
+                                                                                    <?php else: ?>
+                                                                                        <?php echo e($change['old'] ?: 'Empty'); ?>
+
+                                                                                    <?php endif; ?><!--[if ENDBLOCK]><![endif]-->
+                                                                                </div>
                                                                             </div>
                                                                         <?php else: ?>
                                                                             <div class="bg-red-50 p-2 rounded border border-red-200">
                                                                                 <div class="text-red-600 font-medium mb-1">Before:</div>
-                                                                                <div class="text-gray-700 break-words"><?php echo e($change['old'] ?: 'Empty'); ?></div>
+                                                                                <div class="text-gray-700 break-words">
+                                                                                    <!--[if BLOCK]><![endif]--><?php if($change['field'] === 'Amount' && is_numeric($change['old'])): ?>
+                                                                                        Rp <?php echo e(number_format($change['old'], 0, ',', '.')); ?>
+
+                                                                                    <?php else: ?>
+                                                                                        <?php echo e($change['old'] ?: 'Empty'); ?>
+
+                                                                                    <?php endif; ?><!--[if ENDBLOCK]><![endif]-->
+                                                                                </div>
                                                                             </div>
                                                                             <div class="bg-green-50 p-2 rounded border border-green-200">
                                                                                 <div class="text-green-600 font-medium mb-1">After:</div>
-                                                                                <div class="text-gray-700 break-words"><?php echo e($change['new'] ?: 'Empty'); ?></div>
+                                                                                <div class="text-gray-700 break-words">
+                                                                                    <!--[if BLOCK]><![endif]--><?php if($change['field'] === 'Amount' && is_numeric($change['new'])): ?>
+                                                                                        Rp <?php echo e(number_format($change['new'], 0, ',', '.')); ?>
+
+                                                                                    <?php else: ?>
+                                                                                        <?php echo e($change['new'] ?: 'Empty'); ?>
+
+                                                                                    <?php endif; ?><!--[if ENDBLOCK]><![endif]-->
+                                                                                </div>
                                                                             </div>
                                                                         <?php endif; ?><!--[if ENDBLOCK]><![endif]-->
                                                                     </div>
