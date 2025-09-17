@@ -27,13 +27,57 @@
                             </svg>
                             History
                         </a>
-                        <button wire:click="showEditForm({{ $soil->id }}, 'details', 'detail')"
-                                class="inline-flex items-center px-2 py-1.5 text-xs font-medium text-white bg-blue-600 border border-transparent rounded-md hover:bg-blue-700">
-                            <svg class="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/>
-                            </svg>
-                            Edit
-                        </button>
+                        
+                        <!-- Edit Dropdown -->
+                        <div class="relative inline-block text-left" x-data="{ open: false }" @click.outside="open = false">
+                            <button type="button" 
+                                    @click="open = !open"
+                                    class="inline-flex items-center px-2 py-1.5 text-xs font-medium text-white bg-blue-600 border border-transparent rounded-md hover:bg-blue-700">
+                                <svg class="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/>
+                                </svg>
+                                Edit
+                                <svg class="w-3 h-3 ml-1" fill="currentColor" viewBox="0 0 20 20">
+                                    <path fill-rule="evenodd" d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z" clip-rule="evenodd"/>
+                                </svg>
+                            </button>
+                            <div x-show="open" 
+                                x-transition:enter="transition ease-out duration-100"
+                                x-transition:enter-start="transform opacity-0 scale-95"
+                                x-transition:enter-end="transform opacity-100 scale-100"
+                                x-transition:leave="transition ease-in duration-75"
+                                x-transition:leave-start="transform opacity-100 scale-100"
+                                x-transition:leave-end="transform opacity-0 scale-95"
+                                class="absolute right-0 mt-1 w-44 rounded-md shadow-lg bg-white ring-1 ring-black ring-opacity-5 z-50"
+                                @click="open = false">
+                                <div class="py-1">
+                                    @can('soils.edit')
+                                    <button wire:click="showEditForm({{ $soil->id }}, 'details', 'detail')" 
+                                            class="block px-3 py-2 text-sm text-gray-700 hover:bg-gray-100 w-full text-left">
+                                        <div class="flex items-center">
+                                            <svg class="w-4 h-4 mr-2 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/>
+                                            </svg>
+                                            Edit Details
+                                        </div>
+                                    </button>
+                                    @endcan
+                                    @can('soil-costs.edit')
+                                    <button wire:click="showEditForm({{ $soil->id }}, 'costs', 'detail')" 
+                                            class="block px-3 py-2 text-sm text-gray-700 hover:bg-gray-100 w-full text-left">
+                                        <div class="flex items-center">
+                                            <svg class="w-4 h-4 mr-2 text-gray-400" fill="currentColor" viewBox="0 0 20 20">
+                                                <path d="M4 4a2 2 0 00-2 2v4a2 2 0 002 2V6h10a2 2 0 00-2-2H4zm2 6a2 2 0 012-2h8a2 2 0 012 2v4a2 2 0 01-2 2H8a2 2 0 01-2-2v-4zm6 4a2 2 0 100-4 2 2 0 000 4z"/>
+                                            </svg>
+                                            Manage Costs
+                                        </div>
+                                    </button>
+                                    @endcan
+                                </div>
+                            </div>
+                        </div>
+                        
+                        @can('soils.delete')
                         <button wire:click="delete({{ $soil->id }})" 
                                 wire:confirm="Are you sure you want to delete this soil record? This action cannot be undone."
                                 class="inline-flex items-center px-2 py-1.5 text-xs font-medium text-white bg-red-600 border border-transparent rounded-md hover:bg-red-700">
@@ -42,6 +86,7 @@
                             </svg>
                             Delete
                         </button>
+                        @endcan
                     </div>
                 </div>
             </div>
@@ -115,7 +160,7 @@
                                 </div>
                                 <div class="space-y-4">
                                     <div class="flex justify-between items-start">
-                                        <dt class="text-sm font-medium text-gray-500 flex-shrink-0 w-24">PPJB/AJB</dt>
+                                        <dt class="text-sm font-medium text-gray-500 flex-shrink-0 w-24">PPJB/ AJB</dt>
                                         <dd class="text-sm text-gray-900 text-right">{{ $soil->nomor_ppjb }}</dd>
                                     </div>
                                     <div class="flex justify-between items-start">
@@ -206,7 +251,7 @@
                                 <div class="bg-blue-50 p-3 rounded-lg">
                                     <div class="text-xs text-blue-800 font-medium mb-1">Price Calculation</div>
                                     <div class="text-xs text-blue-700">
-                                        {{ $soil->formatted_harga }} ÷ {{ number_format($soil->luas, 0, ',', '.') }} m² = {{ $soil->formatted_harga_per_meter }}
+                                        {{ $soil->formatted_harga }} : {{ number_format($soil->luas, 0, ',', '.') }} m² = {{ $soil->formatted_harga_per_meter }}
                                     </div>
                                 </div>
                             </div>
