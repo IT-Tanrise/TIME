@@ -194,20 +194,25 @@ if (isset($__slots)) unset($__slots);
                                     <p class="text-xs text-green-600 mt-1">Click sidebar "Soils" for filtered view</p>
                                 </div>
                             </div>
-
+                            <?php if (app(\Illuminate\Contracts\Auth\Access\Gate::class)->any(['business-units.edit', 'business-units.delete'])): ?>
                             <div class="mt-6 pt-6 border-gray-200">
                                 <div class="flex space-x-3 pt-4 border-t">
+                                    <?php if (app(\Illuminate\Contracts\Auth\Access\Gate::class)->check('business-units.edit')): ?>
                                     <button wire:click="showEdit(<?php echo e($unit->id); ?>)" 
                                             class="bg-blue-500 hover:bg-blue-600 text-white px-4 py-2 rounded-lg">
                                         Edit
                                     </button>
+                                    <?php endif; ?>
+                                    <?php if (app(\Illuminate\Contracts\Auth\Access\Gate::class)->check('business-units.delete')): ?>
                                     <button wire:click="delete(<?php echo e($unit->id); ?>)" 
                                             onclick="return confirm('Are you sure you want to delete this business unit?')"
                                             class="bg-red-500 hover:bg-red-600 text-white px-4 py-2 rounded-lg">
                                         Delete
                                     </button>
+                                    <?php endif; ?>
                                 </div>
                             </div>
+                            <?php endif; ?>
                         </div>
 
                         

@@ -29,6 +29,7 @@
                         </a>
                         
                         <!-- Edit Dropdown -->
+                        @canany(['soils.edit', 'soil-costs.edit'])
                         <div class="relative inline-block text-left" x-data="{ open: false }" @click.outside="open = false">
                             <button type="button" 
                                     @click="open = !open"
@@ -76,6 +77,7 @@
                                 </div>
                             </div>
                         </div>
+                        @endcan
                         
                         @can('soils.delete')
                         <button wire:click="delete({{ $soil->id }})" 

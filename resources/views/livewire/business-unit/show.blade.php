@@ -173,20 +173,25 @@
                                     <p class="text-xs text-green-600 mt-1">Click sidebar "Soils" for filtered view</p>
                                 </div>
                             </div>
-
+                            @canany(['business-units.edit', 'business-units.delete'])
                             <div class="mt-6 pt-6 border-gray-200">
                                 <div class="flex space-x-3 pt-4 border-t">
+                                    @can('business-units.edit')
                                     <button wire:click="showEdit({{ $unit->id }})" 
                                             class="bg-blue-500 hover:bg-blue-600 text-white px-4 py-2 rounded-lg">
                                         Edit
                                     </button>
+                                    @endcan
+                                    @can('business-units.delete')
                                     <button wire:click="delete({{ $unit->id }})" 
                                             onclick="return confirm('Are you sure you want to delete this business unit?')"
                                             class="bg-red-500 hover:bg-red-600 text-white px-4 py-2 rounded-lg">
                                         Delete
                                     </button>
+                                    @endcan
                                 </div>
                             </div>
+                            @endcan
                         </div>
 
                         {{-- Complete Hierarchy Tree --}}
