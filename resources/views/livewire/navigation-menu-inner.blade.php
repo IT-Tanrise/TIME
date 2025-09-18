@@ -6,6 +6,7 @@
             <h2 class="text-xl font-semibold text-gray-800 mb-4">Menu</h2>
             <nav class="space-y-2">
                 <!-- Ownerships -->
+                @can('ownerships.access')
                 <a href="{{ $this->getOwnershipsUrl() }}" 
                    class="block px-2 py-1 text-gray-800 rounded-lg hover:font-semibold transition-colors duration-200 {{ $this->isActive('partners') ? 'bg-blue-100 font-semibold' : '' }}">
                     Ownerships
@@ -15,8 +16,9 @@
                         </span>
                     @endif
                 </a>
-                
+                @endcan
                 <!-- Soils -->
+                @can('soils.access')
                 <a href="{{ $this->getSoilsUrl() }}" 
                    class="block px-2 py-1 text-gray-800 rounded-lg hover:font-semibold transition-colors duration-200 {{ $this->isActive('soils') ? 'bg-blue-100 font-semibold' : '' }}">
                     Soils
@@ -26,6 +28,7 @@
                         </span>
                     @endif
                 </a>
+                @endcan
                 
             </nav>
         </div>

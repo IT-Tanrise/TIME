@@ -21,9 +21,9 @@
                     <h1 class="text-2xl font-medium text-gray-900">
                         Welcome, <?php echo e(auth()->user()->name); ?>!
                     </h1>
-
+                    <?php if (\Illuminate\Support\Facades\Blade::check('role', 'Super Admin')): ?>
                     <p class="mt-6 text-gray-500 leading-relaxed">
-                        You are logged in!<br>Your current role(s): 
+                        You are logged in!<br>Your current role(s):
                         <?php $__currentLoopData = auth()->user()->roles; $__env->addLoop($__currentLoopData); foreach($__currentLoopData as $role): $__env->incrementLoopIndices(); $loop = $__env->getLastLoop(); ?>
                             <span class="inline-block bg-blue-100 text-blue-800 text-sm px-2 py-1 rounded mr-1">
                                 <?php echo e($role->name); ?>
@@ -44,6 +44,7 @@
                             <span class="inline-block bg-blue-100 text-blue-800 text-sm px-2 py-1 rounded mr-1">No permissions available.</span>
                         <?php endif; ?>
                     </p>
+                    <?php endif; ?>
                 </div>
             </div>
         </div>

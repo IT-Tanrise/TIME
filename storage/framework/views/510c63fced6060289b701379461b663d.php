@@ -6,6 +6,7 @@
             <h2 class="text-xl font-semibold text-gray-800 mb-4">Menu</h2>
             <nav class="space-y-2">
                 <!-- Ownerships -->
+                <?php if (app(\Illuminate\Contracts\Auth\Access\Gate::class)->check('ownerships.access')): ?>
                 <a href="<?php echo e($this->getOwnershipsUrl()); ?>" 
                    class="block px-2 py-1 text-gray-800 rounded-lg hover:font-semibold transition-colors duration-200 <?php echo e($this->isActive('partners') ? 'bg-blue-100 font-semibold' : ''); ?>">
                     Ownerships
@@ -15,8 +16,9 @@
                         </span>
                     <?php endif; ?><!--[if ENDBLOCK]><![endif]-->
                 </a>
-                
+                <?php endif; ?>
                 <!-- Soils -->
+                <?php if (app(\Illuminate\Contracts\Auth\Access\Gate::class)->check('soils.access')): ?>
                 <a href="<?php echo e($this->getSoilsUrl()); ?>" 
                    class="block px-2 py-1 text-gray-800 rounded-lg hover:font-semibold transition-colors duration-200 <?php echo e($this->isActive('soils') ? 'bg-blue-100 font-semibold' : ''); ?>">
                     Soils
@@ -26,6 +28,7 @@
                         </span>
                     <?php endif; ?><!--[if ENDBLOCK]><![endif]-->
                 </a>
+                <?php endif; ?>
                 
             </nav>
         </div>

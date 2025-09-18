@@ -21,9 +21,11 @@ Route::get('posts', Posts::class)->name('posts')->middleware('auth');
 Route::get('tasks', Tasks::class)->name('tasks')->middleware('auth');
 
 // Partners Routes
-Route::get('/partners', Partners::class)->name('partners.index');
-Route::get('/partners/business-unit/{businessUnit}', Partners::class)->name('partners.by-business-unit')
-    ->where('businessUnit', '[0-9]+');
+Route::middleware(['permission:ownerships.access'])->group(function () {
+    Route::get('/partners', Partners::class)->name('partners.index');
+    Route::get('/partners/business-unit/{businessUnit}', Partners::class)->name('partners.by-business-unit')
+        ->where('businessUnit', '[0-9]+');
+});
 
 // Land Routes
 Route::middleware(['permission:lands.access'])->group(function () {

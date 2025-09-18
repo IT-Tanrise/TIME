@@ -11,9 +11,9 @@
                     <h1 class="text-2xl font-medium text-gray-900">
                         Welcome, {{ auth()->user()->name }}!
                     </h1>
-
+                    @role('Super Admin')
                     <p class="mt-6 text-gray-500 leading-relaxed">
-                        You are logged in!<br>Your current role(s): 
+                        You are logged in!<br>Your current role(s):
                         @foreach(auth()->user()->roles as $role)
                             <span class="inline-block bg-blue-100 text-blue-800 text-sm px-2 py-1 rounded mr-1">
                                 {{ $role->name }}
@@ -32,6 +32,7 @@
                             <span class="inline-block bg-blue-100 text-blue-800 text-sm px-2 py-1 rounded mr-1">No permissions available.</span>
                         @endif
                     </p>
+                    @endrole
                 </div>
             </div>
         </div>

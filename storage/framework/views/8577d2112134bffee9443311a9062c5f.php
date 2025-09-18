@@ -155,6 +155,7 @@ if (isset($__slots)) unset($__slots);
 
                             
                             <div class="grid grid-cols-2 gap-4 mb-6">
+                                <?php if (app(\Illuminate\Contracts\Auth\Access\Gate::class)->check('ownerships.access')): ?>
                                 <div class="bg-indigo-50 rounded-lg p-4">
                                     <div class="flex items-center justify-between">
                                         <div>
@@ -174,6 +175,7 @@ if (isset($__slots)) unset($__slots);
                                     </div>
                                     <p class="text-xs text-indigo-600 mt-1">Click sidebar "Ownerships" for filtered view</p>
                                 </div>
+                                <?php endif; ?>
                                 
                                 <div class="bg-green-50 rounded-lg p-4">
                                     <div class="flex items-center justify-between">

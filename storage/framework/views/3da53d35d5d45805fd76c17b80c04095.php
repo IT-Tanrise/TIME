@@ -415,6 +415,7 @@ unset($__errorArgs, $__bag); ?><!--[if ENDBLOCK]><![endif]-->
                                             </button>
                                             
                                             <!-- Edit Dropdown -->
+                                            <?php if (app(\Illuminate\Contracts\Auth\Access\Gate::class)->any(['soils.edit', 'soil-costs.edit'])): ?>
                                             <div class="relative inline-block text-left" x-data="{ open: false }" @click.outside="open = false">
                                                 <button type="button" 
                                                         @click="open = !open"
@@ -449,6 +450,7 @@ unset($__errorArgs, $__bag); ?><!--[if ENDBLOCK]><![endif]-->
                                                     </div>
                                                 </div>
                                             </div>
+                                            <?php endif; ?>
                                             
                                             <!-- Delete Button -->
                                              <?php if (app(\Illuminate\Contracts\Auth\Access\Gate::class)->check('soils.delete')): ?>
