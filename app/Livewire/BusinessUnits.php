@@ -90,7 +90,7 @@ class BusinessUnits extends Component
                 }
             })
             ->orderBy('name')
-            ->paginate(12);
+            ->paginate(100);
 
         // Get parent options for the filter dropdown
         $parentOptions = BusinessUnit::with('parent')
