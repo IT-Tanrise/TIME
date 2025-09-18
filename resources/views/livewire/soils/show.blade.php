@@ -190,6 +190,7 @@
                     </div>
 
                     <!-- Additional Costs Detail -->
+                    @can('soil-costs.access')
                     @if($soil->biayaTambahanSoils->count() > 0)
                         <div class="bg-white rounded-lg shadow-sm border border-gray-200">
                             <div class="px-6 py-4 border-b border-gray-200 flex items-center justify-between">
@@ -231,6 +232,7 @@
                             </div>
                         </div>
                     @endif
+                    @endcan
                 </div>
 
                 <!-- Right Column - 1/3 Width -->
