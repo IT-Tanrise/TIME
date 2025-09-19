@@ -11,6 +11,9 @@
                     <h1 class="text-2xl font-medium text-gray-900">
                         Welcome, {{ auth()->user()->name }}!
                     </h1>
+                    <p class="mt-6 text-gray-500 leading-relaxed">
+                        Last login {{ auth()->user()->formatted_last_login }} 
+                    </p>
                     @role('Super Admin')
                     <p class="mt-6 text-gray-500 leading-relaxed">
                         You are logged in!<br>Your current role(s):

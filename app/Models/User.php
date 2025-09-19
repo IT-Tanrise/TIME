@@ -27,6 +27,7 @@ class User extends Authenticatable
         'name',
         'email',
         'password',
+        'last_login_at', // Add this field
     ];
 
     protected $hidden = [
@@ -39,9 +40,38 @@ class User extends Authenticatable
     protected $casts = [
         'email_verified_at' => 'datetime',
         'password' => 'hashed',
+        'last_login_at' => 'datetime', // Add this cast
     ];
 
     protected $appends = [
         'profile_photo_url',
     ];
+
+    /**
+     * Get formatted last login time
+     */
+    public function getFormattedLastLoginAttribute()
+    {
+        if (!$this->last_login_at) {
+            return 'Never logged in';
+        }
+        
+        return $this->last_login_at->setTimezone('Asia/Jakarta')->format('d/m/Y H:i') . ' (GMT+7)';
+    }
+
+    /**
+     * Get last login time in GMT+7
+     */
+    public function getLastLoginGmt7Attribute()
+    {
+        return $this->last_login_at ? $this->last_login_at->setTimezone('Asia/Jakarta') : null;
+    }
+
+    /**
+     * Update last login timestamp
+     */
+    public function updateLastLogin()
+    {
+        $this->update(['last_login_at' => now()]);
+    }
 }
