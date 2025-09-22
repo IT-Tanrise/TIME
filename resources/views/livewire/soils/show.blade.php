@@ -2,6 +2,9 @@
 <div class="min-h-screen bg-gray-50">
     @php
         $soil = App\Models\Soil::with(['land', 'businessUnit', 'biayaTambahanSoils.description'])->find($soilId);
+        // Get pending approvals for this soil
+        $pendingApprovals = $soil ? App\Models\SoilApproval::where('soil_id', $soil->id)->where('status', 'pending')->with('requestedBy')->get() : collect();
+        $recentApprovals = $soil ? App\Models\SoilApproval::where('soil_id', $soil->id)->whereIn('status', ['approved', 'rejected'])->with(['requestedBy', 'approvedBy'])->latest()->limit(3)->get() : collect();
     @endphp
 
     @if($soil)
@@ -18,6 +21,16 @@
                             Back
                         </button>
                         <h2 class="text-lg font-semibold text-gray-900">Soil Record Details</h2>
+                        
+                        <!-- Approval Status Indicators -->
+                        @if($pendingApprovals->count() > 0)
+                            <div class="flex items-center space-x-2">
+                                <div class="flex items-center px-2 py-1 bg-yellow-100 border border-yellow-200 rounded-full">
+                                    <div class="w-2 h-2 bg-yellow-400 rounded-full mr-1.5 animate-pulse"></div>
+                                    <span class="text-xs font-medium text-yellow-800">{{ $pendingApprovals->count() }} Pending</span>
+                                </div>
+                            </div>
+                        @endif
                     </div>
                     <div class="flex items-center space-x-2">
                         <a href="{{ route('soils.history', $soil->id) }}" 
@@ -95,6 +108,124 @@
         </div>
 
         <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-3">
+            <!-- Approval Status Section - For users without approval permissions -->
+            @if(!auth()->user()->can('soil-data.approval') && !auth()->user()->can('soil-data-costs.approval'))
+                @if($pendingApprovals->count() > 0 || $recentApprovals->count() > 0)
+                    <div class="mb-6 bg-white rounded-lg shadow-sm border border-gray-200">
+                        <div class="px-6 py-4 border-b border-gray-200">
+                            <h3 class="text-lg font-medium text-gray-900 flex items-center">
+                                <svg class="w-5 h-5 mr-2 text-blue-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                                </svg>
+                                Approval Status
+                            </h3>
+                        </div>
+                        <div class="p-6">
+                            <!-- Pending Approvals -->
+                            @if($pendingApprovals->count() > 0)
+                                <div class="mb-6">
+                                    <h4 class="text-sm font-medium text-gray-700 mb-3 flex items-center">
+                                        <div class="w-2 h-2 bg-yellow-400 rounded-full mr-2 animate-pulse"></div>
+                                        Pending Approvals ({{ $pendingApprovals->count() }})
+                                    </h4>
+                                    <div class="space-y-3">
+                                        @foreach($pendingApprovals as $approval)
+                                            <div class="bg-yellow-50 border border-yellow-200 rounded-lg p-4">
+                                                <div class="flex items-start justify-between">
+                                                    <div class="flex-1">
+                                                        <div class="flex items-center mb-2">
+                                                            <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium 
+                                                                @if($approval->change_type === 'details') bg-blue-100 text-blue-800 @else bg-purple-100 text-purple-800 @endif">
+                                                                {{ $approval->change_type === 'details' ? 'Soil Data Changes' : 'Cost Changes' }}
+                                                            </span>
+                                                            <span class="ml-2 text-xs text-yellow-700">
+                                                                Requested {{ $approval->created_at->diffForHumans() }}
+                                                            </span>
+                                                        </div>
+                                                        <p class="text-sm text-yellow-800 mb-2">
+                                                            Your changes are waiting for approval from an authorized user.
+                                                        </p>
+                                                        <div class="text-xs text-yellow-700">
+                                                            <strong>Requested by:</strong> {{ $approval->requestedBy->name }}
+                                                        </div>
+                                                    </div>
+                                                    <div class="ml-4 flex-shrink-0">
+                                                        <div class="flex items-center">
+                                                            <div class="w-3 h-3 bg-yellow-400 rounded-full animate-pulse"></div>
+                                                            <span class="ml-2 text-xs font-medium text-yellow-800">Waiting</span>
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        @endforeach
+                                    </div>
+                                </div>
+                            @endif
+
+                            <!-- Recent Approvals History -->
+                            @if($recentApprovals->count() > 0)
+                                <div class="@if($pendingApprovals->count() > 0) border-t border-gray-200 pt-6 @endif">
+                                    <h4 class="text-sm font-medium text-gray-700 mb-3">Recent Approval History</h4>
+                                    <div class="space-y-3">
+                                        @foreach($recentApprovals as $approval)
+                                            <div class="border rounded-lg p-4 
+                                                @if($approval->status === 'approved') bg-green-50 border-green-200 @else bg-red-50 border-red-200 @endif">
+                                                <div class="flex items-start justify-between">
+                                                    <div class="flex-1">
+                                                        <div class="flex items-center mb-2">
+                                                            <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium 
+                                                                @if($approval->change_type === 'details') bg-blue-100 text-blue-800 @else bg-purple-100 text-purple-800 @endif">
+                                                                {{ $approval->change_type === 'details' ? 'Soil Data Changes' : 'Cost Changes' }}
+                                                            </span>
+                                                            <span class="ml-2 text-xs 
+                                                                @if($approval->status === 'approved') text-green-700 @else text-red-700 @endif">
+                                                                {{ ucfirst($approval->status) }} {{ $approval->updated_at->diffForHumans() }}
+                                                            </span>
+                                                        </div>
+                                                        
+                                                        <div class="text-xs mb-2 
+                                                            @if($approval->status === 'approved') text-green-700 @else text-red-700 @endif">
+                                                            <div class="mb-1">
+                                                                <strong>Requested by:</strong> {{ $approval->requestedBy->name }}
+                                                            </div>
+                                                            <div>
+                                                                <strong>{{ $approval->status === 'approved' ? 'Approved' : 'Rejected' }} by:</strong> {{ $approval->approvedBy->name ?? 'Unknown' }}
+                                                            </div>
+                                                            <div>
+                                                                @if($approval->status === 'rejected')
+                                                                <strong>Reason:</strong> {{ $approval->reason }}
+                                                                @endif
+                                                            </div>
+                                                        </div>
+
+                                                        @if($approval->status === 'rejected' && $approval->rejection_reason)
+                                                            <div class="mt-2 p-2 bg-red-100 border border-red-200 rounded text-xs text-red-800">
+                                                                <strong>Rejection Reason:</strong> {{ $approval->rejection_reason }}
+                                                            </div>
+                                                        @endif
+                                                    </div>
+                                                    <div class="ml-4 flex-shrink-0">
+                                                        <div class="flex items-center">
+                                                            @if($approval->status === 'approved')
+                                                                <div class="w-3 h-3 bg-green-500 rounded-full"></div>
+                                                                <span class="ml-2 text-xs font-medium text-green-800">Approved</span>
+                                                            @else
+                                                                <div class="w-3 h-3 bg-red-500 rounded-full"></div>
+                                                                <span class="ml-2 text-xs font-medium text-red-800">Rejected</span>
+                                                            @endif
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        @endforeach
+                                    </div>
+                                </div>
+                            @endif
+                        </div>
+                    </div>
+                @endif
+            @endif
+
             <!-- Financial Summary Cards - Most Important Info First -->
             <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-3 mb-3">
                 <div class="bg-gradient-to-br from-blue-500 to-blue-600 rounded-lg p-3 text-white">
@@ -182,6 +313,7 @@
                                         <dd class="text-sm text-gray-900 text-right">
                                             <span class="inline-flex px-2 py-1 text-xs font-semibold rounded-full bg-blue-100 text-blue-800">
                                                 {{ $soil->atas_nama }} 
+                                            </span>
                                         </dd>
                                     </div>
                                 </div>

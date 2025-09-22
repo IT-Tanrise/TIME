@@ -41,7 +41,7 @@ class Soil extends Model
         'updated_at' => 'datetime',
     ];
 
-    private $historyLogging = false;
+    public $historyLogging = false; // Changed from private to public for external access
 
     public function isHistoryLogging()
     {
@@ -102,6 +102,16 @@ class Soil extends Model
     public function biayaTambahanSoils()
     {
         return $this->hasMany(BiayaTambahanSoil::class)->orderBy('date_cost', 'asc');
+    }
+
+    public function approvals()
+    {
+        return $this->hasMany(SoilApproval::class);
+    }
+
+    public function pendingApprovals()
+    {
+        return $this->hasMany(SoilApproval::class)->where('status', 'pending');
     }
 
     // Accessors
@@ -205,24 +215,30 @@ class Soil extends Model
             $newValues = null;
             $changedFields = [];
 
-            if ($action === 'updated') {
-                // For updated action, check if we have meaningful changes
-                $dirtyFields = $this->getDirty();
-                
-                // Remove timestamps and user tracking fields from changes
-                unset($dirtyFields['updated_at'], $dirtyFields['updated_by']);
-                
-                if (empty($dirtyFields)) {
-                    return; // No meaningful changes to track
-                }
-                
-                $changedFields = array_keys($dirtyFields);
-                $oldValues = [];
-                $newValues = [];
-                
-                foreach ($changedFields as $field) {
-                    $oldValues[$field] = $this->getOriginal($field);
-                    $newValues[$field] = $this->getAttribute($field);
+            if ($action === 'updated' || $action === 'approved_update') {
+                if ($changes && is_array($changes)) {
+                    // For approved updates, we already have the changes
+                    $newValues = $changes;
+                    $changedFields = array_keys($changes);
+                } else {
+                    // For regular updates, check dirty fields
+                    $dirtyFields = $this->getDirty();
+                    
+                    // Remove timestamps and user tracking fields from changes
+                    unset($dirtyFields['updated_at'], $dirtyFields['updated_by']);
+                    
+                    if (empty($dirtyFields)) {
+                        return; // No meaningful changes to track
+                    }
+                    
+                    $changedFields = array_keys($dirtyFields);
+                    $oldValues = [];
+                    $newValues = [];
+                    
+                    foreach ($changedFields as $field) {
+                        $oldValues[$field] = $this->getOriginal($field);
+                        $newValues[$field] = $this->getAttribute($field);
+                    }
                 }
             } elseif ($action === 'created') {
                 $newValues = $this->getAttributes();
@@ -285,6 +301,8 @@ class Soil extends Model
                 'cost_type' => $oldCostData['cost_type'] ?? 'standard',
                 'date_cost' => $oldCostData['date_cost'] ?? null,
             ];
+        } elseif ($action === 'approved') {
+            $newValues = $costData;
         }
 
         try {

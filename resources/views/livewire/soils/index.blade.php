@@ -310,6 +310,12 @@
                 </div>
             @endif
 
+            @if (session()->has('warning'))
+                <div class="bg-red-100 border-l-4 border-red-500 text-red-700 p-3 mb-4 rounded">
+                    {{ session('warning') }}
+                </div>
+            @endif
+
             <!-- Compact Table -->
             <div class="bg-white rounded-lg shadow-sm border border-gray-200 overflow-hidden">
                 <div class="overflow-x-auto">

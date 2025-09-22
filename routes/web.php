@@ -10,12 +10,13 @@ use App\Livewire\Lands;
 use App\Livewire\Soils;
 use App\Livewire\Projects;
 use App\Livewire\RentLands;
+use App\Livewire\SoilHistories;
+use App\Livewire\SoilApprovals;
 
 use App\Http\Controllers\RoleController;
 use App\Http\Controllers\PermissionController;
 use App\Http\Controllers\UserController;
 
-use App\Livewire\SoilHistories;
    
 Route::get('posts', Posts::class)->name('posts')->middleware('auth');
 Route::get('tasks', Tasks::class)->name('tasks')->middleware('auth');
@@ -38,6 +39,9 @@ Route::get('/projects', Projects::class)->name('projects');
 
 // Business Units Routes
 Route::get('/business-units/{view?}/{id?}', BusinessUnits::class)->name('business-units');
+
+// Soil Approvals Routes
+Route::get('/soil-approvals', SoilApprovals::class)->name('soil-approvals');
 
 // Soil Routes
 Route::middleware(['permission:soils.access'])->group(function () {

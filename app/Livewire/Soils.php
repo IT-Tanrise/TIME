@@ -6,6 +6,7 @@ use App\Models\Soil;
 use App\Models\Land;
 use App\Models\BusinessUnit;
 use App\Models\DescriptionBiayaTambahanSoil;
+use App\Models\SoilApproval; // Add this import
 use Livewire\Component;
 use Livewire\WithPagination;
 use App\Models\BiayaTambahanSoil;
@@ -80,8 +81,8 @@ class Soils extends Component
         'soilDetails.*.nomor_ppjb' => 'required|string|max:255',
         'soilDetails.*.tanggal_ppjb' => 'required|date',
         'soilDetails.*.letak_tanah' => 'required|string|max:255',
-        'soilDetails.*.luas' => 'required|numeric|min:0.01', // Changed from min:0 to min:0.01
-        'soilDetails.*.harga' => 'required|numeric|min:0.01', // Changed from min:0 to min:0.01
+        'soilDetails.*.luas' => 'required|numeric|min:0.01',
+        'soilDetails.*.harga' => 'required|numeric|min:0.01',
         'soilDetails.*.bukti_kepemilikan' => 'required|string|max:255',
         'soilDetails.*.bukti_kepemilikan_details' => 'nullable|string|max:255',
         'soilDetails.*.atas_nama' => 'required|string|max:255',
@@ -116,6 +117,8 @@ class Soils extends Component
         'soilDetails.*.nama_notaris_ppat.max' => 'Notaris/PPAT name must not exceed 255 characters.',
         'soilDetails.*.keterangan.required' => 'Notes are required for all soil details.',
     ];
+
+    public $biayaTambahan = [];
 
     // Show export modal
     public function showExportModalView()
@@ -351,7 +354,7 @@ class Soils extends Component
         $this->soil = Soil::findOrFail($id);
         $this->soilId = $this->soil->id;
         $this->editMode = $mode;
-        $this->editSource = $source; // NEW: Store the source of the edit
+        $this->editSource = $source;
         
         if ($mode === 'details') {
             $this->land_id = $this->soil->land_id;
@@ -419,36 +422,77 @@ class Soils extends Component
         $this->showDetailForm = true;
     }
 
-    public $biayaTambahan = [];
-
     public function save()
     {
         $this->validate();
 
         if ($this->isEdit && $this->editMode === 'details') {
-            // Update logic - this seems fine
-            $soil = Soil::findOrFail($this->soilId);
-            $detail = $this->soilDetails[0];
-            
-            $soil->update([
-                'land_id' => $this->land_id,
-                'business_unit_id' => $this->business_unit_id,
-                'nama_penjual' => $detail['nama_penjual'],
-                'alamat_penjual' => $detail['alamat_penjual'],
-                'nomor_ppjb' => $detail['nomor_ppjb'],
-                'tanggal_ppjb' => $detail['tanggal_ppjb'],
-                'letak_tanah' => $detail['letak_tanah'],
-                'luas' => $this->parseFormattedNumber($detail['luas']),
-                'harga' => $this->parseFormattedNumber($detail['harga']),
-                'bukti_kepemilikan' => $detail['bukti_kepemilikan'],
-                'bukti_kepemilikan_details' => $detail['bukti_kepemilikan_details'],
-                'atas_nama' => $detail['atas_nama'],
-                'nop_pbb' => $detail['nop_pbb'],
-                'nama_notaris_ppat' => $detail['nama_notaris_ppat'],
-                'keterangan' => $detail['keterangan'],
-            ]);
-            
-            session()->flash('message', 'Soil record details updated successfully.');
+            // MODIFIED: Check if user has soil data approval permission (separate from costs)
+            if (auth()->user()->can('soil-data.approval')) {
+                // User has approval permission - update directly
+                $soil = Soil::findOrFail($this->soilId);
+                $detail = $this->soilDetails[0];
+                
+                $soil->update([
+                    'land_id' => $this->land_id,
+                    'business_unit_id' => $this->business_unit_id,
+                    'nama_penjual' => $detail['nama_penjual'],
+                    'alamat_penjual' => $detail['alamat_penjual'],
+                    'nomor_ppjb' => $detail['nomor_ppjb'],
+                    'tanggal_ppjb' => $detail['tanggal_ppjb'],
+                    'letak_tanah' => $detail['letak_tanah'],
+                    'luas' => $this->parseFormattedNumber($detail['luas']),
+                    'harga' => $this->parseFormattedNumber($detail['harga']),
+                    'bukti_kepemilikan' => $detail['bukti_kepemilikan'],
+                    'bukti_kepemilikan_details' => $detail['bukti_kepemilikan_details'],
+                    'atas_nama' => $detail['atas_nama'],
+                    'nop_pbb' => $detail['nop_pbb'],
+                    'nama_notaris_ppat' => $detail['nama_notaris_ppat'],
+                    'keterangan' => $detail['keterangan'],
+                ]);
+                
+                session()->flash('message', 'Soil record details updated successfully.');
+            } else {
+                // User needs approval - create approval request
+                $soil = Soil::findOrFail($this->soilId);
+                $detail = $this->soilDetails[0];
+                
+                $oldData = $soil->only([
+                    'land_id', 'business_unit_id', 'nama_penjual', 'alamat_penjual', 
+                    'nomor_ppjb', 'tanggal_ppjb', 'letak_tanah', 'luas', 'harga', 
+                    'bukti_kepemilikan', 'bukti_kepemilikan_details', 'atas_nama', 
+                    'nop_pbb', 'nama_notaris_ppat', 'keterangan'
+                ]);
+                
+                $newData = [
+                    'land_id' => $this->land_id,
+                    'business_unit_id' => $this->business_unit_id,
+                    'nama_penjual' => $detail['nama_penjual'],
+                    'alamat_penjual' => $detail['alamat_penjual'],
+                    'nomor_ppjb' => $detail['nomor_ppjb'],
+                    'tanggal_ppjb' => $detail['tanggal_ppjb'],
+                    'letak_tanah' => $detail['letak_tanah'],
+                    'luas' => $this->parseFormattedNumber($detail['luas']),
+                    'harga' => $this->parseFormattedNumber($detail['harga']),
+                    'bukti_kepemilikan' => $detail['bukti_kepemilikan'],
+                    'bukti_kepemilikan_details' => $detail['bukti_kepemilikan_details'],
+                    'atas_nama' => $detail['atas_nama'],
+                    'nop_pbb' => $detail['nop_pbb'],
+                    'nama_notaris_ppat' => $detail['nama_notaris_ppat'],
+                    'keterangan' => $detail['keterangan'],
+                ];
+
+                SoilApproval::create([
+                    'soil_id' => $this->soilId,
+                    'requested_by' => auth()->id(),
+                    'old_data' => $oldData,
+                    'new_data' => $newData,
+                    'change_type' => 'details',
+                    'status' => 'pending'
+                ]);
+                
+                session()->flash('warning', 'Your soil data changes have been submitted for approval and are pending review.');
+            }
             
             if ($this->editSource === 'detail') {
                 $this->showForm = false;
@@ -460,13 +504,8 @@ class Soils extends Component
             }
             
         } else {
-            // CREATE NEW RECORDS - This is where the double entry happens
-            
-            // PROBLEM: Your soilDetails array might have empty or duplicate entries
-            // SOLUTION: Filter and validate before creating
-            
+            // CREATE NEW RECORDS - This logic remains the same
             $validDetails = collect($this->soilDetails)->filter(function($detail) {
-                // Only process details that have required fields filled
                 return !empty($detail['nama_penjual']) && 
                     !empty($detail['alamat_penjual']) && 
                     !empty($detail['nomor_ppjb']) &&
@@ -479,7 +518,6 @@ class Soils extends Component
             }
             
             foreach ($validDetails as $detail) {
-                // Validate each field before creating
                 $createData = [
                     'land_id' => $this->land_id,
                     'business_unit_id' => $this->business_unit_id,
@@ -497,8 +535,6 @@ class Soils extends Component
                     'nama_notaris_ppat' => trim($detail['nama_notaris_ppat'] ?? ''),
                     'keterangan' => trim($detail['keterangan'] ?? ''),
                 ];
-                
-                \Log::info('Creating soil record:', $createData);
                 
                 Soil::create($createData);
             }
@@ -519,19 +555,55 @@ class Soils extends Component
         ]);
 
         $soil = Soil::findOrFail($this->soilId);
-        $this->updateBiayaTambahan($soil, $this->biayaTambahan);
         
-        session()->flash('message', 'Additional costs updated successfully.');
+        // MODIFIED: Check for separate soil cost approval permission
+        if (auth()->user()->can('soil-data-costs.approval')) {
+            // User has cost approval permission - update directly
+            $this->updateBiayaTambahan($soil, $this->biayaTambahan);
+            session()->flash('message', 'Additional costs updated successfully.');
+        } else {
+            // User needs approval - create approval request for costs
+            $oldCostData = $soil->biayaTambahanSoils()->with('description')->get()->map(function($cost) {
+                return [
+                    'id' => $cost->id,
+                    'description_id' => $cost->description_id,
+                    'description' => $cost->description->description ?? '',
+                    'harga' => $cost->harga,
+                    'cost_type' => $cost->cost_type,
+                    'date_cost' => $cost->date_cost,
+                ];
+            })->toArray();
+
+            $newCostData = collect($this->biayaTambahan)->map(function($biaya) {
+                $description = \App\Models\DescriptionBiayaTambahanSoil::find($biaya['description_id']);
+                return [
+                    'id' => $biaya['id'] ?? null,
+                    'description_id' => $biaya['description_id'],
+                    'description' => $description->description ?? '',
+                    'harga' => $this->parseFormattedNumber($biaya['harga']),
+                    'cost_type' => $biaya['cost_type'],
+                    'date_cost' => $biaya['date_cost'],
+                ];
+            })->toArray();
+
+            SoilApproval::create([
+                'soil_id' => $this->soilId,
+                'requested_by' => auth()->id(),
+                'old_data' => $oldCostData,
+                'new_data' => $newCostData,
+                'change_type' => 'costs',
+                'status' => 'pending'
+            ]);
+            
+            session()->flash('warning', 'Your cost changes have been submitted for approval and are pending review.');
+        }
         
-        // NEW: Return based on where the edit was initiated from
+        // Return based on where the edit was initiated from
         if ($this->editSource === 'detail') {
-            // Return to detail view
             $this->showAdditionalCostsForm = false;
             $this->showDetailForm = true;
             $this->isEdit = false;
-            // Keep soilId to stay on the detail page
         } else {
-            // Return to index view
             $this->showAdditionalCostsForm = false;
             $this->resetForm();
         }
@@ -626,8 +698,8 @@ class Soils extends Component
                             );
                             
                             if ($hasChanges) {
-                                // SOLUTION: Use updateQuietly to bypass model events
-                                $existingCost->updateQuietly([
+                                // Update without triggering model events
+                                $existingCost->update([
                                     'description_id' => $biaya['description_id'],
                                     'harga' => $harga,
                                     'cost_type' => $biaya['cost_type'],
