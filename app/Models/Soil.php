@@ -86,6 +86,14 @@ class Soil extends Model
                 $soil->updated_by = Auth::id();
             }
         });
+
+        // Add deleting event to log deletion history
+        static::deleting(function ($soil) {
+            // Only log if not already in history logging process
+            if (!$soil->isHistoryLogging()) {
+                $soil->logHistory('deleted');
+            }
+        });
     }
 
     // Relationships
@@ -112,6 +120,18 @@ class Soil extends Model
     public function pendingApprovals()
     {
         return $this->hasMany(SoilApproval::class)->where('status', 'pending');
+    }
+
+    // Check if soil has any pending approvals
+    public function hasPendingApprovals()
+    {
+        return $this->pendingApprovals()->exists();
+    }
+
+    // Get pending approvals by type
+    public function getPendingApprovalsByType($type)
+    {
+        return $this->pendingApprovals()->where('change_type', $type)->get();
     }
 
     // Accessors
@@ -200,8 +220,8 @@ class Soil extends Model
                ($this->updatedBy ? ' - ' . $this->updatedBy->name : '');
     }
 
-    // ENHANCED: Method to log history
-    public function logHistory($action, $changes = null)
+    // ENHANCED: Method to log history with approval information
+    public function logHistory($action, $changes = null, $approvedBy = null, $approvalId = null)
     {
         // Prevent recursive calls
         if ($this->historyLogging) {
@@ -242,11 +262,38 @@ class Soil extends Model
                 }
             } elseif ($action === 'created') {
                 $newValues = $this->getAttributes();
+            } elseif ($action === 'deleted' || $action === 'approved_deletion') {
+                // For deletion, store the data that's being deleted
+                $oldValues = $this->getAttributes();
+                if ($changes && is_array($changes)) {
+                    // Include additional deletion info like reason
+                    $newValues = $changes;
+                }
+            }
+
+            // Determine the user ID for history
+            $historyUserId = $approvedBy ?? Auth::id();
+
+            // Add approval metadata if this is an approved action
+            $historyMetadata = null;
+            if ($approvedBy && $approvalId) {
+                $historyMetadata = [
+                    'approved_by' => $approvedBy,
+                    'approval_id' => $approvalId,
+                    'is_approved_change' => true
+                ];
+                
+                // Merge metadata with new_values
+                if ($newValues) {
+                    $newValues = array_merge($newValues, ['_approval_metadata' => $historyMetadata]);
+                } else {
+                    $newValues = ['_approval_metadata' => $historyMetadata];
+                }
             }
 
             SoilHistory::create([
                 'soil_id' => $this->id,
-                'user_id' => Auth::id(),
+                'user_id' => $historyUserId,
                 'action' => $action,
                 'changes' => $changedFields,
                 'old_values' => $oldValues,
@@ -266,8 +313,8 @@ class Soil extends Model
         }
     }
 
-    // NEW: Create history for additional cost changes
-    public function logAdditionalCostHistory($action, $costData = [], $oldCostData = [])
+    // ENHANCED: Create history for additional cost changes with approval info
+    public function logAdditionalCostHistory($action, $costData = [], $oldCostData = [], $approvedBy = null, $approvalId = null)
     {
         $historyAction = 'additional_cost_' . $action;
         
@@ -305,10 +352,29 @@ class Soil extends Model
             $newValues = $costData;
         }
 
+        // Determine the user ID for history
+        $historyUserId = $approvedBy ?? Auth::id();
+
+        // Add approval metadata if this is an approved action
+        if ($approvedBy && $approvalId) {
+            $historyMetadata = [
+                'approved_by' => $approvedBy,
+                'approval_id' => $approvalId,
+                'is_approved_change' => true
+            ];
+            
+            // Merge metadata with new_values
+            if ($newValues) {
+                $newValues = array_merge($newValues, ['_approval_metadata' => $historyMetadata]);
+            } else {
+                $newValues = ['_approval_metadata' => $historyMetadata];
+            }
+        }
+
         try {
             SoilHistory::create([
                 'soil_id' => $this->id,
-                'user_id' => Auth::id(),
+                'user_id' => $historyUserId,
                 'action' => $historyAction,
                 'changes' => [],
                 'old_values' => $oldValues,
@@ -318,7 +384,7 @@ class Soil extends Model
             ]);
             \Log::info('Soil History '. $action . ': ', [
                 'soil_id' => $this->id,
-                'user_id' => Auth::id(),
+                'user_id' => $historyUserId,
                 'action' => $historyAction,
                 'changes' => [],
                 'old_values' => $oldValues,

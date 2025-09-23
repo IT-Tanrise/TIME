@@ -73,6 +73,11 @@ class Soils extends Component
 
     public $editSource = 'index';
 
+    // Add properties for delete confirmation
+    public $showDeleteModal = false;
+    public $deleteReason = '';
+    public $deleteSoilId = null;
+
     protected $rules = [
         'land_id' => 'required|exists:lands,id',
         'business_unit_id' => 'required|exists:business_units,id',
@@ -98,6 +103,14 @@ class Soils extends Component
             'exportType' => 'required|in:current,all,date_range',
             'exportDateFrom' => 'required_if:exportType,date_range|nullable|date',
             'exportDateTo' => 'required_if:exportType,date_range|nullable|date|after_or_equal:exportDateFrom',
+        ];
+    }
+
+    // Delete validation rules
+    protected function getDeleteRules()
+    {
+        return [
+            'deleteReason' => 'required|string|min:10|max:500',
         ];
     }
 
@@ -134,6 +147,23 @@ class Soils extends Component
     {
         $this->showExportModal = false;
         $this->resetValidation(['exportType', 'exportDateFrom', 'exportDateTo']);
+    }
+
+    // Show delete modal
+    public function showDeleteModalView($id)
+    {
+        $this->deleteSoilId = $id;
+        $this->deleteReason = '';
+        $this->showDeleteModal = true;
+    }
+
+    // Hide delete modal
+    public function hideDeleteModalView()
+    {
+        $this->deleteSoilId = null;
+        $this->deleteReason = '';
+        $this->showDeleteModal = false;
+        $this->resetValidation(['deleteReason']);
     }
 
     // Export to Excel
@@ -730,14 +760,108 @@ class Soils extends Component
         });
     }
 
+    /**
+     * UPDATED DELETE FUNCTION WITH APPROVAL WORKFLOW
+     */
     public function delete($id)
     {
         $soil = Soil::findOrFail($id);
         
-        $soil->biayaTambahanSoils()->delete();
+        // Check if user has deletion approval permission
+        if (auth()->user()->can('soil-data.approval')) {
+            // User has approval permission - delete directly
+            $soil->biayaTambahanSoils()->delete();
+            $soil->delete();
+            session()->flash('message', 'Soil record deleted successfully.');
+        } else {
+            // User needs approval - create deletion approval request
+            $oldData = $soil->only([
+                'land_id', 'business_unit_id', 'nama_penjual', 'alamat_penjual', 
+                'nomor_ppjb', 'tanggal_ppjb', 'letak_tanah', 'luas', 'harga', 
+                'bukti_kepemilikan', 'bukti_kepemilikan_details', 'atas_nama', 
+                'nop_pbb', 'nama_notaris_ppat', 'keterangan'
+            ]);
+
+            // Include related costs in the deletion approval
+            $oldCostData = $soil->biayaTambahanSoils()->with('description')->get()->map(function($cost) {
+                return [
+                    'id' => $cost->id,
+                    'description_id' => $cost->description_id,
+                    'description' => $cost->description->description ?? '',
+                    'harga' => $cost->harga,
+                    'cost_type' => $cost->cost_type,
+                    'date_cost' => $cost->date_cost,
+                ];
+            })->toArray();
+
+            $oldData['additional_costs'] = $oldCostData;
+
+            SoilApproval::create([
+                'soil_id' => $soil->id,
+                'requested_by' => auth()->id(),
+                'old_data' => $oldData,
+                'new_data' => [], // Empty for deletion
+                'change_type' => 'delete',
+                'status' => 'pending'
+            ]);
+            
+            session()->flash('warning', 'Your deletion request has been submitted for approval and is pending review.');
+        }
+    }
+
+    /**
+     * DELETE WITH REASON (Called from delete modal)
+     */
+    public function deleteWithReason()
+    {
+        $this->validate($this->getDeleteRules());
         
-        $soil->delete();
-        session()->flash('message', 'Soil record deleted successfully.');
+        if ($this->deleteSoilId) {
+            $soil = Soil::findOrFail($this->deleteSoilId);
+            
+            // Check if user has deletion approval permission
+            if (auth()->user()->can('soil-data.approval')) {
+                // User has approval permission - delete directly
+                $soil->biayaTambahanSoils()->delete();
+                $soil->delete();
+                session()->flash('message', 'Soil record deleted successfully.');
+            } else {
+                // User needs approval - create deletion approval request with reason
+                $oldData = $soil->only([
+                    'land_id', 'business_unit_id', 'nama_penjual', 'alamat_penjual', 
+                    'nomor_ppjb', 'tanggal_ppjb', 'letak_tanah', 'luas', 'harga', 
+                    'bukti_kepemilikan', 'bukti_kepemilikan_details', 'atas_nama', 
+                    'nop_pbb', 'nama_notaris_ppat', 'keterangan'
+                ]);
+
+                // Include related costs in the deletion approval
+                $oldCostData = $soil->biayaTambahanSoils()->with('description')->get()->map(function($cost) {
+                    return [
+                        'id' => $cost->id,
+                        'description_id' => $cost->description_id,
+                        'description' => $cost->description->description ?? '',
+                        'harga' => $cost->harga,
+                        'cost_type' => $cost->cost_type,
+                        'date_cost' => $cost->date_cost,
+                    ];
+                })->toArray();
+
+                $oldData['additional_costs'] = $oldCostData;
+
+                SoilApproval::create([
+                    'soil_id' => $soil->id,
+                    'requested_by' => auth()->id(),
+                    'old_data' => $oldData,
+                    'new_data' => ['deletion_reason' => $this->deleteReason], // Store reason
+                    'change_type' => 'delete',
+                    'status' => 'pending'
+                ]);
+                
+                session()->flash('warning', 'Your deletion request has been submitted for approval and is pending review.');
+            }
+            
+            $this->hideDeleteModalView();
+        }
     }
 
     public function backToIndex()

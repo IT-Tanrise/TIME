@@ -216,4 +216,20 @@ class SoilHistory extends Model
     {
         return $query->where('action', $action);
     }
+
+    // NEW: Check if this is an approved change
+    public function isApprovedChange()
+    {
+        return in_array($this->action, ['approved_update', 'approved_deletion', 'additional_cost_approved']) ||
+            ($this->new_values && isset($this->new_values['_approval_metadata']));
+    }
+
+    // NEW: Get approval metadata
+    public function getApprovalMetadata()
+    {
+        if ($this->new_values && isset($this->new_values['_approval_metadata'])) {
+            return $this->new_values['_approval_metadata'];
+        }
+        return null;
+    }
 }

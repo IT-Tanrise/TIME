@@ -121,6 +121,11 @@ class SoilHistories extends Component
 
     private function hasMeaningfulChanges($history)
     {
+        // Don't filter approved changes - always show them
+        if ($history->isApprovedChange()) {
+            return true;
+        }
+        
         if ($history->action !== 'additional_cost_updated') {
             return true; // Always show non-update actions
         }
@@ -215,7 +220,12 @@ class SoilHistories extends Component
     public function getChangeDetails($history)
     {
         // Special handling for additional cost actions
-        if (in_array($history->action, ['additional_cost_added', 'additional_cost_updated', 'additional_cost_deleted'])) {
+        if (in_array($history->action, [
+            'additional_cost_added', 
+            'additional_cost_updated', 
+            'additional_cost_deleted',
+            'additional_cost_approved'  // Add this
+        ])) {
             return $this->getAdditionalCostDetails($history);
         }
 
@@ -359,6 +369,29 @@ class SoilHistories extends Component
                         0),
                 'new' => 'Deleted'
             ];
+        } elseif ($history->action === 'additional_cost_approved' && $history->new_values) {
+            foreach ($history->new_values as $nv){
+                // Handle approved additional costs
+                $details[] = [
+                    'field' => 'Cost Description',
+                    'old' => '',
+                    'new' => $nv['additional_cost_description'] ?? 
+                            $nv['description'] ?? 
+                            'N/A'
+                ];
+                $details[] = [
+                    'field' => 'Amount',
+                    'old' => '',
+                    'new' => $this->formatValue('additional_cost_amount', 
+                            $nv['additional_cost_amount'] ?? 
+                            $nv['amount'] ?? 
+                            $nv['additional_cost_harga'] ?? 
+                            $nv['harga'] ?? 
+                            0)
+                ];
+            }
+            
+            // Add other fields as needed...
         }
         
         return !empty($details) ? $details : null;
@@ -446,5 +479,84 @@ class SoilHistories extends Component
         ];
 
         return $fieldMap[$field] ?? ucfirst(str_replace('_', ' ', $field));
+    }
+
+    // NEW: Get approval information for display
+    public function getApprovalInfo($history)
+    {
+        if (!$history->isApprovedChange()) {
+            return null;
+        }
+
+        $approvalMetadata = $history->getApprovalMetadata();
+        if (!$approvalMetadata || !isset($approvalMetadata['approved_by'])) {
+            return null;
+        }
+
+        $approver = \App\Models\User::find($approvalMetadata['approved_by']);
+        if (!$approver) {
+            return null;
+        }
+
+        return [
+            'approver_name' => $approver->name,
+            'approval_id' => $approvalMetadata['approval_id'] ?? null,
+            'is_approved_change' => $approvalMetadata['is_approved_change'] ?? false
+        ];
+    }
+
+    // Helper method to check if history entry should show approval badge
+    public function shouldShowApprovalBadge($history)
+    {
+        return in_array($history->action, [
+            'approved_update', 
+            'approved_deletion', 
+            'additional_cost_approved'
+        ]) || $history->isApprovedChange();
+    }
+
+    // Helper method to get the appropriate CSS classes for history action
+    public function getActionClasses($history)
+    {
+        if ($history->isApprovedChange()) {
+            return [
+                'border' => 'border-green-200',
+                'bg' => 'bg-green-50',
+                'text' => 'text-green-600',
+                'badge_bg' => 'bg-green-100',
+                'badge_text' => 'text-green-800'
+            ];
+        }
+
+        return match($history->action) {
+            'created' => [
+                'border' => 'border-green-200',
+                'bg' => 'bg-green-50', 
+                'text' => 'text-green-600',
+                'badge_bg' => 'bg-green-100',
+                'badge_text' => 'text-green-800'
+            ],
+            'updated' => [
+                'border' => 'border-blue-200',
+                'bg' => 'bg-blue-50',
+                'text' => 'text-blue-600', 
+                'badge_bg' => 'bg-blue-100',
+                'badge_text' => 'text-blue-800'
+            ],
+            'deleted' => [
+                'border' => 'border-red-200',
+                'bg' => 'bg-red-50',
+                'text' => 'text-red-600',
+                'badge_bg' => 'bg-red-100', 
+                'badge_text' => 'text-red-800'
+            ],
+            default => [
+                'border' => 'border-orange-200',
+                'bg' => 'bg-orange-50',
+                'text' => 'text-orange-600',
+                'badge_bg' => 'bg-orange-100',
+                'badge_text' => 'text-orange-800'
+            ]
+        };
     }
 }

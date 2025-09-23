@@ -52,8 +52,8 @@ class SoilApprovals extends Component
             // User can approve both types - show all
             // No additional filtering needed
         } elseif ($canApproveData && !$canApproveCosts) {
-            // User can only approve data changes
-            $query->where('change_type', 'details');
+            // User can only approve data changes and deletions
+            $query->whereIn('change_type', ['details', 'delete']);
         } elseif (!$canApproveData && $canApproveCosts) {
             // User can only approve cost changes
             $query->where('change_type', 'costs');
@@ -73,7 +73,7 @@ class SoilApprovals extends Component
         
         // Check if user has permission for this specific approval type
         $canApprove = false;
-        if ($approval->change_type === 'details' && auth()->user()->can('soil-data.approval')) {
+        if (($approval->change_type === 'details' || $approval->change_type === 'delete') && auth()->user()->can('soil-data.approval')) {
             $canApprove = true;
         } elseif ($approval->change_type === 'costs' && auth()->user()->can('soil-data-costs.approval')) {
             $canApprove = true;
@@ -86,7 +86,12 @@ class SoilApprovals extends Component
         
         try {
             $approval->approve($reason);
-            session()->flash('message', 'Changes approved and applied successfully.');
+            
+            if ($approval->change_type === 'delete') {
+                session()->flash('message', 'Deletion approved and soil record has been deleted successfully.');
+            } else {
+                session()->flash('message', 'Changes approved and applied successfully.');
+            }
         } catch (\Exception $e) {
             session()->flash('error', 'Failed to approve changes: ' . $e->getMessage());
         }
@@ -98,7 +103,7 @@ class SoilApprovals extends Component
         
         // Check if user has permission for this specific approval type
         $canReject = false;
-        if ($approval->change_type === 'details' && auth()->user()->can('soil-data.approval')) {
+        if (($approval->change_type === 'details' || $approval->change_type === 'delete') && auth()->user()->can('soil-data.approval')) {
             $canReject = true;
         } elseif ($approval->change_type === 'costs' && auth()->user()->can('soil-data-costs.approval')) {
             $canReject = true;
@@ -129,7 +134,7 @@ class SoilApprovals extends Component
             
             // Double-check permission before rejecting
             $canReject = false;
-            if ($approval->change_type === 'details' && auth()->user()->can('soil-data.approval')) {
+            if (($approval->change_type === 'details' || $approval->change_type === 'delete') && auth()->user()->can('soil-data.approval')) {
                 $canReject = true;
             } elseif ($approval->change_type === 'costs' && auth()->user()->can('soil-data-costs.approval')) {
                 $canReject = true;
@@ -143,7 +148,12 @@ class SoilApprovals extends Component
             
             $approval->reject($this->rejectionReason);
             
-            session()->flash('message', 'Changes rejected successfully.');
+            if ($approval->change_type === 'delete') {
+                session()->flash('message', 'Deletion request rejected successfully.');
+            } else {
+                session()->flash('message', 'Changes rejected successfully.');
+            }
+            
             $this->hideRejectModal();
         }
     }
@@ -159,6 +169,8 @@ class SoilApprovals extends Component
             return $this->getDetailChangeDetails($approval);
         } elseif ($approval->change_type === 'costs') {
             return $this->getCostChangeDetails($approval);
+        } elseif ($approval->change_type === 'delete') {
+            return $this->getDeleteChangeDetails($approval);
         }
         
         return [];
@@ -218,6 +230,42 @@ class SoilApprovals extends Component
         }
         
         return $changes;
+    }
+
+    private function getDeleteChangeDetails($approval)
+    {
+        $details = [];
+        $soil = $approval->soil;
+        $deletionReason = $approval->getDeletionReason();
+        
+        if ($soil) {
+            $details[] = [
+                'field' => 'Record Details',
+                'value' => "Seller: {$soil->nama_penjual}, Location: {$soil->letak_tanah}, PPJB: {$soil->nomor_ppjb}"
+            ];
+            
+            $details[] = [
+                'field' => 'Area & Price',
+                'value' => number_format($soil->luas, 0, ',', '.') . ' m² - ' . $this->formatCurrency($soil->harga)
+            ];
+            
+            if ($soil->biayaTambahanSoils->count() > 0) {
+                $totalCosts = $soil->biayaTambahanSoils->sum('harga');
+                $details[] = [
+                    'field' => 'Additional Costs',
+                    'value' => $soil->biayaTambahanSoils->count() . ' items - ' . $this->formatCurrency($totalCosts)
+                ];
+            }
+        }
+        
+        if ($deletionReason) {
+            $details[] = [
+                'field' => 'Deletion Reason',
+                'value' => $deletionReason
+            ];
+        }
+        
+        return $details;
     }
     
     private function getCostChangeDetails($approval)
@@ -348,5 +396,84 @@ class SoilApprovals extends Component
             'difference' => $this->formatCurrency($newTotal - $oldTotal),
             'difference_raw' => $newTotal - $oldTotal
         ];
+    }
+
+    // NEW: Get approval information for display
+    public function getApprovalInfo($history)
+    {
+        if (!$history->isApprovedChange()) {
+            return null;
+        }
+
+        $approvalMetadata = $history->getApprovalMetadata();
+        if (!$approvalMetadata || !isset($approvalMetadata['approved_by'])) {
+            return null;
+        }
+
+        $approver = \App\Models\User::find($approvalMetadata['approved_by']);
+        if (!$approver) {
+            return null;
+        }
+
+        return [
+            'approver_name' => $approver->name,
+            'approval_id' => $approvalMetadata['approval_id'] ?? null,
+            'is_approved_change' => $approvalMetadata['is_approved_change'] ?? false
+        ];
+    }
+
+    // Helper method to check if history entry should show approval badge
+    public function shouldShowApprovalBadge($history)
+    {
+        return in_array($history->action, [
+            'approved_update', 
+            'approved_deletion', 
+            'additional_cost_approved'
+        ]) || $history->isApprovedChange();
+    }
+
+    // Helper method to get the appropriate CSS classes for history action
+    public function getActionClasses($history)
+    {
+        if ($history->isApprovedChange()) {
+            return [
+                'border' => 'border-green-200',
+                'bg' => 'bg-green-50',
+                'text' => 'text-green-600',
+                'badge_bg' => 'bg-green-100',
+                'badge_text' => 'text-green-800'
+            ];
+        }
+
+        return match($history->action) {
+            'created' => [
+                'border' => 'border-green-200',
+                'bg' => 'bg-green-50', 
+                'text' => 'text-green-600',
+                'badge_bg' => 'bg-green-100',
+                'badge_text' => 'text-green-800'
+            ],
+            'updated' => [
+                'border' => 'border-blue-200',
+                'bg' => 'bg-blue-50',
+                'text' => 'text-blue-600', 
+                'badge_bg' => 'bg-blue-100',
+                'badge_text' => 'text-blue-800'
+            ],
+            'deleted' => [
+                'border' => 'border-red-200',
+                'bg' => 'bg-red-50',
+                'text' => 'text-red-600',
+                'badge_bg' => 'bg-red-100', 
+                'badge_text' => 'text-red-800'
+            ],
+            default => [
+                'border' => 'border-orange-200',
+                'bg' => 'bg-orange-50',
+                'text' => 'text-orange-600',
+                'badge_bg' => 'bg-orange-100',
+                'badge_text' => 'text-orange-800'
+            ]
+        };
     }
 }

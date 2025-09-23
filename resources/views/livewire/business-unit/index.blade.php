@@ -114,6 +114,7 @@
                                      x-transition:leave-end="transform opacity-0 scale-95"
                                      class="absolute right-0 mt-2 w-48 bg-white rounded-md shadow-lg ring-1 ring-black ring-opacity-5">
                                     <div class="py-1">
+                                        @can('business-units.access')
                                         <button wire:click="showDetail({{ $unit->id }})" @click="open = false"
                                                 class="flex items-center w-full px-4 py-2 text-sm text-gray-700 hover:bg-gray-100">
                                             <svg class="w-4 h-4 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -122,6 +123,8 @@
                                             </svg>
                                             View Details
                                         </button>
+                                        @endcan
+                                        @can('business-units.edit')
                                         <button wire:click="showEdit({{ $unit->id }})" @click="open = false"
                                                 class="flex items-center w-full px-4 py-2 text-sm text-gray-700 hover:bg-gray-100">
                                             <svg class="w-4 h-4 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -129,6 +132,7 @@
                                             </svg>
                                             Edit
                                         </button>
+                                        @endcan
                                         @if($unit->children->count() > 0)
                                             <button wire:click="$set('parentFilter', {{ $unit->id }})" @click="open = false"
                                                     class="flex items-center w-full px-4 py-2 text-sm text-purple-700 hover:bg-purple-50">
@@ -138,6 +142,7 @@
                                                 Filter by This Unit
                                             </button>
                                         @endif
+                                        @can('business-units.delete')
                                         <button wire:click="delete({{ $unit->id }})" @click="open = false"
                                                 onclick="return confirm('Are you sure you want to delete this business unit? This action cannot be undone.')"
                                                 class="flex items-center w-full px-4 py-2 text-sm text-red-700 hover:bg-red-50">
@@ -146,6 +151,7 @@
                                             </svg>
                                             Delete
                                         </button>
+                                        @endcan
                                     </div>
                                 </div>
                             </div>

@@ -5,7 +5,6 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Facades\Auth;
-
 use Illuminate\Support\Facades\DB;
 
 class SoilApproval extends Model
@@ -20,7 +19,7 @@ class SoilApproval extends Model
         'reason',
         'old_data',
         'new_data',
-        'change_type',
+        'change_type', // 'details', 'costs', 'delete'
         'approved_at'
     ];
 
@@ -64,6 +63,21 @@ class SoilApproval extends Model
         return $query->where('status', 'rejected');
     }
 
+    public function scopeDetails($query)
+    {
+        return $query->where('change_type', 'details');
+    }
+
+    public function scopeCosts($query)
+    {
+        return $query->where('change_type', 'costs');
+    }
+
+    public function scopeDeletes($query)
+    {
+        return $query->where('change_type', 'delete');
+    }
+
     // Accessors
     public function getFormattedCreatedAtAttribute()
     {
@@ -76,12 +90,64 @@ class SoilApproval extends Model
     }
 
     // Helper methods
+    public function isPending()
+    {
+        return $this->status === 'pending';
+    }
+
+    public function isApproved()
+    {
+        return $this->status === 'approved';
+    }
+
+    public function isRejected()
+    {
+        return $this->status === 'rejected';
+    }
+
+    public function isDetailsChange()
+    {
+        return $this->change_type === 'details';
+    }
+
+    public function isCostsChange()
+    {
+        return $this->change_type === 'costs';
+    }
+
+    public function isDeleteRequest()
+    {
+        return $this->change_type === 'delete';
+    }
+
+    // Get deletion reason if this is a delete request
+    public function getDeletionReason()
+    {
+        if ($this->isDeleteRequest() && is_array($this->new_data)) {
+            return $this->new_data['deletion_reason'] ?? null;
+        }
+        return null;
+    }
+
+    // Get formatted change type
+    public function getFormattedChangeType()
+    {
+        return match($this->change_type) {
+            'details' => 'Soil Details',
+            'costs' => 'Additional Costs',
+            'delete' => 'Delete Record',
+            default => ucfirst($this->change_type)
+        };
+    }
+
     public function getChangeSummary()
     {
         if ($this->change_type === 'details') {
             return $this->getDetailChangeSummary();
         } elseif ($this->change_type === 'costs') {
             return $this->getCostChangeSummary();
+        } elseif ($this->change_type === 'delete') {
+            return $this->getDeleteChangeSummary();
         }
         
         return 'Unknown change type';
@@ -128,25 +194,48 @@ class SoilApproval extends Model
 
     private function getCostChangeSummary()
     {
-        return 'Additional costs modification requested';
+        $oldData = $this->old_data ?? [];
+        $newData = $this->new_data ?? [];
+        
+        $oldTotal = collect($oldData)->sum('harga');
+        $newTotal = collect($newData)->sum('harga');
+        
+        return 'Cost changes: ' . count($newData) . ' items, total difference: Rp ' . 
+               number_format($newTotal - $oldTotal, 0, ',', '.');
+    }
+
+    private function getDeleteChangeSummary()
+    {
+        $reason = $this->getDeletionReason();
+        $summary = 'Request to delete soil record';
+        
+        if ($reason) {
+            $summary .= ' - Reason: ' . substr($reason, 0, 50) . (strlen($reason) > 50 ? '...' : '');
+        }
+        
+        return $summary;
     }
 
     // Actions
     public function approve($reason = null)
     {
-        $this->update([
-            'status' => 'approved',
-            'approved_by' => Auth::id(),
-            'approved_at' => now(),
-            'reason' => $reason
-        ]);
+        DB::transaction(function () use ($reason) {
+            $this->update([
+                'status' => 'approved',
+                'approved_by' => Auth::id(),
+                'approved_at' => now(),
+                'reason' => $reason
+            ]);
 
-        // Apply the changes to the soil record
-        if ($this->change_type === 'details') {
-            $this->applyDetailChanges();
-        } elseif ($this->change_type === 'costs') {
-            $this->applyCostChanges();
-        }
+            // Apply the changes to the soil record based on change type
+            if ($this->change_type === 'details') {
+                $this->applyDetailChanges();
+            } elseif ($this->change_type === 'costs') {
+                $this->applyCostChanges();
+            } elseif ($this->change_type === 'delete') {
+                $this->applyDeletion();
+            }
+        });
     }
 
     public function reject($reason)
@@ -206,5 +295,26 @@ class SoilApproval extends Model
         
         // Reset history logging flag
         $soil->historyLogging = false;
+    }
+
+    private function applyDeletion()
+    {
+        $soil = $this->soil;
+        if (!$soil) {
+            throw new \Exception('Soil record not found for deletion approval.');
+        }
+
+        // Log deletion history before actually deleting
+        $soil->logHistory('approved_deletion', [
+            'deletion_reason' => $this->getDeletionReason(),
+            'deleted_by_approval_id' => $this->id,
+            'approved_by' => $this->approved_by
+        ]);
+
+        // Delete related BiayaTambahanSoil records first
+        $soil->biayaTambahanSoils()->delete();
+        
+        // Delete the soil record
+        $soil->delete();
     }
 }

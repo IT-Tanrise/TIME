@@ -63,9 +63,18 @@
                             </h2>
                             <div class="flex items-center space-x-2">
                                 <?php if (app(\Illuminate\Contracts\Auth\Access\Gate::class)->check('soil-data.approval')): ?>
+                                    <?php
+                                        $pendingDetailsCount = App\Models\SoilApproval::pending()->where('change_type', 'details')->count();
+                                        $pendingDeleteCount = App\Models\SoilApproval::pending()->where('change_type', 'delete')->count();
+                                    ?>
                                     <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
-                                        <?php echo e(App\Models\SoilApproval::pending()->where('change_type', 'details')->count()); ?> Soil Data
+                                        <?php echo e($pendingDetailsCount); ?> Soil Data
                                     </span>
+                                    <?php if($pendingDeleteCount > 0): ?>
+                                        <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-red-100 text-red-800">
+                                            <?php echo e($pendingDeleteCount); ?> Deletions
+                                        </span>
+                                    <?php endif; ?>
                                 <?php endif; ?>
                                 <?php if (app(\Illuminate\Contracts\Auth\Access\Gate::class)->check('soil-data-costs.approval')): ?>
                                     <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-purple-100 text-purple-800">
@@ -78,7 +87,7 @@
                         <?php
                             $totalPending = 0;
                             if(auth()->user()->can('soil-data.approval')) {
-                                $totalPending += App\Models\SoilApproval::pending()->where('change_type', 'details')->count();
+                                $totalPending += App\Models\SoilApproval::pending()->whereIn('change_type', ['details', 'delete'])->count();
                             }
                             if(auth()->user()->can('soil-data-costs.approval')) {
                                 $totalPending += App\Models\SoilApproval::pending()->where('change_type', 'costs')->count();
@@ -163,7 +172,14 @@ if (isset($__slots)) unset($__slots);
                                         <ul class="list-disc list-inside space-y-1">
                                             <?php $__currentLoopData = $userPendingApprovals; $__env->addLoop($__currentLoopData); foreach($__currentLoopData as $approval): $__env->incrementLoopIndices(); $loop = $__env->getLastLoop(); ?>
                                                 <li>
-                                                    <span class="font-medium"><?php echo e(ucfirst(str_replace('_', ' ', $approval->change_type))); ?></span> 
+                                                    <?php if($approval->change_type === 'delete'): ?>
+                                                        <span class="inline-flex items-center px-1.5 py-0.5 rounded text-xs font-medium bg-red-100 text-red-800 mr-1">
+                                                            DELETE
+                                                        </span>
+                                                        <span class="font-medium">Deletion request</span>
+                                                    <?php else: ?>
+                                                        <span class="font-medium"><?php echo e(ucfirst(str_replace('_', ' ', $approval->change_type))); ?></span>
+                                                    <?php endif; ?>
                                                     for <?php echo e($approval->soil->nama_penjual ?? 'Unknown'); ?> 
                                                     (<?php echo e($approval->created_at->diffForHumans()); ?>)
                                                 </li>
@@ -203,10 +219,19 @@ if (isset($__slots)) unset($__slots);
                                                 <div class="min-w-0 flex-1 pt-1.5 flex justify-between space-x-4">
                                                     <div>
                                                         <p class="text-sm text-gray-500">
-                                                            <span class="font-medium text-gray-900">
-                                                                <?php echo e(ucfirst(str_replace('_', ' ', $approval->change_type))); ?> changes
-                                                            </span>
-                                                            for <?php echo e($approval->soil->nama_penjual ?? 'Unknown Seller'); ?>
+                                                            <?php if($approval->change_type === 'delete'): ?>
+                                                                <span class="inline-flex items-center px-1.5 py-0.5 rounded text-xs font-medium bg-red-100 text-red-800 mr-1">
+                                                                    DELETE
+                                                                </span>
+                                                                <span class="font-medium text-gray-900">
+                                                                    Deletion request
+                                                                </span>
+                                                            <?php else: ?>
+                                                                <span class="font-medium text-gray-900">
+                                                                    <?php echo e(ucfirst(str_replace('_', ' ', $approval->change_type))); ?> changes
+                                                                </span>
+                                                            <?php endif; ?>
+                                                            for <?php echo e($approval->soil->nama_penjual ?? ($approval->change_type === 'delete' ? 'Deleted Record' : 'Unknown Seller')); ?>
 
                                                             <span class="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium <?php echo e($approval->status === 'approved' ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'); ?>">
                                                                 <?php echo e(ucfirst($approval->status)); ?>
@@ -215,16 +240,20 @@ if (isset($__slots)) unset($__slots);
                                                         </p>
                                                         <p class="text-xs text-gray-400 mt-1">
                                                             Requested by: <?php echo e($approval->requestedBy->name ?? 'Unknown'); ?> |
-                                                            Business Unit: <?php echo e($approval->soil->businessUnit->name ?? 'N/A'); ?> |
-                                                            Land: <?php echo e($approval->soil->land->lokasi_lahan ?? 'N/A'); ?>
+                                                            <?php if($approval->soil): ?>
+                                                                Business Unit: <?php echo e($approval->soil->businessUnit->name ?? 'N/A'); ?> |
+                                                                Land: <?php echo e($approval->soil->land->lokasi_lahan ?? 'N/A'); ?>
 
+                                                            <?php else: ?>
+                                                                <span class="text-red-500">Record has been deleted</span>
+                                                            <?php endif; ?>
                                                         </p>
                                                         <?php if($approval->status === 'approved'): ?>
                                                             <p class="text-xs text-green-600 mt-1">
                                                                 Approved by: <?php echo e($approval->approvedBy->name ?? 'Unknown'); ?>
 
-                                                                <?php if($approval->approval_reason): ?>
-                                                                    - <?php echo e(Str::limit($approval->approval_reason, 50)); ?>
+                                                                <?php if($approval->reason): ?>
+                                                                    - <?php echo e(Str::limit($approval->reason, 50)); ?>
 
                                                                 <?php endif; ?>
                                                             </p>
@@ -232,10 +261,18 @@ if (isset($__slots)) unset($__slots);
                                                             <p class="text-xs text-red-600 mt-1">
                                                                 Rejected by: <?php echo e($approval->approvedBy->name ?? 'Unknown'); ?>
 
-                                                                <?php if($approval->rejection_reason): ?>
-                                                                    - <?php echo e(Str::limit($approval->rejection_reason, 50)); ?>
+                                                                <?php if($approval->reason): ?>
+                                                                    - <?php echo e(Str::limit($approval->reason, 50)); ?>
 
                                                                 <?php endif; ?>
+                                                            </p>
+                                                        <?php endif; ?>
+                                                        
+                                                        
+                                                        <?php if($approval->change_type === 'delete' && $approval->getDeletionReason()): ?>
+                                                            <p class="text-xs text-gray-600 mt-1 bg-gray-50 p-2 rounded">
+                                                                <strong>Deletion Reason:</strong> <?php echo e(Str::limit($approval->getDeletionReason(), 100)); ?>
+
                                                             </p>
                                                         <?php endif; ?>
                                                     </div>
