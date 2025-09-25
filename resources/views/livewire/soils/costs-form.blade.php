@@ -77,37 +77,46 @@
                                             <div class="relative">
                                                 <label class="block text-sm font-medium text-gray-700">Description *</label>
                                                 <input type="text" 
-                                                       wire:model.live.debounce.300ms="descriptionSearch.{{ $index }}"
-                                                       wire:focus="searchDescriptions({{ $index }})"
-                                                       placeholder="Search or select description..."
-                                                       class="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 sm:text-sm @error('biayaTambahan.'.$index.'.description_id') border-red-300 @enderror"
-                                                       autocomplete="off">
+                                                    wire:model.live.debounce.300ms="descriptionSearch.{{ $index }}"
+                                                    wire:focus="searchDescriptions({{ $index }})"
+                                                    placeholder="Search or select description..."
+                                                    class="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 sm:text-sm @error('biayaTambahan.'.$index.'.description_id') border-red-300 @enderror"
+                                                    autocomplete="off">
                                                 
                                                 @if(isset($showDescriptionDropdown[$index]) && $showDescriptionDropdown[$index])
-                                                    <div class="absolute z-50 mt-1 w-full bg-white shadow-lg max-h-60 rounded-md py-1 text-base ring-1 ring-black ring-opacity-5 overflow-auto focus:outline-none sm:text-sm"
-                                                         wire:click.stop>
+                                                    <div class="absolute z-40 mt-1 w-full bg-white shadow-lg rounded-md py-1 text-xs ring-1 ring-black ring-opacity-5 focus:outline-none"
+                                                        style="max-height: 240px; overflow-y: auto; overflow-x: hidden;"
+                                                        wire:click.stop>
                                                         @php
                                                             $descriptions = $this->getFilteredDescriptions($index);
                                                         @endphp
                                                         
                                                         @if(empty($descriptionSearch[$index] ?? '') && $descriptions->count() > 0)
-                                                            <div class="px-4 py-2 text-xs text-blue-600 bg-blue-50 border-b border-blue-100">
-                                                                Showing all descriptions - start typing to filter
+                                                            <div class="px-3 py-1.5 text-xs text-blue-600 bg-blue-50 border-b border-blue-100 sticky top-0 z-10">
+                                                                Showing available descriptions - start typing to filter
                                                             </div>
                                                         @endif
                                                         
-                                                        @forelse($descriptions as $description)
-                                                            <button type="button"
-                                                                    wire:click.stop="selectDescription({{ $index }}, {{ $description->id }}, '{{ addslashes($description->description) }}')"
-                                                                    class="w-full text-left px-4 py-2 text-sm text-gray-900 hover:bg-gray-100">
-                                                                {{ $description->description }}
-                                                            </button>
-                                                        @empty
-                                                            <div class="px-4 py-2 text-sm text-gray-500">No descriptions found</div>
-                                                        @endforelse
+                                                        <div class="max-h-48 overflow-y-auto">
+                                                            @forelse($descriptions as $description)
+                                                                <button type="button"
+                                                                        wire:click.stop="selectDescription({{ $index }}, {{ $description->id }}, '{{ addslashes($description->description) }}')"
+                                                                        class="w-full text-left px-3 py-1.5 text-xs text-gray-900 hover:bg-gray-100 focus:bg-gray-100 focus:outline-none">
+                                                                    {{ $description->description }}
+                                                                </button>
+                                                            @empty
+                                                                <div class="px-3 py-1.5 text-xs text-gray-500">
+                                                                    @if(strlen($descriptionSearch[$index] ?? '') > 0)
+                                                                        No descriptions found for "{{ $descriptionSearch[$index] }}"
+                                                                    @else
+                                                                        No descriptions available
+                                                                    @endif
+                                                                </div>
+                                                            @endforelse
+                                                        </div>
                                                         
                                                         @if($descriptions->count() >= 20)
-                                                            <div class="px-4 py-2 text-xs text-gray-500 bg-gray-50 border-t border-gray-100">
+                                                            <div class="px-3 py-1.5 text-xs text-gray-500 bg-gray-50 border-t border-gray-100 sticky bottom-0">
                                                                 Showing first 20 results - type to search for more
                                                             </div>
                                                         @endif
@@ -241,30 +250,43 @@ document.addEventListener('alpine:init', () => {
     }));
 });
 
-// Handle click outside to close dropdowns
+// Simple click outside handler - same pattern as your working form
 document.addEventListener('click', function(event) {
-    // Only close dropdowns if clicking outside of any dropdown or input
-    const dropdowns = document.querySelectorAll('[wire\\:click\\.stop]');
-    const inputs = document.querySelectorAll('input[wire\\:focus]');
+    // Check if click is outside any dropdown-related element
+    const isDropdownClick = event.target.closest('.relative') || 
+                           event.target.closest('[wire\\:click\\.stop]') ||
+                           event.target.closest('[wire\\:focus]');
     
-    let clickedInside = false;
-    
-    // Check if click was inside any dropdown or input
-    dropdowns.forEach(dropdown => {
-        if (dropdown.contains(event.target)) {
-            clickedInside = true;
-        }
-    });
-    
-    inputs.forEach(input => {
-        if (input.contains(event.target)) {
-            clickedInside = true;
-        }
-    });
-    
-    // If clicked outside, close all dropdowns
-    if (!clickedInside) {
+    if (!isDropdownClick && window.Livewire) {
         window.Livewire.dispatch('closeDropdowns');
     }
 });
 </script>
+
+<!-- Add the same CSS styles from your working form for consistency -->
+<style>
+/* Custom scrollbar styling for better UX */
+[style*="max-height"][style*="overflow-y: auto"]::-webkit-scrollbar {
+    width: 6px;
+}
+
+[style*="max-height"][style*="overflow-y: auto"]::-webkit-scrollbar-track {
+    background: #f1f1f1;
+    border-radius: 3px;
+}
+
+[style*="max-height"][style*="overflow-y: auto"]::-webkit-scrollbar-thumb {
+    background: #c1c1c1;
+    border-radius: 3px;
+}
+
+[style*="max-height"][style*="overflow-y: auto"]::-webkit-scrollbar-thumb:hover {
+    background: #a8a8a8;
+}
+
+/* Force scrolling on all dropdown containers */
+[style*="max-height"][style*="overflow-y: auto"] {
+    scrollbar-width: thin;
+    scrollbar-color: #c1c1c1 #f1f1f1;
+}
+</style>

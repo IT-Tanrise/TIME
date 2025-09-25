@@ -1104,19 +1104,33 @@ class Soils extends Component
             'cost_type' => 'standard',
             'date_cost' => '',
         ];
+        
+        // Ensure arrays are properly sized
+        if (!is_array($this->descriptionSearch)) {
+            $this->descriptionSearch = [];
+        }
+        if (!is_array($this->showDescriptionDropdown)) {
+            $this->showDescriptionDropdown = [];
+        }
+        
         $this->descriptionSearch[$index] = '';
         $this->showDescriptionDropdown[$index] = false;
     }
 
     public function removeBiayaTambahan($index)
     {
+        // Remove from all related arrays
         unset($this->biayaTambahan[$index]);
         unset($this->descriptionSearch[$index]);
         unset($this->showDescriptionDropdown[$index]);
         
+        // Re-index arrays to prevent gaps
         $this->biayaTambahan = array_values($this->biayaTambahan);
         $this->descriptionSearch = array_values($this->descriptionSearch);
         $this->showDescriptionDropdown = array_values($this->showDescriptionDropdown);
+        
+        // Dispatch event to clean up any DOM references
+        $this->dispatch('cost-item-removed', removedIndex: $index);
     }
 
     public function getTotalBiayaTambahan()
@@ -1142,28 +1156,49 @@ class Soils extends Component
     // Description search methods (removed category)
     public function updatedDescriptionSearch($value, $key)
     {
-        if (!isset($this->showDescriptionDropdown[$key])) {
-            $this->showDescriptionDropdown[$key] = false;
-        }
-    }
-
-    public function searchDescriptions($index)
-    {
+        // Simple approach - just ensure dropdown stays open while typing
         if (!is_array($this->showDescriptionDropdown)) {
             $this->showDescriptionDropdown = [];
         }
         
-        for ($i = 0; $i < count($this->biayaTambahan); $i++) {
-            $this->showDescriptionDropdown[$i] = ($i === $index);
+        // Keep dropdown open when there's a value or when empty (to show all options)
+        $this->showDescriptionDropdown[$key] = true;
+    }
+
+    public function searchDescriptions($index)
+    {
+        // Initialize arrays if needed
+        if (!is_array($this->showDescriptionDropdown)) {
+            $this->showDescriptionDropdown = [];
         }
         
+        // Close all other dropdowns first - same as business unit dropdown
+        for ($i = 0; $i < count($this->biayaTambahan); $i++) {
+            $this->showDescriptionDropdown[$i] = false;
+        }
+        
+        // Open the requested dropdown
         $this->showDescriptionDropdown[$index] = true;
+        
+        // Initialize search if not set
+        if (!isset($this->descriptionSearch[$index])) {
+            $this->descriptionSearch[$index] = '';
+        }
     }
 
     public function selectDescription($index, $descriptionId, $descriptionName)
     {
-        $this->biayaTambahan[$index]['description_id'] = $descriptionId;
+        // Set the values - same pattern as business unit
+        if (isset($this->biayaTambahan[$index])) {
+            $this->biayaTambahan[$index]['description_id'] = $descriptionId;
+        }
+        
+        if (!is_array($this->descriptionSearch)) {
+            $this->descriptionSearch = [];
+        }
         $this->descriptionSearch[$index] = $descriptionName;
+        
+        // Close dropdown
         $this->showDescriptionDropdown[$index] = false;
     }
 
@@ -1173,8 +1208,9 @@ class Soils extends Component
         
         $query = DescriptionBiayaTambahanSoil::query();
         
+        // Apply search filter if there's text
         if (!empty(trim($search))) {
-            $query->where('description', 'like', '%' . $search . '%');
+            $query->where('description', 'like', '%' . trim($search) . '%');
         }
         
         return $query->orderBy('description')->limit(20)->get();
@@ -1231,12 +1267,14 @@ class Soils extends Component
     #[On('closeDropdowns')]
     public function closeDropdowns()
     {
+        // Close description dropdowns
         if (is_array($this->biayaTambahan) && count($this->biayaTambahan) > 0) {
             $this->showDescriptionDropdown = array_fill(0, count($this->biayaTambahan), false);
         } else {
             $this->showDescriptionDropdown = [];
         }
 
+        // Close other dropdowns
         if (is_array($this->soilDetails) && count($this->soilDetails) > 0) {
             $this->showSellerNameDropdown = array_fill(0, count($this->soilDetails), false);
             $this->showSellerAddressDropdown = array_fill(0, count($this->soilDetails), false);
