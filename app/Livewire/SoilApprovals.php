@@ -39,9 +39,14 @@ class SoilApprovals extends Component
     
     public function render()
     {
-        $query = SoilApproval::with(['soil.land', 'soil.businessUnit', 'requestedBy'])
+        $query = SoilApproval::with(['requestedBy'])
+            ->leftJoin('soils', 'soil_approvals.soil_id', '=', 'soils.id')
+            ->leftJoin('lands', 'soils.land_id', '=', 'lands.id') 
+            ->leftJoin('business_units', 'soils.business_unit_id', '=', 'business_units.id')
+            ->select('soil_approvals.*') // Make sure to select only approval fields
+            ->with(['soil.land', 'soil.businessUnit']) // Still eager load relationships
             ->pending()
-            ->orderBy('created_at', 'desc');
+            ->orderBy('soil_approvals.created_at', 'desc');
 
         // Filter approvals based on user permissions
         $user = auth()->user();
@@ -52,14 +57,14 @@ class SoilApprovals extends Component
             // User can approve both types - show all
             // No additional filtering needed
         } elseif ($canApproveData && !$canApproveCosts) {
-            // User can only approve data changes and deletions
-            $query->whereIn('change_type', ['details', 'delete']);
+            // User can only approve data changes, creations, and deletions
+            $query->whereIn('soil_approvals.change_type', ['details', 'delete', 'create']);
         } elseif (!$canApproveData && $canApproveCosts) {
             // User can only approve cost changes
-            $query->where('change_type', 'costs');
+            $query->where('soil_approvals.change_type', 'costs');
         } else {
             // User has no approval permissions - show nothing
-            $query->where('id', '<', 0); // Force empty result
+            $query->where('soil_approvals.id', '<', 0); // Force empty result
         }
             
         $pendingApprovals = $query->paginate(10);
@@ -73,7 +78,7 @@ class SoilApprovals extends Component
         
         // Check if user has permission for this specific approval type
         $canApprove = false;
-        if (($approval->change_type === 'details' || $approval->change_type === 'delete') && auth()->user()->can('soil-data.approval')) {
+        if (($approval->change_type === 'details' || $approval->change_type === 'delete' || $approval->change_type === 'create') && auth()->user()->can('soil-data.approval')) {
             $canApprove = true;
         } elseif ($approval->change_type === 'costs' && auth()->user()->can('soil-data-costs.approval')) {
             $canApprove = true;
@@ -89,6 +94,8 @@ class SoilApprovals extends Component
             
             if ($approval->change_type === 'delete') {
                 session()->flash('message', 'Deletion approved and soil record has been deleted successfully.');
+            } elseif ($approval->change_type === 'create') {
+                session()->flash('message', 'Creation approved and new soil record has been created successfully.');
             } else {
                 session()->flash('message', 'Changes approved and applied successfully.');
             }
@@ -103,7 +110,7 @@ class SoilApprovals extends Component
         
         // Check if user has permission for this specific approval type
         $canReject = false;
-        if (($approval->change_type === 'details' || $approval->change_type === 'delete') && auth()->user()->can('soil-data.approval')) {
+        if (($approval->change_type === 'details' || $approval->change_type === 'delete' || $approval->change_type === 'create') && auth()->user()->can('soil-data.approval')) {
             $canReject = true;
         } elseif ($approval->change_type === 'costs' && auth()->user()->can('soil-data-costs.approval')) {
             $canReject = true;
@@ -134,7 +141,7 @@ class SoilApprovals extends Component
             
             // Double-check permission before rejecting
             $canReject = false;
-            if (($approval->change_type === 'details' || $approval->change_type === 'delete') && auth()->user()->can('soil-data.approval')) {
+            if (($approval->change_type === 'details' || $approval->change_type === 'delete' || $approval->change_type === 'create') && auth()->user()->can('soil-data.approval')) {
                 $canReject = true;
             } elseif ($approval->change_type === 'costs' && auth()->user()->can('soil-data-costs.approval')) {
                 $canReject = true;
@@ -150,12 +157,77 @@ class SoilApprovals extends Component
             
             if ($approval->change_type === 'delete') {
                 session()->flash('message', 'Deletion request rejected successfully.');
+            } elseif ($approval->change_type === 'create') {
+                session()->flash('message', 'Creation request rejected successfully.');
             } else {
                 session()->flash('message', 'Changes rejected successfully.');
             }
             
             $this->hideRejectModal();
         }
+    }
+
+    private function getCreateChangeDetails($approval)
+    {
+        $details = [];
+        $newData = $approval->new_data;
+        
+        if (!$newData) {
+            return [];
+        }
+        
+        $fieldLabels = [
+            'land_id' => 'Land',
+            'business_unit_id' => 'Business Unit',
+            'nama_penjual' => 'Seller Name',
+            'alamat_penjual' => 'Seller Address',
+            'nomor_ppjb' => 'PPJB Number',
+            'tanggal_ppjb' => 'PPJB Date',
+            'letak_tanah' => 'Land Location',
+            'luas' => 'Area (mÂ²)',
+            'harga' => 'Price',
+            'bukti_kepemilikan' => 'Ownership Proof',
+            'bukti_kepemilikan_details' => 'Ownership Details',
+            'atas_nama' => 'Owner Name',
+            'nop_pbb' => 'PBB Number',
+            'nama_notaris_ppat' => 'Notary Name',
+            'keterangan' => 'Notes'
+        ];
+        
+        foreach ($newData as $field => $value) {
+            if ($value !== null && $value !== '') {
+                $label = $fieldLabels[$field] ?? ucfirst(str_replace('_', ' ', $field));
+                
+                if (in_array($field, ['luas', 'harga'])) {
+                    $details[] = [
+                        'field' => $label,
+                        'value' => number_format($value, 0, ',', '.')
+                    ];
+                } elseif (in_array($field, ['land_id', 'business_unit_id'])) {
+                    // For foreign keys, resolve to names if possible
+                    if ($field === 'land_id') {
+                        $land = \App\Models\Land::find($value);
+                        $details[] = [
+                            'field' => $label,
+                            'value' => $land ? $land->lokasi_lahan : "ID: {$value}"
+                        ];
+                    } elseif ($field === 'business_unit_id') {
+                        $businessUnit = \App\Models\BusinessUnit::find($value);
+                        $details[] = [
+                            'field' => $label,
+                            'value' => $businessUnit ? $businessUnit->name : "ID: {$value}"
+                        ];
+                    }
+                } else {
+                    $details[] = [
+                        'field' => $label,
+                        'value' => $value
+                    ];
+                }
+            }
+        }
+        
+        return $details;
     }
     
     public function formatCurrency($amount)
@@ -171,6 +243,8 @@ class SoilApprovals extends Component
             return $this->getCostChangeDetails($approval);
         } elseif ($approval->change_type === 'delete') {
             return $this->getDeleteChangeDetails($approval);
+        } elseif ($approval->change_type === 'create') {
+            return $this->getCreateChangeDetails($approval);
         }
         
         return [];

@@ -73,10 +73,16 @@
                                     <?php
                                         $pendingDetailsCount = App\Models\SoilApproval::pending()->where('change_type', 'details')->count();
                                         $pendingDeleteCount = App\Models\SoilApproval::pending()->where('change_type', 'delete')->count();
+                                        $pendingCreateCount = App\Models\SoilApproval::pending()->where('change_type', 'create')->count();
                                     ?>
                                     <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
                                         <?php echo e($pendingDetailsCount); ?> Soil Data
                                     </span>
+                                    <?php if($pendingCreateCount > 0): ?>
+                                        <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">
+                                            <?php echo e($pendingCreateCount); ?> New Records
+                                        </span>
+                                    <?php endif; ?>
                                     <?php if($pendingDeleteCount > 0): ?>
                                         <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-red-100 text-red-800">
                                             <?php echo e($pendingDeleteCount); ?> Deletions
@@ -96,7 +102,7 @@
                             <?php
                                 $totalPending = 0;
                                 if(auth()->user()->can('soil-data.approval')) {
-                                    $totalPending += App\Models\SoilApproval::pending()->whereIn('change_type', ['details', 'delete'])->count();
+                                    $totalPending += App\Models\SoilApproval::pending()->whereIn('change_type', ['details', 'delete', 'create'])->count();
                                 }
                                 if(auth()->user()->can('soil-data-costs.approval')) {
                                     $totalPending += App\Models\SoilApproval::pending()->where('change_type', 'costs')->count();
@@ -193,12 +199,14 @@ if (isset($__slots)) unset($__slots);
                                             <ul class="list-disc list-inside space-y-1">
                                                 <?php $__currentLoopData = $userPendingApprovals; $__env->addLoop($__currentLoopData); foreach($__currentLoopData as $approval): $__env->incrementLoopIndices(); $loop = $__env->getLastLoop(); ?>
                                                     <li>
-                                                        <?php if($approval->change_type === 'delete'): ?>
-                                                            <span class="inline-flex items-center px-1.5 py-0.5 rounded text-xs font-medium bg-red-100 text-red-800 mr-1">
-                                                                DELETE
+                                                       <?php if($approval->change_type === 'create'): ?>
+                                                            <span class="inline-flex items-center px-1.5 py-0.5 rounded text-xs font-medium bg-green-100 text-green-800 mr-1">
+                                                                CREATE
                                                             </span>
-                                                            <span class="font-medium">Deletion request</span>
-                                                        <?php else: ?>
+                                                            <span class="font-medium text-gray-900">
+                                                                Creation request
+                                                            </span>
+                                                        <?php elseif($approval->change_type === 'delete'): ?>
                                                             <span class="font-medium"><?php echo e(ucfirst(str_replace('_', ' ', $approval->change_type))); ?></span>
                                                         <?php endif; ?>
                                                         for <?php echo e($approval->soil->nama_penjual ?? 'Unknown'); ?> 
@@ -247,6 +255,13 @@ if (isset($__slots)) unset($__slots);
                                                                     <span class="font-medium text-gray-900">
                                                                         Deletion request
                                                                     </span>
+                                                                <?php elseif($approval->change_type === 'create'): ?>
+                                                                    <span class="inline-flex items-center px-1.5 py-0.5 rounded text-xs font-medium bg-green-100 text-green-800 mr-1">
+                                                                        CREATE
+                                                                    </span>
+                                                                    <span class="font-medium text-gray-900">
+                                                                        Creation request
+                                                                    </span>
                                                                 <?php else: ?>
                                                                     <span class="font-medium text-gray-900">
                                                                         <?php echo e(ucfirst(str_replace('_', ' ', $approval->change_type))); ?> changes
@@ -262,11 +277,13 @@ if (isset($__slots)) unset($__slots);
                                                             <p class="text-xs text-gray-400 mt-1">
                                                                 Requested by: <?php echo e($approval->requestedBy->name ?? 'Unknown'); ?> |
                                                                 <?php if($approval->soil): ?>
-                                                                    Business Unit: <?php echo e($approval->soil->businessUnit->name ?? 'N/A'); ?> |
-                                                                    Land: <?php echo e($approval->soil->land->lokasi_lahan ?? 'N/A'); ?>
+                                                                    <?php echo e($approval->soil->nama_penjual ?? 'Unknown Seller'); ?>
+
+                                                                <?php elseif($approval->change_type === 'create' && $approval->new_data): ?>
+                                                                    <?php echo e($approval->new_data['nama_penjual'] ?? 'New Record'); ?>
 
                                                                 <?php else: ?>
-                                                                    <span class="text-red-500">Record has been deleted</span>
+                                                                    <span class="text-red-500">Record has been deleted or doesn't exist</span>
                                                                 <?php endif; ?>
                                                             </p>
                                                             <?php if($approval->status === 'approved'): ?>

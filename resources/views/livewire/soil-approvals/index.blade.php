@@ -30,7 +30,14 @@
                                 <h3 class="text-lg font-medium text-gray-900">
                                     Approval Request #{{ $approval->id }}
                                 </h3>
-                                @if($approval->change_type === 'delete')
+                                @if($approval->change_type === 'create')
+                                    <span class="inline-flex items-center px-2 py-1 rounded text-xs font-semibold bg-green-100 text-green-800">
+                                        <svg class="w-3 h-3 mr-1" fill="currentColor" viewBox="0 0 20 20">
+                                            <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm1-11a1 1 0 10-2 0v3.586L7.707 9.293a1 1 0 00-1.414 1.414l3 3a1 1 0 001.414 0l3-3a1 1 0 00-1.414-1.414L11 11.586V7z" clip-rule="evenodd"/>
+                                        </svg>
+                                        CREATE REQUEST
+                                    </span>
+                                @elseif($approval->change_type === 'delete')
                                     <span class="inline-flex items-center px-2 py-1 rounded text-xs font-semibold bg-red-100 text-red-800">
                                         <svg class="w-3 h-3 mr-1" fill="currentColor" viewBox="0 0 20 20">
                                             <path fill-rule="evenodd" d="M9 2a1 1 0 000 2h2a1 1 0 100-2H9z" clip-rule="evenodd"/>
@@ -46,6 +53,25 @@
                                     <span>•</span>
                                     <span>{{ $approval->soil->businessUnit->name ?? 'N/A' }}</span>
                                     <span>•</span>
+                                @elseif($approval->change_type === 'create')
+                                    @php
+                                        $landName = 'N/A';
+                                        $businessUnitName = 'N/A';
+                                        if ($approval->new_data) {
+                                            if (isset($approval->new_data['land_id'])) {
+                                                $land = \App\Models\Land::find($approval->new_data['land_id']);
+                                                $landName = $land ? $land->lokasi_lahan : 'N/A';
+                                            }
+                                            if (isset($approval->new_data['business_unit_id'])) {
+                                                $businessUnit = \App\Models\BusinessUnit::find($approval->new_data['business_unit_id']);
+                                                $businessUnitName = $businessUnit ? $businessUnit->name : 'N/A';
+                                            }
+                                        }
+                                    @endphp
+                                    <span>{{ $landName }}</span>
+                                    <span>•</span>
+                                    <span>{{ $businessUnitName }}</span>
+                                    <span>•</span>
                                 @else
                                     <span class="text-red-500">Record may be deleted</span>
                                     <span>•</span>
@@ -57,9 +83,11 @@
                             <div class="mt-2">
                                 <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium
                                     {{ $approval->change_type === 'details' ? 'bg-blue-100 text-blue-800' : 
-                                       ($approval->change_type === 'costs' ? 'bg-purple-100 text-purple-800' : 'bg-red-100 text-red-800') }}">
+                                    ($approval->change_type === 'costs' ? 'bg-purple-100 text-purple-800' : 
+                                    ($approval->change_type === 'create' ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800')) }}">
                                     {{ $approval->change_type === 'details' ? 'Soil Details' : 
-                                       ($approval->change_type === 'costs' ? 'Additional Costs' : 'Delete Record') }}
+                                    ($approval->change_type === 'costs' ? 'Additional Costs' : 
+                                    ($approval->change_type === 'create' ? 'Create Record' : 'Delete Record')) }}
                                 </span>
                             </div>
                         </div>
@@ -158,6 +186,30 @@
                                     </div>
                                 </div>
                             </div>
+                        @elseif($approval->change_type === 'create')
+                            @php $createDetails = $this->getChangeDetails($approval); @endphp
+                            
+                            <div class="bg-green-50 border border-green-200 rounded-lg p-4">
+                                <div class="flex items-start">
+                                    <svg class="w-5 h-5 text-green-400 mt-0.5 mr-3 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
+                                        <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm1-11a1 1 0 10-2 0v3.586L7.707 9.293a1 1 0 00-1.414 1.414l3 3a1 1 0 001.414 0l3-3a1 1 0 00-1.414-1.414L11 11.586V7z" clip-rule="evenodd"/>
+                                    </svg>
+                                    <div class="flex-1">
+                                        <h4 class="text-sm font-medium text-green-800 mb-2">
+                                            This request will create a new soil record with the following data:
+                                        </h4>
+                                        
+                                        <div class="space-y-2 text-sm">
+                                            @foreach($createDetails as $detail)
+                                                <div class="flex items-start">
+                                                    <span class="font-medium text-green-700 w-32 flex-shrink-0">{{ $detail['field'] }}:</span>
+                                                    <span class="text-green-600">{{ $detail['value'] }}</span>
+                                                </div>
+                                            @endforeach
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
                         @endif
                     </div>
                 @endif
@@ -168,10 +220,13 @@
                     <div class="flex items-center justify-between">
                         <div class="text-sm text-gray-600">
                             <span class="font-medium">
-                                {{ $approval->change_type === 'delete' ? 'Record to Delete:' : 'Soil Record:' }}
+                                {{ $approval->change_type === 'delete' ? 'Record to Delete:' : 
+                                ($approval->change_type === 'create' ? 'New Record:' : 'Soil Record:') }}
                             </span>
                             @if($approval->soil)
                                 {{ $approval->soil->nama_penjual }} - {{ $approval->soil->letak_tanah }}
+                            @elseif($approval->change_type === 'create' && $approval->new_data)
+                                {{ $approval->new_data['nama_penjual'] ?? 'Unknown Seller' }} - {{ $approval->new_data['letak_tanah'] ?? 'Unknown Location' }}
                             @else
                                 <span class="text-red-500 italic">Record no longer exists</span>
                             @endif
@@ -188,6 +243,16 @@
                                     </svg>
                                     Approve Deletion
                                 </button>
+                            @elseif($approval->change_type === 'create')
+                                <button 
+                                    wire:click="approve({{ $approval->id }})"
+                                    onclick="return confirm('Are you sure you want to approve the creation of this new soil record?')"
+                                    class="inline-flex items-center px-3 py-1.5 border border-transparent text-sm font-medium rounded-md text-white bg-green-600 hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500">
+                                    <svg class="w-4 h-4 mr-1" fill="currentColor" viewBox="0 0 20 20">
+                                        <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm1-11a1 1 0 10-2 0v3.586L7.707 9.293a1 1 0 00-1.414 1.414l3 3a1 1 0 001.414 0l3-3a1 1 0 00-1.414-1.414L11 11.586V7z" clip-rule="evenodd"/>
+                                    </svg>
+                                    Approve Creation
+                                </button>
                             @else
                                 <button 
                                     wire:click="approve({{ $approval->id }})"
@@ -200,7 +265,8 @@
                             <button 
                                 wire:click="showRejectModal({{ $approval->id }})"
                                 class="inline-flex items-center px-3 py-1.5 border border-transparent text-sm font-medium rounded-md text-white bg-red-600 hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500">
-                                {{ $approval->change_type === 'delete' ? 'Deny Deletion' : 'Reject' }}
+                                {{ $approval->change_type === 'delete' ? 'Deny Deletion' : 
+                                ($approval->change_type === 'create' ? 'Reject Creation' : 'Reject') }}
                             </button>
                         </div>
                     </div>
@@ -230,12 +296,15 @@
             <div class="relative top-20 mx-auto p-5 border w-96 shadow-lg rounded-md bg-white">
                 <div class="mt-3">
                     <h3 class="text-lg font-medium text-gray-900 mb-4">
-                        {{ App\Models\SoilApproval::find($rejectionApprovalId)?->change_type === 'delete' ? 'Deny Deletion Request' : 'Reject Changes' }}
+                        {{ App\Models\SoilApproval::find($rejectionApprovalId)?->change_type === 'delete' ? 'Deny Deletion Request' : 
+                        (App\Models\SoilApproval::find($rejectionApprovalId)?->change_type === 'create' ? 'Reject Creation Request' : 'Reject Changes') }}
                     </h3>
                     <p class="text-sm text-gray-600 mb-4">
                         {{ App\Models\SoilApproval::find($rejectionApprovalId)?->change_type === 'delete' ? 
-                           'Please provide a reason for denying this deletion request:' : 
-                           'Please provide a reason for rejecting these changes:' }}
+                        'Please provide a reason for denying this deletion request:' : 
+                        (App\Models\SoilApproval::find($rejectionApprovalId)?->change_type === 'create' ? 
+                            'Please provide a reason for rejecting this creation request:' : 
+                            'Please provide a reason for rejecting these changes:') }}
                     </p>
                     
                     <textarea 
@@ -244,12 +313,15 @@
                         rows="4"
                         placeholder="{{ App\Models\SoilApproval::find($rejectionApprovalId)?->change_type === 'delete' ? 
                                     'Enter reason for denying deletion...' : 
-                                    'Enter rejection reason...' }}"
+                                    (App\Models\SoilApproval::find($rejectionApprovalId)?->change_type === 'create' ? 
+                                    'Enter reason for rejecting creation...' : 
+                                    'Enter rejection reason...') }}"
                     ></textarea>
-                    
+
                     @error('rejectionReason') 
                         <p class="mt-1 text-sm text-red-600">{{ $message }}</p> 
                     @enderror
+
                     
                     <div class="flex items-center justify-end space-x-2 mt-4">
                         <button 
@@ -261,7 +333,10 @@
                             wire:click="rejectWithReason"
                             class="px-4 py-2 bg-red-600 text-white rounded-md hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-red-500">
                             {{ App\Models\SoilApproval::find($rejectionApprovalId)?->change_type === 'delete' ? 
-                               'Deny Deletion' : 'Reject Changes' }}
+                            'Deny Deletion' : 
+                            (App\Models\SoilApproval::find($rejectionApprovalId)?->change_type === 'create' ? 
+                                'Reject Creation' : 
+                                'Reject Changes') }}
                         </button>
                     </div>
                 </div>

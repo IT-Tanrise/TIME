@@ -74,9 +74,13 @@ class SoilHistory extends Model
             'updated' => 'Record Updated', 
             'deleted' => 'Record Deleted',
             'restored' => 'Record Restored',
+            'approved_creation' => 'Record Created (Approved)', // Add this line
+            'approved_update' => 'Record Updated (Approved)',
+            'approved_deletion' => 'Record Deleted (Approved)',
             'additional_cost_added' => 'Additional Cost Added',
             'additional_cost_updated' => 'Additional Cost Updated',
             'additional_cost_deleted' => 'Additional Cost Deleted',
+            'additional_cost_approved' => 'Additional Cost Approved',
             default => ucfirst(str_replace('_', ' ', $this->action))
         };
     }
@@ -220,8 +224,12 @@ class SoilHistory extends Model
     // NEW: Check if this is an approved change
     public function isApprovedChange()
     {
-        return in_array($this->action, ['approved_update', 'approved_deletion', 'additional_cost_approved']) ||
-            ($this->new_values && isset($this->new_values['_approval_metadata']));
+        return in_array($this->action, [
+            'approved_update', 
+            'approved_deletion', 
+            'approved_creation', // Add this line
+            'additional_cost_approved'
+        ]) || ($this->new_values && isset($this->new_values['_approval_metadata']));
     }
 
     // NEW: Get approval metadata

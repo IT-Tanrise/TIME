@@ -61,10 +61,16 @@
                                     @php
                                         $pendingDetailsCount = App\Models\SoilApproval::pending()->where('change_type', 'details')->count();
                                         $pendingDeleteCount = App\Models\SoilApproval::pending()->where('change_type', 'delete')->count();
+                                        $pendingCreateCount = App\Models\SoilApproval::pending()->where('change_type', 'create')->count();
                                     @endphp
                                     <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
                                         {{ $pendingDetailsCount }} Soil Data
                                     </span>
+                                    @if($pendingCreateCount > 0)
+                                        <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">
+                                            {{ $pendingCreateCount }} New Records
+                                        </span>
+                                    @endif
                                     @if($pendingDeleteCount > 0)
                                         <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-red-100 text-red-800">
                                             {{ $pendingDeleteCount }} Deletions
@@ -84,7 +90,7 @@
                             @php
                                 $totalPending = 0;
                                 if(auth()->user()->can('soil-data.approval')) {
-                                    $totalPending += App\Models\SoilApproval::pending()->whereIn('change_type', ['details', 'delete'])->count();
+                                    $totalPending += App\Models\SoilApproval::pending()->whereIn('change_type', ['details', 'delete', 'create'])->count();
                                 }
                                 if(auth()->user()->can('soil-data-costs.approval')) {
                                     $totalPending += App\Models\SoilApproval::pending()->where('change_type', 'costs')->count();
@@ -166,12 +172,14 @@
                                             <ul class="list-disc list-inside space-y-1">
                                                 @foreach($userPendingApprovals as $approval)
                                                     <li>
-                                                        @if($approval->change_type === 'delete')
-                                                            <span class="inline-flex items-center px-1.5 py-0.5 rounded text-xs font-medium bg-red-100 text-red-800 mr-1">
-                                                                DELETE
+                                                       @if($approval->change_type === 'create')
+                                                            <span class="inline-flex items-center px-1.5 py-0.5 rounded text-xs font-medium bg-green-100 text-green-800 mr-1">
+                                                                CREATE
                                                             </span>
-                                                            <span class="font-medium">Deletion request</span>
-                                                        @else
+                                                            <span class="font-medium text-gray-900">
+                                                                Creation request
+                                                            </span>
+                                                        @elseif($approval->change_type === 'delete')
                                                             <span class="font-medium">{{ ucfirst(str_replace('_', ' ', $approval->change_type)) }}</span>
                                                         @endif
                                                         for {{ $approval->soil->nama_penjual ?? 'Unknown' }} 
@@ -220,6 +228,13 @@
                                                                     <span class="font-medium text-gray-900">
                                                                         Deletion request
                                                                     </span>
+                                                                @elseif($approval->change_type === 'create')
+                                                                    <span class="inline-flex items-center px-1.5 py-0.5 rounded text-xs font-medium bg-green-100 text-green-800 mr-1">
+                                                                        CREATE
+                                                                    </span>
+                                                                    <span class="font-medium text-gray-900">
+                                                                        Creation request
+                                                                    </span>
                                                                 @else
                                                                     <span class="font-medium text-gray-900">
                                                                         {{ ucfirst(str_replace('_', ' ', $approval->change_type)) }} changes
@@ -233,10 +248,11 @@
                                                             <p class="text-xs text-gray-400 mt-1">
                                                                 Requested by: {{ $approval->requestedBy->name ?? 'Unknown' }} |
                                                                 @if($approval->soil)
-                                                                    Business Unit: {{ $approval->soil->businessUnit->name ?? 'N/A' }} |
-                                                                    Land: {{ $approval->soil->land->lokasi_lahan ?? 'N/A' }}
+                                                                    {{ $approval->soil->nama_penjual ?? 'Unknown Seller' }}
+                                                                @elseif($approval->change_type === 'create' && $approval->new_data)
+                                                                    {{ $approval->new_data['nama_penjual'] ?? 'New Record' }}
                                                                 @else
-                                                                    <span class="text-red-500">Record has been deleted</span>
+                                                                    <span class="text-red-500">Record has been deleted or doesn't exist</span>
                                                                 @endif
                                                             </p>
                                                             @if($approval->status === 'approved')

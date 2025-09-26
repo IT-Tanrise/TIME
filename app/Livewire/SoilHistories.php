@@ -529,7 +529,7 @@ class SoilHistories extends Component
         }
 
         return match($history->action) {
-            'created' => [
+            'created', 'approved_creation' => [
                 'border' => 'border-green-200',
                 'bg' => 'bg-green-50', 
                 'text' => 'text-green-600',

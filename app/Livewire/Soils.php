@@ -457,7 +457,7 @@ class Soils extends Component
         $this->validate();
 
         if ($this->isEdit && $this->editMode === 'details') {
-            // MODIFIED: Check if user has soil data approval permission (separate from costs)
+            // EXISTING EDIT LOGIC - Check if user has soil data approval permission (separate from costs)
             if (auth()->user()->can('soil-data.approval')) {
                 // User has approval permission - update directly
                 $soil = Soil::findOrFail($this->soilId);
@@ -534,7 +534,7 @@ class Soils extends Component
             }
             
         } else {
-            // CREATE NEW RECORDS - This logic remains the same
+            // NEW: CREATE NEW RECORDS WITH APPROVAL WORKFLOW
             $validDetails = collect($this->soilDetails)->filter(function($detail) {
                 return !empty($detail['nama_penjual']) && 
                     !empty($detail['alamat_penjual']) && 
@@ -547,29 +547,76 @@ class Soils extends Component
                 return;
             }
             
-            foreach ($validDetails as $detail) {
-                $createData = [
-                    'land_id' => $this->land_id,
-                    'business_unit_id' => $this->business_unit_id,
-                    'nama_penjual' => trim($detail['nama_penjual']),
-                    'alamat_penjual' => trim($detail['alamat_penjual']),
-                    'nomor_ppjb' => trim($detail['nomor_ppjb']),
-                    'tanggal_ppjb' => $detail['tanggal_ppjb'],
-                    'letak_tanah' => trim($detail['letak_tanah']),
-                    'luas' => $this->parseFormattedNumber($detail['luas'] ?? ''),
-                    'harga' => $this->parseFormattedNumber($detail['harga'] ?? ''),
-                    'bukti_kepemilikan' => trim($detail['bukti_kepemilikan'] ?? ''),
-                    'bukti_kepemilikan_details' => trim($detail['bukti_kepemilikan_details'] ?? ''),
-                    'atas_nama' => trim($detail['atas_nama'] ?? ''),
-                    'nop_pbb' => trim($detail['nop_pbb'] ?? ''),
-                    'nama_notaris_ppat' => trim($detail['nama_notaris_ppat'] ?? ''),
-                    'keterangan' => trim($detail['keterangan'] ?? ''),
-                ];
+            // Check if user has soil data approval permission for creating records
+            if (auth()->user()->can('soil-data.approval')) {
+                // User has approval permission - create directly
+                $createdCount = 0;
                 
-                Soil::create($createData);
+                foreach ($validDetails as $detail) {
+                    $createData = [
+                        'land_id' => $this->land_id,
+                        'business_unit_id' => $this->business_unit_id,
+                        'nama_penjual' => trim($detail['nama_penjual']),
+                        'alamat_penjual' => trim($detail['alamat_penjual']),
+                        'nomor_ppjb' => trim($detail['nomor_ppjb']),
+                        'tanggal_ppjb' => $detail['tanggal_ppjb'],
+                        'letak_tanah' => trim($detail['letak_tanah']),
+                        'luas' => $this->parseFormattedNumber($detail['luas'] ?? ''),
+                        'harga' => $this->parseFormattedNumber($detail['harga'] ?? ''),
+                        'bukti_kepemilikan' => trim($detail['bukti_kepemilikan'] ?? ''),
+                        'bukti_kepemilikan_details' => trim($detail['bukti_kepemilikan_details'] ?? ''),
+                        'atas_nama' => trim($detail['atas_nama'] ?? ''),
+                        'nop_pbb' => trim($detail['nop_pbb'] ?? ''),
+                        'nama_notaris_ppat' => trim($detail['nama_notaris_ppat'] ?? ''),
+                        'keterangan' => trim($detail['keterangan'] ?? ''),
+                    ];
+                    
+                    Soil::create($createData);
+                    $createdCount++;
+                }
+                
+                session()->flash('message', $createdCount . ' soil record(s) created successfully.');
+                
+            } else {
+                // User needs approval - create approval requests for each new record
+                $requestCount = 0;
+                
+                foreach ($validDetails as $detail) {
+                    $createData = [
+                        'land_id' => $this->land_id,
+                        'business_unit_id' => $this->business_unit_id,
+                        'nama_penjual' => trim($detail['nama_penjual']),
+                        'alamat_penjual' => trim($detail['alamat_penjual']),
+                        'nomor_ppjb' => trim($detail['nomor_ppjb']),
+                        'tanggal_ppjb' => $detail['tanggal_ppjb'],
+                        'letak_tanah' => trim($detail['letak_tanah']),
+                        'luas' => $this->parseFormattedNumber($detail['luas'] ?? ''),
+                        'harga' => $this->parseFormattedNumber($detail['harga'] ?? ''),
+                        'bukti_kepemilikan' => trim($detail['bukti_kepemilikan'] ?? ''),
+                        'bukti_kepemilikan_details' => trim($detail['bukti_kepemilikan_details'] ?? ''),
+                        'atas_nama' => trim($detail['atas_nama'] ?? ''),
+                        'nop_pbb' => trim($detail['nop_pbb'] ?? ''),
+                        'nama_notaris_ppat' => trim($detail['nama_notaris_ppat'] ?? ''),
+                        'keterangan' => trim($detail['keterangan'] ?? ''),
+                    ];
+                    
+                    // Create approval request for this new record
+                    // Note: For create operations, old_data will be empty and new_data contains the record to be created
+                    SoilApproval::create([
+                        'soil_id' => null, // No soil_id yet since record doesn't exist
+                        'requested_by' => auth()->id(),
+                        'old_data' => [], // Empty for new records
+                        'new_data' => $createData,
+                        'change_type' => 'create', // New change type for create operations
+                        'status' => 'pending'
+                    ]);
+                    
+                    $requestCount++;
+                }
+                
+                session()->flash('warning', $requestCount . ' soil record creation request(s) have been submitted for approval and are pending review.');
             }
             
-            session()->flash('message', count($validDetails) . ' soil records created successfully.');
             $this->resetForm();
             $this->showForm = false;
         }

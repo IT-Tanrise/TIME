@@ -34,7 +34,7 @@ class SoilApproval extends Model
     // Relationships
     public function soil()
     {
-        return $this->belongsTo(Soil::class);
+        return $this->belongsTo(Soil::class)->withTrashed(); // In case the soil record gets soft deleted
     }
 
     public function requestedBy()
@@ -50,17 +50,17 @@ class SoilApproval extends Model
     // Scopes
     public function scopePending($query)
     {
-        return $query->where('status', 'pending');
+        return $query->where('soil_approvals.status', 'pending');
     }
 
     public function scopeApproved($query)
     {
-        return $query->where('status', 'approved');
+        return $query->where('soil_approvals.status', 'approved');
     }
 
     public function scopeRejected($query)
     {
-        return $query->where('status', 'rejected');
+        return $query->where('soil_approvals.status', 'rejected');
     }
 
     public function scopeDetails($query)
@@ -136,6 +136,7 @@ class SoilApproval extends Model
             'details' => 'Soil Details',
             'costs' => 'Additional Costs',
             'delete' => 'Delete Record',
+            'create' => 'Create Record', // Add this line
             default => ucfirst($this->change_type)
         };
     }
@@ -148,9 +149,24 @@ class SoilApproval extends Model
             return $this->getCostChangeSummary();
         } elseif ($this->change_type === 'delete') {
             return $this->getDeleteChangeSummary();
+        } elseif ($this->change_type === 'create') {
+            return $this->getCreateChangeSummary();
         }
         
         return 'Unknown change type';
+    }
+
+    private function getCreateChangeSummary()
+    {
+        if (!$this->new_data) {
+            return 'New soil record creation request';
+        }
+        
+        $sellerName = $this->new_data['nama_penjual'] ?? 'Unknown Seller';
+        $location = $this->new_data['letak_tanah'] ?? 'Unknown Location';
+        $ppjb = $this->new_data['nomor_ppjb'] ?? 'N/A';
+        
+        return "Create new record: {$sellerName} - {$location} (PPJB: {$ppjb})";
     }
 
     private function getDetailChangeSummary()
@@ -234,8 +250,26 @@ class SoilApproval extends Model
                 $this->applyCostChanges();
             } elseif ($this->change_type === 'delete') {
                 $this->applyDeletion();
+            } elseif ($this->change_type === 'create') {
+                $this->applyCreation();
             }
         });
+    }
+
+    private function applyCreation()
+    {
+        if (!$this->new_data) {
+            throw new \Exception('No data provided for soil record creation.');
+        }
+        
+        // Create the new soil record
+        $soil = Soil::create($this->new_data);
+        
+        // Update this approval record with the newly created soil_id
+        $this->update(['soil_id' => $soil->id]);
+        
+        // Log creation history with approval info
+        $soil->logHistory('approved_creation', $this->new_data, $this->approved_by, $this->id);
     }
 
     public function reject($reason)
@@ -316,5 +350,15 @@ class SoilApproval extends Model
         
         // Delete the soil record
         $soil->delete();
+    }
+
+    public function scopeCreates($query)
+    {
+        return $query->where('change_type', 'create');
+    }
+
+    public function isCreateRequest()
+    {
+        return $this->change_type === 'create' && is_null($this->soil_id);
     }
 }
