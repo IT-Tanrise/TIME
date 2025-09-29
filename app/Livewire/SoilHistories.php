@@ -447,7 +447,7 @@ class SoilHistories extends Component
             'alamat_penjual' => 'Seller Address',
             'nomor_ppjb' => 'PPJB Number',
             'tanggal_ppjb' => 'PPJB Date',
-            'letak_tanah' => 'Land Location',
+            'letak_tanah' => 'Soil Location',
             'luas' => 'Area (m²)',
             'harga' => 'Price (Rp)',
             'bukti_kepemilikan' => 'Ownership Proof',

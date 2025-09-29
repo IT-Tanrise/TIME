@@ -265,7 +265,7 @@
 
                                             <!-- Land Location -->
                                             <div>
-                                                <label class="block text-xs font-medium text-gray-700 mb-1">Land Location *</label>
+                                                <label class="block text-xs font-medium text-gray-700 mb-1">Soil Location *</label>
                                                 <input wire:model="soilDetails.{{ $index }}.letak_tanah" type="text" 
                                                     class="w-full px-2 py-1.5 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-xs @error('soilDetails.'.$index.'.letak_tanah') border-red-500 @enderror">
                                                 @error('soilDetails.'.$index.'.letak_tanah') 

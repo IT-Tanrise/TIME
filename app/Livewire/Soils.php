@@ -121,7 +121,7 @@ class Soils extends Component
         'soilDetails.*.alamat_penjual.required' => 'Seller address is required for all soil details.',
         'soilDetails.*.nomor_ppjb.required' => 'PPJB number is required for all soil details.',
         'soilDetails.*.tanggal_ppjb.required' => 'PPJB date is required for all soil details.',
-        'soilDetails.*.letak_tanah.required' => 'Land location is required for all soil details.',
+        'soilDetails.*.letak_tanah.required' => 'Soil location is required for all soil details.',
         'soilDetails.*.luas.required' => 'Area is required for all soil details.',
         'soilDetails.*.harga.required' => 'Price is required for all soil details.',
         'soilDetails.*.bukti_kepemilikan.required' => 'Ownership proof is required for all soil details.',

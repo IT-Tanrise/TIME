@@ -180,7 +180,7 @@ class SoilApproval extends Model
             'alamat_penjual' => 'Seller Address',
             'nomor_ppjb' => 'PPJB Number',
             'tanggal_ppjb' => 'PPJB Date',
-            'letak_tanah' => 'Land Location',
+            'letak_tanah' => 'Soil Location',
             'luas' => 'Area',
             'harga' => 'Price',
             'bukti_kepemilikan' => 'Ownership Proof',
