@@ -1,6 +1,6 @@
-APP_NAME=TIME
+APP_NAME=Laravel
 APP_ENV=local
-APP_KEY=base64:TpzDQr6whNxlkojEo56xpGMCLYVh7kC9yk2aLQOpBcY=
+APP_KEY=base64:uRnRlXP8k32TbgTMdlf/1v+ogN/tH91rHVPa7+8Dc1k=
 APP_DEBUG=true
 APP_URL=http://localhost
 
@@ -23,7 +23,7 @@ LOG_LEVEL=debug
 DB_CONNECTION=mysql
 DB_HOST=127.0.0.1
 DB_PORT=3306
-DB_DATABASE=tanrise_portal
+DB_DATABASE=land_tanrise
 DB_USERNAME=root
 DB_PASSWORD=
 
