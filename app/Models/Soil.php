@@ -403,4 +403,53 @@ class Soil extends Model
             ]);
         }
     }
+
+    public function logApprovedHistory($action, $oldValues, $newValues, $approvedBy, $approvalId)
+    {
+        if ($this->historyLogging) {
+            return;
+        }
+        
+        $this->historyLogging = true;
+        
+        try {
+            // Determine changed fields
+            $changedFields = [];
+            foreach ($newValues as $field => $newValue) {
+                $oldValue = $oldValues[$field] ?? null;
+                if ($oldValue != $newValue) {
+                    $changedFields[] = $field;
+                }
+            }
+            
+            // Add approval metadata
+            $historyMetadata = [
+                'approved_by' => $approvedBy,
+                'approval_id' => $approvalId,
+                'is_approved_change' => true
+            ];
+            
+            $newValuesWithMetadata = array_merge($newValues, ['_approval_metadata' => $historyMetadata]);
+
+            SoilHistory::create([
+                'soil_id' => $this->id,
+                'user_id' => $approvedBy,
+                'action' => $action,
+                'changes' => $changedFields,
+                'old_values' => $oldValues,
+                'new_values' => $newValuesWithMetadata,
+                'ip_address' => request()->ip(),
+                'user_agent' => request()->userAgent(),
+            ]);
+            
+        } catch (\Exception $e) {
+            \Log::error('Failed to create approved soil history: ' . $e->getMessage(), [
+                'soil_id' => $this->id,
+                'action' => $action,
+                'error' => $e->getMessage()
+            ]);
+        } finally {
+            $this->historyLogging = false;
+        }
+    }
 }

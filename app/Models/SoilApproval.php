@@ -286,15 +286,19 @@ class SoilApproval extends Model
     {
         $soil = $this->soil;
         if ($soil) {
+            // Get old values BEFORE updating
+            $oldValues = $soil->only(array_keys($this->new_data));
+            
             // Prevent creating history during approval application
             $soil->historyLogging = true;
             
             $soil->update($this->new_data);
             
-            // Log approval history
-            $soil->logHistory('approved_update', $this->new_data);
-            
+            // Reset flag BEFORE logging approval history
             $soil->historyLogging = false;
+            
+            // Now log approval history with both old and new values
+            $soil->logApprovedHistory('approved_update', $oldValues, $this->new_data, $this->approved_by, $this->id);
         }
     }
 
@@ -324,11 +328,11 @@ class SoilApproval extends Model
             }
         });
         
-        // Log approval history
-        $soil->logAdditionalCostHistory('approved', $this->new_data);
-        
-        // Reset history logging flag
+        // Reset flag BEFORE logging
         $soil->historyLogging = false;
+        
+        // Log approval history
+        $soil->logAdditionalCostHistory('approved', $this->new_data, [], $this->approved_by, $this->id);
     }
 
     private function applyDeletion()
@@ -338,12 +342,12 @@ class SoilApproval extends Model
             throw new \Exception('Soil record not found for deletion approval.');
         }
 
-        // Log deletion history before actually deleting
+        // Log deletion history FIRST (before any flags are set)
         $soil->logHistory('approved_deletion', [
             'deletion_reason' => $this->getDeletionReason(),
             'deleted_by_approval_id' => $this->id,
             'approved_by' => $this->approved_by
-        ]);
+        ], $this->approved_by, $this->id);
 
         // Delete related BiayaTambahanSoil records first
         $soil->biayaTambahanSoils()->delete();
