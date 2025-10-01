@@ -4,7 +4,7 @@
 
 namespace Composer\Autoload;
 
-class ComposerStaticInit88970a0117c062eed55fa8728fc43833
+class ComposerStaticInit06c2f4d6d5daa356588a0a6ed134fb6f
 {
     public static $files = array (
         '6e3fae29631ef280660b3cdad06f25a8' => __DIR__ . '/..' . '/symfony/deprecation-contracts/function.php',
@@ -114,7 +114,6 @@ class ComposerStaticInit88970a0117c062eed55fa8728fc43833
             'PragmaRX\\Google2FA\\' => 19,
             'PhpParser\\' => 10,
             'PhpOption\\' => 10,
-            'Phiki\\' => 6,
             'ParagonIE\\ConstantTime\\' => 23,
         ),
         'N' => 
@@ -401,10 +400,6 @@ class ComposerStaticInit88970a0117c062eed55fa8728fc43833
         'PhpOption\\' => 
         array (
             0 => __DIR__ . '/..' . '/phpoption/phpoption/src/PhpOption',
-        ),
-        'Phiki\\' => 
-        array (
-            0 => __DIR__ . '/..' . '/phiki/phiki/src',
         ),
         'ParagonIE\\ConstantTime\\' => 
         array (
@@ -2558,6 +2553,8 @@ class ComposerStaticInit88970a0117c062eed55fa8728fc43833
         'Illuminate\\Hashing\\BcryptHasher' => __DIR__ . '/..' . '/laravel/framework/src/Illuminate/Hashing/BcryptHasher.php',
         'Illuminate\\Hashing\\HashManager' => __DIR__ . '/..' . '/laravel/framework/src/Illuminate/Hashing/HashManager.php',
         'Illuminate\\Hashing\\HashServiceProvider' => __DIR__ . '/..' . '/laravel/framework/src/Illuminate/Hashing/HashServiceProvider.php',
+        'Illuminate\\Http\\Client\\Batch' => __DIR__ . '/..' . '/laravel/framework/src/Illuminate/Http/Client/Batch.php',
+        'Illuminate\\Http\\Client\\BatchInProgressException' => __DIR__ . '/..' . '/laravel/framework/src/Illuminate/Http/Client/BatchInProgressException.php',
         'Illuminate\\Http\\Client\\Concerns\\DeterminesStatusCode' => __DIR__ . '/..' . '/laravel/framework/src/Illuminate/Http/Client/Concerns/DeterminesStatusCode.php',
         'Illuminate\\Http\\Client\\ConnectionException' => __DIR__ . '/..' . '/laravel/framework/src/Illuminate/Http/Client/ConnectionException.php',
         'Illuminate\\Http\\Client\\Events\\ConnectionFailed' => __DIR__ . '/..' . '/laravel/framework/src/Illuminate/Http/Client/Events/ConnectionFailed.php',
@@ -3204,6 +3201,7 @@ class ComposerStaticInit88970a0117c062eed55fa8728fc43833
         'Laravel\\Fortify\\Http\\Controllers\\TwoFactorQrCodeController' => __DIR__ . '/..' . '/laravel/fortify/src/Http/Controllers/TwoFactorQrCodeController.php',
         'Laravel\\Fortify\\Http\\Controllers\\TwoFactorSecretKeyController' => __DIR__ . '/..' . '/laravel/fortify/src/Http/Controllers/TwoFactorSecretKeyController.php',
         'Laravel\\Fortify\\Http\\Controllers\\VerifyEmailController' => __DIR__ . '/..' . '/laravel/fortify/src/Http/Controllers/VerifyEmailController.php',
+        'Laravel\\Fortify\\Http\\Requests\\ConfirmPasswordRequest' => __DIR__ . '/..' . '/laravel/fortify/src/Http/Requests/ConfirmPasswordRequest.php',
         'Laravel\\Fortify\\Http\\Requests\\LoginRequest' => __DIR__ . '/..' . '/laravel/fortify/src/Http/Requests/LoginRequest.php',
         'Laravel\\Fortify\\Http\\Requests\\TwoFactorLoginRequest' => __DIR__ . '/..' . '/laravel/fortify/src/Http/Requests/TwoFactorLoginRequest.php',
         'Laravel\\Fortify\\Http\\Requests\\VerifyEmailRequest' => __DIR__ . '/..' . '/laravel/fortify/src/Http/Requests/VerifyEmailRequest.php',
@@ -5393,103 +5391,6 @@ class ComposerStaticInit88970a0117c062eed55fa8728fc43833
         'PharIo\\Version\\VersionConstraintParser' => __DIR__ . '/..' . '/phar-io/version/src/VersionConstraintParser.php',
         'PharIo\\Version\\VersionConstraintValue' => __DIR__ . '/..' . '/phar-io/version/src/VersionConstraintValue.php',
         'PharIo\\Version\\VersionNumber' => __DIR__ . '/..' . '/phar-io/version/src/VersionNumber.php',
-        'Phiki\\Adapters\\CommonMark\\CodeBlockRenderer' => __DIR__ . '/..' . '/phiki/phiki/src/Adapters/CommonMark/CodeBlockRenderer.php',
-        'Phiki\\Adapters\\CommonMark\\PhikiExtension' => __DIR__ . '/..' . '/phiki/phiki/src/Adapters/CommonMark/PhikiExtension.php',
-        'Phiki\\Adapters\\CommonMark\\Transformers\\AnnotationsTransformer' => __DIR__ . '/..' . '/phiki/phiki/src/Adapters/CommonMark/Transformers/AnnotationsTransformer.php',
-        'Phiki\\Adapters\\CommonMark\\Transformers\\Annotations\\Annotation' => __DIR__ . '/..' . '/phiki/phiki/src/Adapters/CommonMark/Transformers/Annotations/Annotation.php',
-        'Phiki\\Adapters\\CommonMark\\Transformers\\Annotations\\AnnotationRange' => __DIR__ . '/..' . '/phiki/phiki/src/Adapters/CommonMark/Transformers/Annotations/AnnotationRange.php',
-        'Phiki\\Adapters\\CommonMark\\Transformers\\Annotations\\AnnotationRangeKind' => __DIR__ . '/..' . '/phiki/phiki/src/Adapters/CommonMark/Transformers/Annotations/AnnotationRangeKind.php',
-        'Phiki\\Adapters\\CommonMark\\Transformers\\Annotations\\AnnotationType' => __DIR__ . '/..' . '/phiki/phiki/src/Adapters/CommonMark/Transformers/Annotations/AnnotationType.php',
-        'Phiki\\Adapters\\CommonMark\\Transformers\\MetaTransformer' => __DIR__ . '/..' . '/phiki/phiki/src/Adapters/CommonMark/Transformers/MetaTransformer.php',
-        'Phiki\\Adapters\\Laravel\\Components\\Code' => __DIR__ . '/..' . '/phiki/phiki/src/Adapters/Laravel/Components/Code.php',
-        'Phiki\\Adapters\\Laravel\\Facades\\Phiki' => __DIR__ . '/..' . '/phiki/phiki/src/Adapters/Laravel/Facades/Phiki.php',
-        'Phiki\\Adapters\\Laravel\\PhikiServiceProvider' => __DIR__ . '/..' . '/phiki/phiki/src/Adapters/Laravel/PhikiServiceProvider.php',
-        'Phiki\\Contracts\\ExtensionInterface' => __DIR__ . '/..' . '/phiki/phiki/src/Contracts/ExtensionInterface.php',
-        'Phiki\\Contracts\\GrammarRepositoryInterface' => __DIR__ . '/..' . '/phiki/phiki/src/Contracts/GrammarRepositoryInterface.php',
-        'Phiki\\Contracts\\HasContentNameInterface' => __DIR__ . '/..' . '/phiki/phiki/src/Contracts/HasContentNameInterface.php',
-        'Phiki\\Contracts\\InjectionMatcherInterface' => __DIR__ . '/..' . '/phiki/phiki/src/Contracts/InjectionMatcherInterface.php',
-        'Phiki\\Contracts\\InjectionSelectorParserInputInterface' => __DIR__ . '/..' . '/phiki/phiki/src/Contracts/InjectionSelectorParserInputInterface.php',
-        'Phiki\\Contracts\\PatternInterface' => __DIR__ . '/..' . '/phiki/phiki/src/Contracts/PatternInterface.php',
-        'Phiki\\Contracts\\RequiresGrammarInterface' => __DIR__ . '/..' . '/phiki/phiki/src/Contracts/RequiresGrammarInterface.php',
-        'Phiki\\Contracts\\RequiresThemesInterface' => __DIR__ . '/..' . '/phiki/phiki/src/Contracts/RequiresThemesInterface.php',
-        'Phiki\\Contracts\\ThemeRepositoryInterface' => __DIR__ . '/..' . '/phiki/phiki/src/Contracts/ThemeRepositoryInterface.php',
-        'Phiki\\Contracts\\TransformerInterface' => __DIR__ . '/..' . '/phiki/phiki/src/Contracts/TransformerInterface.php',
-        'Phiki\\Environment' => __DIR__ . '/..' . '/phiki/phiki/src/Environment.php',
-        'Phiki\\Exceptions\\FailedToInitializePatternSearchException' => __DIR__ . '/..' . '/phiki/phiki/src/Exceptions/FailedToInitializePatternSearchException.php',
-        'Phiki\\Exceptions\\FailedToSetSearchPositionException' => __DIR__ . '/..' . '/phiki/phiki/src/Exceptions/FailedToSetSearchPositionException.php',
-        'Phiki\\Exceptions\\GenericPatternException' => __DIR__ . '/..' . '/phiki/phiki/src/Exceptions/GenericPatternException.php',
-        'Phiki\\Exceptions\\InvalidThemeException' => __DIR__ . '/..' . '/phiki/phiki/src/Exceptions/InvalidThemeException.php',
-        'Phiki\\Exceptions\\MissingRequiredGrammarKeyException' => __DIR__ . '/..' . '/phiki/phiki/src/Exceptions/MissingRequiredGrammarKeyException.php',
-        'Phiki\\Exceptions\\UnreachableException' => __DIR__ . '/..' . '/phiki/phiki/src/Exceptions/UnreachableException.php',
-        'Phiki\\Exceptions\\UnrecognisedGrammarException' => __DIR__ . '/..' . '/phiki/phiki/src/Exceptions/UnrecognisedGrammarException.php',
-        'Phiki\\Exceptions\\UnrecognisedReferenceException' => __DIR__ . '/..' . '/phiki/phiki/src/Exceptions/UnrecognisedReferenceException.php',
-        'Phiki\\Exceptions\\UnrecognisedThemeException' => __DIR__ . '/..' . '/phiki/phiki/src/Exceptions/UnrecognisedThemeException.php',
-        'Phiki\\Grammar\\BeginEndPattern' => __DIR__ . '/..' . '/phiki/phiki/src/Grammar/BeginEndPattern.php',
-        'Phiki\\Grammar\\BeginWhilePattern' => __DIR__ . '/..' . '/phiki/phiki/src/Grammar/BeginWhilePattern.php',
-        'Phiki\\Grammar\\Capture' => __DIR__ . '/..' . '/phiki/phiki/src/Grammar/Capture.php',
-        'Phiki\\Grammar\\CollectionPattern' => __DIR__ . '/..' . '/phiki/phiki/src/Grammar/CollectionPattern.php',
-        'Phiki\\Grammar\\EndPattern' => __DIR__ . '/..' . '/phiki/phiki/src/Grammar/EndPattern.php',
-        'Phiki\\Grammar\\Grammar' => __DIR__ . '/..' . '/phiki/phiki/src/Grammar/Grammar.php',
-        'Phiki\\Grammar\\GrammarParser' => __DIR__ . '/..' . '/phiki/phiki/src/Grammar/GrammarParser.php',
-        'Phiki\\Grammar\\GrammarRepository' => __DIR__ . '/..' . '/phiki/phiki/src/Grammar/GrammarRepository.php',
-        'Phiki\\Grammar\\IncludePattern' => __DIR__ . '/..' . '/phiki/phiki/src/Grammar/IncludePattern.php',
-        'Phiki\\Grammar\\Injections\\Composite' => __DIR__ . '/..' . '/phiki/phiki/src/Grammar/Injections/Composite.php',
-        'Phiki\\Grammar\\Injections\\Expression' => __DIR__ . '/..' . '/phiki/phiki/src/Grammar/Injections/Expression.php',
-        'Phiki\\Grammar\\Injections\\Filter' => __DIR__ . '/..' . '/phiki/phiki/src/Grammar/Injections/Filter.php',
-        'Phiki\\Grammar\\Injections\\Group' => __DIR__ . '/..' . '/phiki/phiki/src/Grammar/Injections/Group.php',
-        'Phiki\\Grammar\\Injections\\Injection' => __DIR__ . '/..' . '/phiki/phiki/src/Grammar/Injections/Injection.php',
-        'Phiki\\Grammar\\Injections\\Operator' => __DIR__ . '/..' . '/phiki/phiki/src/Grammar/Injections/Operator.php',
-        'Phiki\\Grammar\\Injections\\Path' => __DIR__ . '/..' . '/phiki/phiki/src/Grammar/Injections/Path.php',
-        'Phiki\\Grammar\\Injections\\Prefix' => __DIR__ . '/..' . '/phiki/phiki/src/Grammar/Injections/Prefix.php',
-        'Phiki\\Grammar\\Injections\\Scope' => __DIR__ . '/..' . '/phiki/phiki/src/Grammar/Injections/Scope.php',
-        'Phiki\\Grammar\\Injections\\Selector' => __DIR__ . '/..' . '/phiki/phiki/src/Grammar/Injections/Selector.php',
-        'Phiki\\Grammar\\MatchPattern' => __DIR__ . '/..' . '/phiki/phiki/src/Grammar/MatchPattern.php',
-        'Phiki\\Grammar\\MatchedInjection' => __DIR__ . '/..' . '/phiki/phiki/src/Grammar/MatchedInjection.php',
-        'Phiki\\Grammar\\MatchedPattern' => __DIR__ . '/..' . '/phiki/phiki/src/Grammar/MatchedPattern.php',
-        'Phiki\\Grammar\\ParsedGrammar' => __DIR__ . '/..' . '/phiki/phiki/src/Grammar/ParsedGrammar.php',
-        'Phiki\\Grammar\\WhilePattern' => __DIR__ . '/..' . '/phiki/phiki/src/Grammar/WhilePattern.php',
-        'Phiki\\Highlighting\\Highlighter' => __DIR__ . '/..' . '/phiki/phiki/src/Highlighting/Highlighter.php',
-        'Phiki\\Output\\Html\\PendingHtmlOutput' => __DIR__ . '/..' . '/phiki/phiki/src/Output/Html/PendingHtmlOutput.php',
-        'Phiki\\Phast\\ClassList' => __DIR__ . '/..' . '/phiki/phiki/src/Phast/ClassList.php',
-        'Phiki\\Phast\\Element' => __DIR__ . '/..' . '/phiki/phiki/src/Phast/Element.php',
-        'Phiki\\Phast\\Literal' => __DIR__ . '/..' . '/phiki/phiki/src/Phast/Literal.php',
-        'Phiki\\Phast\\Properties' => __DIR__ . '/..' . '/phiki/phiki/src/Phast/Properties.php',
-        'Phiki\\Phast\\Root' => __DIR__ . '/..' . '/phiki/phiki/src/Phast/Root.php',
-        'Phiki\\Phast\\Text' => __DIR__ . '/..' . '/phiki/phiki/src/Phast/Text.php',
-        'Phiki\\Phiki' => __DIR__ . '/..' . '/phiki/phiki/src/Phiki.php',
-        'Phiki\\Support\\Arr' => __DIR__ . '/..' . '/phiki/phiki/src/Support/Arr.php',
-        'Phiki\\Support\\Regex' => __DIR__ . '/..' . '/phiki/phiki/src/Support/Regex.php',
-        'Phiki\\Support\\Str' => __DIR__ . '/..' . '/phiki/phiki/src/Support/Str.php',
-        'Phiki\\Tests\\Adapters\\Laravel\\TestCase' => __DIR__ . '/..' . '/phiki/phiki/src/Tests/Adapters/Laravel/TestCase.php',
-        'Phiki\\TextMate\\AttributedScopeStack' => __DIR__ . '/..' . '/phiki/phiki/src/TextMate/AttributedScopeStack.php',
-        'Phiki\\TextMate\\LineTokens' => __DIR__ . '/..' . '/phiki/phiki/src/TextMate/LineTokens.php',
-        'Phiki\\TextMate\\LocalStackElement' => __DIR__ . '/..' . '/phiki/phiki/src/TextMate/LocalStackElement.php',
-        'Phiki\\TextMate\\PatternSearcher' => __DIR__ . '/..' . '/phiki/phiki/src/TextMate/PatternSearcher.php',
-        'Phiki\\TextMate\\ScopeStack' => __DIR__ . '/..' . '/phiki/phiki/src/TextMate/ScopeStack.php',
-        'Phiki\\TextMate\\StateStack' => __DIR__ . '/..' . '/phiki/phiki/src/TextMate/StateStack.php',
-        'Phiki\\TextMate\\Tokenizer' => __DIR__ . '/..' . '/phiki/phiki/src/TextMate/Tokenizer.php',
-        'Phiki\\TextMate\\WhileStackElement' => __DIR__ . '/..' . '/phiki/phiki/src/TextMate/WhileStackElement.php',
-        'Phiki\\Theme\\ParsedTheme' => __DIR__ . '/..' . '/phiki/phiki/src/Theme/ParsedTheme.php',
-        'Phiki\\Theme\\Scope' => __DIR__ . '/..' . '/phiki/phiki/src/Theme/Scope.php',
-        'Phiki\\Theme\\ScopeMatchResult' => __DIR__ . '/..' . '/phiki/phiki/src/Theme/ScopeMatchResult.php',
-        'Phiki\\Theme\\Theme' => __DIR__ . '/..' . '/phiki/phiki/src/Theme/Theme.php',
-        'Phiki\\Theme\\ThemeParser' => __DIR__ . '/..' . '/phiki/phiki/src/Theme/ThemeParser.php',
-        'Phiki\\Theme\\ThemeRepository' => __DIR__ . '/..' . '/phiki/phiki/src/Theme/ThemeRepository.php',
-        'Phiki\\Theme\\TokenColor' => __DIR__ . '/..' . '/phiki/phiki/src/Theme/TokenColor.php',
-        'Phiki\\Theme\\TokenColorMatchResult' => __DIR__ . '/..' . '/phiki/phiki/src/Theme/TokenColorMatchResult.php',
-        'Phiki\\Theme\\TokenSettings' => __DIR__ . '/..' . '/phiki/phiki/src/Theme/TokenSettings.php',
-        'Phiki\\Token\\HighlightedToken' => __DIR__ . '/..' . '/phiki/phiki/src/Token/HighlightedToken.php',
-        'Phiki\\Token\\Token' => __DIR__ . '/..' . '/phiki/phiki/src/Token/Token.php',
-        'Phiki\\Transformers\\AbstractTransformer' => __DIR__ . '/..' . '/phiki/phiki/src/Transformers/AbstractTransformer.php',
-        'Phiki\\Transformers\\AddClassesTransformer' => __DIR__ . '/..' . '/phiki/phiki/src/Transformers/AddClassesTransformer.php',
-        'Phiki\\Transformers\\Concerns\\RequiresGrammar' => __DIR__ . '/..' . '/phiki/phiki/src/Transformers/Concerns/RequiresGrammar.php',
-        'Phiki\\Transformers\\Concerns\\RequiresThemes' => __DIR__ . '/..' . '/phiki/phiki/src/Transformers/Concerns/RequiresThemes.php',
-        'Phiki\\Transformers\\Decorations\\CodeDecoration' => __DIR__ . '/..' . '/phiki/phiki/src/Transformers/Decorations/CodeDecoration.php',
-        'Phiki\\Transformers\\Decorations\\DecorationTransformer' => __DIR__ . '/..' . '/phiki/phiki/src/Transformers/Decorations/DecorationTransformer.php',
-        'Phiki\\Transformers\\Decorations\\GutterDecoration' => __DIR__ . '/..' . '/phiki/phiki/src/Transformers/Decorations/GutterDecoration.php',
-        'Phiki\\Transformers\\Decorations\\LineDecoration' => __DIR__ . '/..' . '/phiki/phiki/src/Transformers/Decorations/LineDecoration.php',
-        'Phiki\\Transformers\\Decorations\\PreDecoration' => __DIR__ . '/..' . '/phiki/phiki/src/Transformers/Decorations/PreDecoration.php',
-        'Phiki\\Transformers\\Meta' => __DIR__ . '/..' . '/phiki/phiki/src/Transformers/Meta.php',
         'PhpOption\\LazyOption' => __DIR__ . '/..' . '/phpoption/phpoption/src/PhpOption/LazyOption.php',
         'PhpOption\\None' => __DIR__ . '/..' . '/phpoption/phpoption/src/PhpOption/None.php',
         'PhpOption\\Option' => __DIR__ . '/..' . '/phpoption/phpoption/src/PhpOption/Option.php',
@@ -7503,9 +7404,9 @@ class ComposerStaticInit88970a0117c062eed55fa8728fc43833
     public static function getInitializer(ClassLoader $loader)
     {
         return \Closure::bind(function () use ($loader) {
-            $loader->prefixLengthsPsr4 = ComposerStaticInit88970a0117c062eed55fa8728fc43833::$prefixLengthsPsr4;
-            $loader->prefixDirsPsr4 = ComposerStaticInit88970a0117c062eed55fa8728fc43833::$prefixDirsPsr4;
-            $loader->classMap = ComposerStaticInit88970a0117c062eed55fa8728fc43833::$classMap;
+            $loader->prefixLengthsPsr4 = ComposerStaticInit06c2f4d6d5daa356588a0a6ed134fb6f::$prefixLengthsPsr4;
+            $loader->prefixDirsPsr4 = ComposerStaticInit06c2f4d6d5daa356588a0a6ed134fb6f::$prefixDirsPsr4;
+            $loader->classMap = ComposerStaticInit06c2f4d6d5daa356588a0a6ed134fb6f::$classMap;
 
         }, null, ClassLoader::class);
     }
