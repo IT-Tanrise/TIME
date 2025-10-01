@@ -274,12 +274,196 @@ class SoilApproval extends Model
 
     public function reject($reason)
     {
-        $this->update([
-            'status' => 'rejected',
-            'approved_by' => Auth::id(),
-            'approved_at' => now(),
-            'reason' => $reason
-        ]);
+        DB::transaction(function () use ($reason) {
+            $this->update([
+                'status' => 'rejected',
+                'approved_by' => Auth::id(),
+                'approved_at' => now(),
+                'reason' => $reason
+            ]);
+
+            // Log rejection in history based on change type
+            if ($this->soil_id) {
+                $soil = $this->soil;
+                
+                if ($soil) {
+                    if ($this->change_type === 'details') {
+                        $this->logRejectedDetailChanges($soil, $reason);
+                    } elseif ($this->change_type === 'costs') {
+                        $this->logRejectedCostChanges($soil, $reason);
+                    } elseif ($this->change_type === 'delete') {
+                        $this->logRejectedDeletion($soil, $reason);
+                    }
+                }
+            } elseif ($this->change_type === 'create') {
+                // For creation rejection, we don't have a soil record yet
+                $this->logRejectedCreation($reason);
+            }
+        });
+    }
+
+    /**
+     * Log rejected detail changes to history
+     */
+    private function logRejectedDetailChanges($soil, $reason)
+    {
+        $soil->historyLogging = true;
+        
+        try {
+            // Determine changed fields
+            $changedFields = array_keys($this->new_data);
+            
+            // Add rejection metadata
+            $rejectionMetadata = [
+                'rejected_by' => Auth::id(),
+                'approval_id' => $this->id,
+                'is_rejected_change' => true,
+                'rejection_reason' => $reason
+            ];
+            
+            $newValuesWithMetadata = array_merge($this->new_data, ['_rejection_metadata' => $rejectionMetadata]);
+
+            SoilHistory::create([
+                'soil_id' => $soil->id,
+                'user_id' => Auth::id(),
+                'action' => 'rejected_update',
+                'changes' => $changedFields,
+                'old_values' => $this->old_data,
+                'new_values' => $newValuesWithMetadata,
+                'ip_address' => request()->ip(),
+                'user_agent' => request()->userAgent(),
+            ]);
+            
+        } catch (\Exception $e) {
+            \Log::error('Failed to create rejected detail history: ' . $e->getMessage(), [
+                'soil_id' => $soil->id,
+                'approval_id' => $this->id,
+                'error' => $e->getMessage()
+            ]);
+        } finally {
+            $soil->historyLogging = false;
+        }
+    }
+
+    /**
+     * Log rejected cost changes to history
+     */
+    private function logRejectedCostChanges($soil, $reason)
+    {
+        $soil->historyLogging = true;
+        
+        try {
+            // Add rejection metadata
+            $rejectionMetadata = [
+                'rejected_by' => Auth::id(),
+                'approval_id' => $this->id,
+                'is_rejected_change' => true,
+                'rejection_reason' => $reason
+            ];
+            
+            $newValuesWithMetadata = array_merge(
+                ['costs' => $this->new_data], 
+                ['_rejection_metadata' => $rejectionMetadata]
+            );
+
+            SoilHistory::create([
+                'soil_id' => $soil->id,
+                'user_id' => Auth::id(),
+                'action' => 'rejected_cost_update',
+                'changes' => [],
+                'old_values' => ['costs' => $this->old_data],
+                'new_values' => $newValuesWithMetadata,
+                'ip_address' => request()->ip(),
+                'user_agent' => request()->userAgent(),
+            ]);
+            
+        } catch (\Exception $e) {
+            \Log::error('Failed to create rejected cost history: ' . $e->getMessage(), [
+                'soil_id' => $soil->id,
+                'approval_id' => $this->id,
+                'error' => $e->getMessage()
+            ]);
+        } finally {
+            $soil->historyLogging = false;
+        }
+    }
+
+    /**
+     * Log rejected deletion to history
+     */
+    private function logRejectedDeletion($soil, $reason)
+    {
+        $soil->historyLogging = true;
+        
+        try {
+            $rejectionMetadata = [
+                'rejected_by' => Auth::id(),
+                'approval_id' => $this->id,
+                'is_rejected_change' => true,
+                'rejection_reason' => $reason
+            ];
+            
+            $newValuesWithMetadata = [
+                'deletion_reason' => $this->getDeletionReason(),
+                '_rejection_metadata' => $rejectionMetadata
+            ];
+
+            SoilHistory::create([
+                'soil_id' => $soil->id,
+                'user_id' => Auth::id(),
+                'action' => 'rejected_deletion',
+                'changes' => [],
+                'old_values' => $this->old_data,
+                'new_values' => $newValuesWithMetadata,
+                'ip_address' => request()->ip(),
+                'user_agent' => request()->userAgent(),
+            ]);
+            
+        } catch (\Exception $e) {
+            \Log::error('Failed to create rejected deletion history: ' . $e->getMessage(), [
+                'soil_id' => $soil->id,
+                'approval_id' => $this->id,
+                'error' => $e->getMessage()
+            ]);
+        } finally {
+            $soil->historyLogging = false;
+        }
+    }
+
+    /**
+     * Log rejected creation (no soil record exists yet)
+     */
+    private function logRejectedCreation($reason)
+    {
+        try {
+            // For rejected creation, we log without a soil_id
+            // This can be queried separately if needed
+            $rejectionMetadata = [
+                'rejected_by' => Auth::id(),
+                'approval_id' => $this->id,
+                'is_rejected_change' => true,
+                'rejection_reason' => $reason,
+                'was_creation_attempt' => true
+            ];
+            
+            $newValuesWithMetadata = array_merge($this->new_data, ['_rejection_metadata' => $rejectionMetadata]);
+
+            // Note: We can't create SoilHistory without soil_id
+            // So we just log it for now - you might want to create a separate ApprovalHistory table
+            \Log::info('Rejected creation request', [
+                'approval_id' => $this->id,
+                'requested_by' => $this->requested_by,
+                'rejected_by' => Auth::id(),
+                'reason' => $reason,
+                'data' => $this->new_data
+            ]);
+            
+        } catch (\Exception $e) {
+            \Log::error('Failed to log rejected creation: ' . $e->getMessage(), [
+                'approval_id' => $this->id,
+                'error' => $e->getMessage()
+            ]);
+        }
     }
 
     private function applyDetailChanges()
@@ -311,11 +495,41 @@ class SoilApproval extends Model
         $soil->historyLogging = true;
         
         DB::transaction(function () use ($soil) {
-            // Delete all existing costs
-            $soil->biayaTambahanSoils()->delete();
+            $oldCosts = $soil->biayaTambahanSoils()->with('description')->get();
+            $newCostsData = $this->new_data;
             
-            // Create new costs from approved data
-            foreach ($this->new_data as $costData) {
+            // Create lookup arrays
+            $oldCostsById = $oldCosts->keyBy('id');
+            $newCostsById = collect($newCostsData)->keyBy('id')->filter(fn($item) => !empty($item['id']));
+            
+            // Track all IDs
+            $oldIds = $oldCostsById->keys();
+            $newIds = $newCostsById->keys();
+            
+            // 1. IDENTIFY DELETED COSTS (in old but not in new)
+            $deletedIds = $oldIds->diff($newIds);
+            foreach ($deletedIds as $deletedId) {
+                $cost = $oldCostsById->get($deletedId);
+                $oldCostData = [
+                    'description' => $cost->description->description ?? 'Unknown',
+                    'harga' => $cost->harga,
+                    'cost_type' => $cost->cost_type,
+                    'date_cost' => $cost->date_cost,
+                ];
+                
+                // Log as deleted with approval metadata
+                $soil->logAdditionalCostHistory('deleted', [], $oldCostData, $this->approved_by, $this->id);
+            }
+            
+            // Delete costs not in new data
+            $soil->biayaTambahanSoils()->whereNotIn('id', $newIds)->delete();
+            
+            // 2. IDENTIFY ADDED COSTS (no ID or new ID)
+            $addedCosts = collect($newCostsData)->filter(function($item) use ($oldIds) {
+                return empty($item['id']) || !$oldIds->contains($item['id']);
+            });
+            
+            foreach ($addedCosts as $costData) {
                 if (!empty($costData['description_id']) && !empty($costData['harga'])) {
                     BiayaTambahanSoil::create([
                         'soil_id' => $soil->id,
@@ -324,15 +538,65 @@ class SoilApproval extends Model
                         'cost_type' => $costData['cost_type'],
                         'date_cost' => $costData['date_cost'],
                     ]);
+                    
+                    $newCostData = [
+                        'description' => $costData['description'] ?? 'Unknown',
+                        'harga' => $costData['harga'],
+                        'cost_type' => $costData['cost_type'],
+                        'date_cost' => $costData['date_cost'],
+                    ];
+                    
+                    // Log as added with approval metadata
+                    $soil->logAdditionalCostHistory('added', $newCostData, [], $this->approved_by, $this->id);
+                }
+            }
+            
+            // 3. IDENTIFY UPDATED COSTS (in both old and new, but changed)
+            foreach ($newIds as $costId) {
+                $oldCost = $oldCostsById->get($costId);
+                $newCostData = $newCostsById->get($costId);
+                
+                if ($oldCost && $newCostData) {
+                    // Check if anything actually changed
+                    $hasChanges = (
+                        $oldCost->description_id != $newCostData['description_id'] ||
+                        $oldCost->harga != $newCostData['harga'] ||
+                        $oldCost->cost_type != $newCostData['cost_type'] ||
+                        $oldCost->date_cost != $newCostData['date_cost']
+                    );
+                    
+                    if ($hasChanges) {
+                        // Update the cost
+                        BiayaTambahanSoil::where('id', $costId)->update([
+                            'description_id' => $newCostData['description_id'],
+                            'harga' => $newCostData['harga'],
+                            'cost_type' => $newCostData['cost_type'],
+                            'date_cost' => $newCostData['date_cost'],
+                        ]);
+                        
+                        $oldCostData = [
+                            'description' => $oldCost->description->description ?? 'Unknown',
+                            'harga' => $oldCost->harga,
+                            'cost_type' => $oldCost->cost_type,
+                            'date_cost' => $oldCost->date_cost,
+                        ];
+                        
+                        $newCostDataFormatted = [
+                            'description' => $newCostData['description'] ?? 'Unknown',
+                            'harga' => $newCostData['harga'],
+                            'cost_type' => $newCostData['cost_type'],
+                            'date_cost' => $newCostData['date_cost'],
+                        ];
+                        
+                        // Log as updated with approval metadata
+                        $soil->logAdditionalCostHistory('updated', $newCostDataFormatted, $oldCostData, $this->approved_by, $this->id);
+                    }
                 }
             }
         });
         
-        // Reset flag BEFORE logging
+        // Reset flag
         $soil->historyLogging = false;
-        
-        // Log approval history
-        $soil->logAdditionalCostHistory('approved', $this->new_data, [], $this->approved_by, $this->id);
     }
 
     private function applyDeletion()

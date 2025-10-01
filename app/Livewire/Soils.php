@@ -494,7 +494,6 @@ class Soils extends Component
                 $oldData = $soil->only([
                     'land_id', 'business_unit_id', 'nama_penjual', 'alamat_penjual', 
                     'nomor_ppjb', 'tanggal_ppjb', 'letak_tanah', 'luas',
-                    // REMOVED: 'harga',
                     'bukti_kepemilikan', 'bukti_kepemilikan_details', 'atas_nama', 
                     'nop_pbb', 'nama_notaris_ppat', 'keterangan'
                 ]);
@@ -508,7 +507,6 @@ class Soils extends Component
                     'tanggal_ppjb' => $detail['tanggal_ppjb'],
                     'letak_tanah' => $detail['letak_tanah'],
                     'luas' => $this->parseFormattedNumber($detail['luas']),
-                    // REMOVED: harga
                     'bukti_kepemilikan' => $detail['bukti_kepemilikan'],
                     'bukti_kepemilikan_details' => $detail['bukti_kepemilikan_details'],
                     'atas_nama' => $detail['atas_nama'],
@@ -517,16 +515,21 @@ class Soils extends Component
                     'keterangan' => $detail['keterangan'],
                 ];
 
-                SoilApproval::create([
-                    'soil_id' => $this->soilId,
-                    'requested_by' => auth()->id(),
-                    'old_data' => $oldData,
-                    'new_data' => $newData,
-                    'change_type' => 'details',
-                    'status' => 'pending'
-                ]);
-                
-                session()->flash('warning', 'Your soil data changes have been submitted for approval and are pending review.');
+                // CHECK IF DATA ACTUALLY CHANGED
+                if ($this->hasDataChanged($oldData, $newData)) {
+                    SoilApproval::create([
+                        'soil_id' => $this->soilId,
+                        'requested_by' => auth()->id(),
+                        'old_data' => $oldData,
+                        'new_data' => $newData,
+                        'change_type' => 'details',
+                        'status' => 'pending'
+                    ]);
+                    
+                    session()->flash('warning', 'Your soil data changes have been submitted for approval and are pending review.');
+                } else {
+                    session()->flash('info', 'No changes detected. The data is identical to the existing record.');
+                }
             }
             
             if ($this->editSource === 'detail') {
@@ -634,7 +637,6 @@ class Soils extends Component
 
         $soil = Soil::findOrFail($this->soilId);
         
-        // MODIFIED: Check for separate soil cost approval permission
         if (auth()->user()->can('soil-data-costs.approval')) {
             // User has cost approval permission - update directly
             
@@ -648,7 +650,7 @@ class Soils extends Component
             
             session()->flash('message', 'Soil price and additional costs updated successfully.');
         } else {
-           // User needs approval - create approval request for costs
+            // User needs approval - check if costs changed
             $oldCostData = $soil->biayaTambahanSoils()->with('description')->get()->map(function($cost) {
                 return [
                     'id' => $cost->id,
@@ -656,7 +658,7 @@ class Soils extends Component
                     'description' => $cost->description->description ?? '',
                     'harga' => $cost->harga,
                     'cost_type' => $cost->cost_type,
-                    'date_cost' => $cost->date_cost,
+                    'date_cost' => $cost->date_cost ? $cost->date_cost->format('Y-m-d') : null,
                 ];
             })->toArray();
 
@@ -672,34 +674,42 @@ class Soils extends Component
                 ];
             })->toArray();
 
-            SoilApproval::create([
-                'soil_id' => $this->soilId,
-                'requested_by' => auth()->id(),
-                'old_data' => $oldCostData,
-                'new_data' => $newCostData,
-                'change_type' => 'costs',
-                'status' => 'pending'
-            ]);
+            // Check soil price change
+            $oldSoilPrice = $soil->harga;
+            $newSoilPrice = $this->parseFormattedNumber($this->soilPrice);
+            $priceChanged = ($oldSoilPrice != $newSoilPrice);
 
-            // Include soil price in approval data
-            $oldData = [
-                'harga' => $soil->harga
-            ];
-            
-            $newData = [
-                'harga' => $this->parseFormattedNumber($this->soilPrice)
-            ];
+            // Check if costs changed
+            $costsChanged = $this->hasCostsChanged($oldCostData, $newCostData);
 
-            SoilApproval::create([
-                'soil_id' => $this->soilId,
-                'requested_by' => auth()->id(),
-                'old_data' => $oldData,
-                'new_data' => $newData,
-                'change_type' => 'details',
-                'status' => 'pending'
-            ]);            
-            
-            session()->flash('warning', 'Your cost changes have been submitted for approval and are pending review.');
+            if (!$priceChanged && !$costsChanged) {
+                session()->flash('info', 'No changes detected. The costs are identical to the existing record.');
+            } else {
+                // Create approval requests only for what changed
+                if ($costsChanged) {
+                    SoilApproval::create([
+                        'soil_id' => $this->soilId,
+                        'requested_by' => auth()->id(),
+                        'old_data' => $oldCostData,
+                        'new_data' => $newCostData,
+                        'change_type' => 'costs',
+                        'status' => 'pending'
+                    ]);
+                }
+
+                if ($priceChanged) {
+                    SoilApproval::create([
+                        'soil_id' => $this->soilId,
+                        'requested_by' => auth()->id(),
+                        'old_data' => ['harga' => $oldSoilPrice],
+                        'new_data' => ['harga' => $newSoilPrice],
+                        'change_type' => 'details',
+                        'status' => 'pending'
+                    ]);
+                }
+                
+                session()->flash('warning', 'Your cost changes have been submitted for approval and are pending review.');
+            }
         }
         
         // Return based on where the edit was initiated from
@@ -1550,5 +1560,86 @@ class Soils extends Component
         }
         
         return $query->orderBy('lokasi_lahan')->limit(20)->get();
+    }
+
+    /**
+     * Check if data has actually changed
+     */
+    private function hasDataChanged($oldData, $newData)
+    {
+        foreach ($newData as $key => $newValue) {
+            $oldValue = $oldData[$key] ?? null;
+            
+            // Normalize values for comparison
+            $oldNormalized = $this->normalizeValue($oldValue);
+            $newNormalized = $this->normalizeValue($newValue);
+            
+            if ($oldNormalized !== $newNormalized) {
+                return true;
+            }
+        }
+        
+        return false;
+    }
+
+    /**
+     * Check if costs have changed
+     */
+    private function hasCostsChanged($oldCostData, $newCostData)
+    {
+        // First check if count is different
+        if (count($oldCostData) !== count($newCostData)) {
+            return true;
+        }
+        
+        // Create lookup arrays by ID
+        $oldCostsById = collect($oldCostData)->keyBy('id');
+        $newCostsById = collect($newCostData)->keyBy('id')->filter(fn($item) => !empty($item['id']));
+        
+        // Check for new costs (without ID)
+        $hasNewCosts = collect($newCostData)->filter(fn($item) => empty($item['id']))->isNotEmpty();
+        if ($hasNewCosts) {
+            return true;
+        }
+        
+        // Check for deleted costs
+        $oldIds = $oldCostsById->keys();
+        $newIds = $newCostsById->keys();
+        if ($oldIds->diff($newIds)->isNotEmpty()) {
+            return true;
+        }
+        
+        // Check for modified costs
+        foreach ($newIds as $costId) {
+            $oldCost = $oldCostsById->get($costId);
+            $newCost = $newCostsById->get($costId);
+            
+            if ($oldCost && $newCost) {
+                if ($oldCost['description_id'] != $newCost['description_id'] ||
+                    $oldCost['harga'] != $newCost['harga'] ||
+                    $oldCost['cost_type'] != $newCost['cost_type'] ||
+                    $oldCost['date_cost'] != $newCost['date_cost']) {
+                    return true;
+                }
+            }
+        }
+        
+        return false;
+    }
+
+    /**
+     * Normalize value for comparison
+     */
+    private function normalizeValue($value)
+    {
+        if (is_null($value)) {
+            return '';
+        }
+        
+        if (is_string($value)) {
+            return trim($value);
+        }
+        
+        return $value;
     }
 }

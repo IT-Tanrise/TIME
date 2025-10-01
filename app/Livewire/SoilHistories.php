@@ -100,6 +100,7 @@ class SoilHistories extends Component
                         'additional_cost_added' => 'Additional Cost Added',
                         'additional_cost_updated' => 'Additional Cost Updated',
                         'additional_cost_deleted' => 'Additional Cost Deleted',
+                        'rejected_cost_update' => 'Rejected Cost',
                         default => ucfirst($action)
                     }
                 ];
@@ -265,131 +266,114 @@ class SoilHistories extends Component
         
         if ($history->action === 'additional_cost_added' && $history->new_values) {
             // For added costs, show the new values
+            $nv = $history->new_values;
+            
             $details[] = [
                 'field' => 'Cost Description',
                 'old' => '',
-                'new' => $history->new_values['additional_cost_description'] ?? 
-                        $history->new_values['description'] ?? 
-                        'N/A'
+                'new' => $nv['description'] ?? 'N/A'
             ];
             $details[] = [
                 'field' => 'Amount',
                 'old' => '',
-                'new' => $this->formatValue('additional_cost_amount', 
-                        $history->new_values['additional_cost_amount'] ?? 
-                        $history->new_values['amount'] ?? 
-                        $history->new_values['additional_cost_harga'] ?? 
-                        $history->new_values['harga'] ?? 
-                        0)
+                'new' => $this->formatValue('additional_cost_amount', $nv['harga'] ?? 0)
             ];
             $details[] = [
                 'field' => 'Cost Type',
                 'old' => '',
-                'new' => $this->formatValue('additional_cost_type',
-                        $history->new_values['additional_cost_type'] ?? 
-                        $history->new_values['additional_cost_cost_type'] ?? 
-                        $history->new_values['cost_type'] ?? 
-                        $history->new_values['type'] ?? 
-                        'standard')
+                'new' => $this->formatValue('additional_cost_type', $nv['cost_type'] ?? 'standard')
             ];
-            if (isset($history->new_values['additional_cost_date']) || isset($history->new_values['additional_cost_date_cost']) || isset($history->new_values['date'])) {
+            if (isset($nv['date_cost'])) {
                 $details[] = [
                     'field' => 'Date',
                     'old' => '',
-                    'new' => $this->formatValue('additional_cost_date',
-                            $history->new_values['additional_cost_date'] ?? 
-                            $history->new_values['additional_cost_date_cost'] ?? 
-                            $history->new_values['date'] ?? 
-                            null)
+                    'new' => $this->formatValue('additional_cost_date', $nv['date_cost'])
                 ];
             }
-        } elseif ($history->action === 'additional_cost_updated' && $history->old_values && $history->new_values) {
+        } 
+        elseif ($history->action === 'additional_cost_updated' && $history->old_values && $history->new_values) {
             // For updated costs, show what changed
-            $costFields = [
-                'description' => ['additional_cost_description', 'description'],
-                'amount' => ['additional_cost_amount', 'additional_cost_harga', 'amount', 'harga'],
-                'type' => ['additional_cost_type', 'additional_cost_cost_type', 'cost_type', 'type'],
-                'date' => ['additional_cost_date', 'additional_cost_date_cost', 'date']
-            ];
+            $ov = $history->old_values;
+            $nv = $history->new_values;
             
-            foreach ($costFields as $displayName => $possibleKeys) {
-                $oldValue = null;
-                $newValue = null;
-                $foundKey = null;
-                
-                // Find which key exists in the data
-                foreach ($possibleKeys as $key) {
-                    if (isset($history->new_values[$key]) || isset($history->old_values[$key])) {
-                        $foundKey = $key;
-                        $oldValue = $history->old_values[$key] ?? null;
-                        $newValue = $history->new_values[$key] ?? null;
-                        break;
-                    }
-                }
-                
-                if ($foundKey && $oldValue !== $newValue) {
-                    $fieldName = match($displayName) {
-                        'description' => 'Cost Description',
-                        'amount' => 'Amount',
-                        'type' => 'Cost Type',
-                        'date' => 'Date',
-                        default => ucfirst($displayName)
-                    };
-                    
-                    $formattingKey = match($displayName) {
-                        'amount' => 'additional_cost_amount',
-                        'type' => 'additional_cost_type',
-                        'date' => 'additional_cost_date',
-                        default => $foundKey
-                    };
-                    
+            // Description
+            if (isset($ov['description']) || isset($nv['description'])) {
+                $oldDesc = $ov['description'] ?? '-';
+                $newDesc = $nv['description'] ?? '-';
+                if ($oldDesc !== $newDesc) {
                     $details[] = [
-                        'field' => $fieldName,
-                        'old' => $this->formatValue($formattingKey, $oldValue),
-                        'new' => $this->formatValue($formattingKey, $newValue)
+                        'field' => 'Cost Description',
+                        'old' => $oldDesc,
+                        'new' => $newDesc
                     ];
                 }
             }
-        } elseif ($history->action === 'additional_cost_deleted' && $history->old_values) {
-            // For deleted costs, show what was deleted
-            $details[] = [
-                'field' => 'Cost Description',
-                'old' => $history->old_values['additional_cost_description'] ?? 
-                        $history->old_values['description'] ?? 
-                        'N/A',
-                'new' => 'Deleted'
-            ];
-            $details[] = [
-                'field' => 'Amount',
-                'old' => $this->formatValue('additional_cost_amount',
-                        $history->old_values['additional_cost_amount'] ?? 
-                        $history->old_values['amount'] ?? 
-                        $history->old_values['additional_cost_harga'] ?? 
-                        $history->old_values['harga'] ?? 
-                        0),
-                'new' => 'Deleted'
-            ];
-        } elseif ($history->action === 'additional_cost_approved' && $history->new_values) {
-            // Handle approved additional costs
-            $details[] = [
-                'field' => 'Cost Description',
-                'old' => '',
-                'new' => $nv['additional_cost_description'] ?? 
-                        $nv['description'] ?? 
-                        'N/A'
-            ];
-            $details[] = [
-                'field' => 'Amount',
-                'old' => '',
-                'new' => $this->formatValue('additional_cost_amount', 
-                        $nv['additional_cost_amount'] ?? 
-                        $nv['amount'] ?? 
-                        $nv['additional_cost_harga'] ?? 
-                        $nv['harga'] ?? 
-                        0)
-            ];
             
-            // Add other fields as needed...
+            // Amount
+            if (isset($ov['harga']) || isset($nv['harga'])) {
+                $oldAmount = $ov['harga'] ?? 0;
+                $newAmount = $nv['harga'] ?? 0;
+                if ($oldAmount != $newAmount) {
+                    $details[] = [
+                        'field' => 'Amount',
+                        'old' => $this->formatValue('additional_cost_amount', $oldAmount),
+                        'new' => $this->formatValue('additional_cost_amount', $newAmount)
+                    ];
+                }
+            }
+            
+            // Cost Type
+            if (isset($ov['cost_type']) || isset($nv['cost_type'])) {
+                $oldType = $ov['cost_type'] ?? 'standard';
+                $newType = $nv['cost_type'] ?? 'standard';
+                if ($oldType !== $newType) {
+                    $details[] = [
+                        'field' => 'Cost Type',
+                        'old' => $this->formatValue('additional_cost_type', $oldType),
+                        'new' => $this->formatValue('additional_cost_type', $newType)
+                    ];
+                }
+            }
+            
+            // Date
+            if (isset($ov['date_cost']) || isset($nv['date_cost'])) {
+                $oldDate = $ov['date_cost'] ?? null;
+                $newDate = $nv['date_cost'] ?? null;
+                if ($oldDate !== $newDate) {
+                    $details[] = [
+                        'field' => 'Date',
+                        'old' => $this->formatValue('additional_cost_date', $oldDate),
+                        'new' => $this->formatValue('additional_cost_date', $newDate)
+                    ];
+                }
+            }
+        } 
+        elseif ($history->action === 'additional_cost_deleted' && $history->old_values) {
+            // For deleted costs, show what was deleted
+            $ov = $history->old_values;
+            
+            $details[] = [
+                'field' => 'Cost Description',
+                'old' => $ov['description'] ?? 'N/A',
+                'new' => 'Deleted'
+            ];
+            $details[] = [
+                'field' => 'Amount',
+                'old' => $this->formatValue('additional_cost_amount', $ov['harga'] ?? 0),
+                'new' => 'Deleted'
+            ];
+            $details[] = [
+                'field' => 'Cost Type',
+                'old' => $this->formatValue('additional_cost_type', $ov['cost_type'] ?? 'standard'),
+                'new' => 'Deleted'
+            ];
+            if (isset($ov['date_cost'])) {
+                $details[] = [
+                    'field' => 'Date',
+                    'old' => $this->formatValue('additional_cost_date', $ov['date_cost']),
+                    'new' => 'Deleted'
+                ];
+            }
         }
         
         return !empty($details) ? $details : null;
@@ -556,5 +540,220 @@ class SoilHistories extends Component
                 'badge_text' => 'text-orange-800'
             ]
         };
+    }
+
+    public function getRejectedChangeDetails($history)
+    {
+        if (!$history->isRejectedChange()) {
+            return null;
+        }
+
+        // Handle different rejection types
+        if ($history->action === 'rejected_update') {
+            return $this->getRejectedDetailChanges($history);
+        } elseif ($history->action === 'rejected_cost_update') {
+            return $this->getRejectedCostChanges($history);
+        } elseif ($history->action === 'rejected_deletion') {
+            return $this->getRejectedDeletionChanges($history);
+        }
+
+        return null;
+    }
+
+    // Get rejected detail changes
+    private function getRejectedDetailChanges($history)
+    {
+        if (!$history->old_values || !$history->new_values) {
+            return null;
+        }
+
+        $changes = [];
+        $oldData = $history->old_values;
+        $newData = $history->new_values;
+
+        // Remove metadata from display
+        unset($newData['_rejection_metadata']);
+
+        $fieldsToCheck = $history->changes ?? array_keys($newData);
+
+        foreach ($fieldsToCheck as $field) {
+            if (isset($oldData[$field]) && isset($newData[$field])) {
+                $oldValue = $oldData[$field];
+                $newValue = $newData[$field];
+
+                if ($oldValue != $newValue) {
+                    $changes[] = [
+                        'field' => $this->getFieldDisplayName($field),
+                        'old' => $this->formatValue($field, $oldValue),
+                        'new' => $this->formatValue($field, $newValue),
+                        'status' => 'rejected'
+                    ];
+                }
+            }
+        }
+
+        return $changes;
+    }
+
+    // Get rejected cost changes
+    private function getRejectedCostChanges($history)
+    {
+        if (!$history->old_values || !$history->new_values) {
+            return null;
+        }
+
+        $oldCosts = $history->old_values['costs'] ?? [];
+        $newCosts = $history->new_values['costs'] ?? [];
+
+        // Remove metadata
+        unset($history->new_values['_rejection_metadata']);
+
+        $changes = [];
+
+        // Create lookup arrays
+        $oldCostsById = collect($oldCosts)->keyBy('id');
+        $newCostsById = collect($newCosts)->keyBy('id')->filter(fn($item) => !empty($item['id']));
+
+        // Track all IDs
+        $oldIds = $oldCostsById->keys();
+        $newIds = $newCostsById->keys();
+
+        // Check for costs that would be added
+        $newCostsWithoutId = collect($newCosts)->filter(function ($cost) {
+            return empty($cost['id']) || is_null($cost['id']);
+        });
+
+        foreach ($newCostsWithoutId as $newCost) {
+            $changes[] = [
+                'type' => 'add',
+                'description' => $newCost['description'] ?? 'Unknown',
+                'amount' => $this->formatValue('harga', $newCost['harga'] ?? 0),
+                'cost_type' => $this->formatValue('cost_type', $newCost['cost_type'] ?? 'standard'),
+                'date_cost' => $this->formatValue('date_cost', $newCost['date_cost'] ?? ''),
+                'status' => 'rejected'
+            ];
+        }
+
+        // Check for costs that would be deleted
+        $deletedIds = $oldIds->diff($newIds);
+        foreach ($deletedIds as $deletedId) {
+            $cost = $oldCostsById->get($deletedId);
+            $changes[] = [
+                'type' => 'delete',
+                'description' => $cost['description'] ?? 'Unknown',
+                'amount' => $this->formatValue('harga', $cost['harga'] ?? 0),
+                'cost_type' => $this->formatValue('cost_type', $cost['cost_type'] ?? 'standard'),
+                'date_cost' => $this->formatValue('date_cost', $cost['date_cost'] ?? ''),
+                'status' => 'rejected'
+            ];
+        }
+
+        // Check for costs that would be modified
+        foreach ($newIds as $costId) {
+            $oldCost = $oldCostsById->get($costId);
+            $newCost = $newCostsById->get($costId);
+
+            if ($oldCost && $newCost) {
+                $hasChanges = (
+                    $oldCost['description_id'] != $newCost['description_id'] ||
+                    $oldCost['harga'] != $newCost['harga'] ||
+                    $oldCost['cost_type'] != $newCost['cost_type'] ||
+                    $oldCost['date_cost'] != $newCost['date_cost']
+                );
+
+                if ($hasChanges) {
+                    $changeDetails = [];
+
+                    if ($oldCost['description'] != $newCost['description']) {
+                        $changeDetails[] = [
+                            'field' => 'Description',
+                            'old' => $oldCost['description'] ?? 'Unknown',
+                            'new' => $newCost['description'] ?? 'Unknown'
+                        ];
+                    }
+
+                    if ($oldCost['harga'] != $newCost['harga']) {
+                        $changeDetails[] = [
+                            'field' => 'Amount',
+                            'old' => $this->formatValue('harga', $oldCost['harga']),
+                            'new' => $this->formatValue('harga', $newCost['harga'])
+                        ];
+                    }
+
+                    if ($oldCost['cost_type'] != $newCost['cost_type']) {
+                        $changeDetails[] = [
+                            'field' => 'Cost Type',
+                            'old' => $this->formatValue('cost_type', $oldCost['cost_type']),
+                            'new' => $this->formatValue('cost_type', $newCost['cost_type'])
+                        ];
+                    }
+
+                    if ($oldCost['date_cost'] != $newCost['date_cost']) {
+                        $changeDetails[] = [
+                            'field' => 'Date',
+                            'old' => $this->formatValue('date_cost', $oldCost['date_cost']),
+                            'new' => $this->formatValue('date_cost', $newCost['date_cost'])
+                        ];
+                    }
+
+                    $changes[] = [
+                        'type' => 'modify',
+                        'description' => $newCost['description'] ?? $oldCost['description'] ?? 'Unknown',
+                        'changes' => $changeDetails,
+                        'status' => 'rejected'
+                    ];
+                }
+            }
+        }
+
+        return $changes;
+    }
+
+    // Get rejected deletion changes
+    private function getRejectedDeletionChanges($history)
+    {
+        $details = [];
+        $oldData = $history->old_values;
+
+        if ($oldData) {
+            $details[] = [
+                'field' => 'Seller Name',
+                'value' => $oldData['nama_penjual'] ?? 'N/A'
+            ];
+
+            $details[] = [
+                'field' => 'Location',
+                'value' => $oldData['letak_tanah'] ?? 'N/A'
+            ];
+
+            $details[] = [
+                'field' => 'PPJB Number',
+                'value' => $oldData['nomor_ppjb'] ?? 'N/A'
+            ];
+
+            if (isset($oldData['luas'])) {
+                $details[] = [
+                    'field' => 'Area',
+                    'value' => $this->formatValue('luas', $oldData['luas'])
+                ];
+            }
+
+            if (isset($oldData['harga'])) {
+                $details[] = [
+                    'field' => 'Price',
+                    'value' => $this->formatValue('harga', $oldData['harga'])
+                ];
+            }
+        }
+
+        // Get deletion reason from new_values
+        if (isset($history->new_values['deletion_reason'])) {
+            $details[] = [
+                'field' => 'Requested Deletion Reason',
+                'value' => $history->new_values['deletion_reason']
+            ];
+        }
+
+        return $details;
     }
 }
