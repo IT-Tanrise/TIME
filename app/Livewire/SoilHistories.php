@@ -370,26 +370,24 @@ class SoilHistories extends Component
                 'new' => 'Deleted'
             ];
         } elseif ($history->action === 'additional_cost_approved' && $history->new_values) {
-            foreach ($history->new_values as $nv){
-                // Handle approved additional costs
-                $details[] = [
-                    'field' => 'Cost Description',
-                    'old' => '',
-                    'new' => $nv['additional_cost_description'] ?? 
-                            $nv['description'] ?? 
-                            'N/A'
-                ];
-                $details[] = [
-                    'field' => 'Amount',
-                    'old' => '',
-                    'new' => $this->formatValue('additional_cost_amount', 
-                            $nv['additional_cost_amount'] ?? 
-                            $nv['amount'] ?? 
-                            $nv['additional_cost_harga'] ?? 
-                            $nv['harga'] ?? 
-                            0)
-                ];
-            }
+            // Handle approved additional costs
+            $details[] = [
+                'field' => 'Cost Description',
+                'old' => '',
+                'new' => $nv['additional_cost_description'] ?? 
+                        $nv['description'] ?? 
+                        'N/A'
+            ];
+            $details[] = [
+                'field' => 'Amount',
+                'old' => '',
+                'new' => $this->formatValue('additional_cost_amount', 
+                        $nv['additional_cost_amount'] ?? 
+                        $nv['amount'] ?? 
+                        $nv['additional_cost_harga'] ?? 
+                        $nv['harga'] ?? 
+                        0)
+            ];
             
             // Add other fields as needed...
         }

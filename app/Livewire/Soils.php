@@ -648,7 +648,7 @@ class Soils extends Component
             
             session()->flash('message', 'Soil price and additional costs updated successfully.');
         } else {
-            // User needs approval - create approval request for costs
+           // User needs approval - create approval request for costs
             $oldCostData = $soil->biayaTambahanSoils()->with('description')->get()->map(function($cost) {
                 return [
                     'id' => $cost->id,
@@ -672,15 +672,22 @@ class Soils extends Component
                 ];
             })->toArray();
 
+            SoilApproval::create([
+                'soil_id' => $this->soilId,
+                'requested_by' => auth()->id(),
+                'old_data' => $oldCostData,
+                'new_data' => $newCostData,
+                'change_type' => 'costs',
+                'status' => 'pending'
+            ]);
+
             // Include soil price in approval data
             $oldData = [
-                'soil_price' => $soil->harga,
-                'additional_costs' => $oldCostData
+                'harga' => $soil->harga
             ];
             
             $newData = [
-                'soil_price' => $this->parseFormattedNumber($this->soilPrice),
-                'additional_costs' => $newCostData
+                'harga' => $this->parseFormattedNumber($this->soilPrice)
             ];
 
             SoilApproval::create([
@@ -688,9 +695,9 @@ class Soils extends Component
                 'requested_by' => auth()->id(),
                 'old_data' => $oldData,
                 'new_data' => $newData,
-                'change_type' => 'costs',
+                'change_type' => 'details',
                 'status' => 'pending'
-            ]);
+            ]);            
             
             session()->flash('warning', 'Your cost changes have been submitted for approval and are pending review.');
         }
