@@ -312,45 +312,6 @@
                                                 @enderror
                                             </div>
 
-                                            <!-- Price (FIXED: Better number formatting) -->
-                                            <div>
-                                                <label class="block text-xs font-medium text-gray-700 mb-1">Price (Rp) *</label>
-                                                <input 
-                                                    wire:model.live="soilDetails.{{ $index }}.harga_display" 
-                                                    type="text" 
-                                                    class="w-full px-2 py-1.5 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-xs @error('soilDetails.'.$index.'.harga') border-red-500 @enderror"
-                                                    placeholder="Enter price"
-                                                    x-data="{
-                                                        formatNumber(value) {
-                                                            // Remove all non-numeric characters
-                                                            let numericValue = value.replace(/[^\d]/g, '');
-                                                            if (numericValue) {
-                                                                // Format with thousand separators using Indonesian format (dot as thousand separator)
-                                                                return new Intl.NumberFormat('id-ID').format(parseInt(numericValue));
-                                                            }
-                                                            return '';
-                                                        }
-                                                    }"
-                                                    x-on:input="
-                                                        let rawValue = $event.target.value;
-                                                        let numericValue = rawValue.replace(/[^\d]/g, '');
-                                                        if (numericValue) {
-                                                            let formattedValue = new Intl.NumberFormat('id-ID').format(parseInt(numericValue));
-                                                            $event.target.value = formattedValue;
-                                                            @this.set('soilDetails.{{ $index }}.harga', parseInt(numericValue));
-                                                            @this.set('soilDetails.{{ $index }}.harga_display', formattedValue);
-                                                        } else {
-                                                            $event.target.value = '';
-                                                            @this.set('soilDetails.{{ $index }}.harga', '');
-                                                            @this.set('soilDetails.{{ $index }}.harga_display', '');
-                                                        }
-                                                    "
-                                                >
-                                                @error('soilDetails.'.$index.'.harga') 
-                                                    <span class="text-red-500 text-xs">{{ $message }}</span> 
-                                                @enderror
-                                            </div>
-
                                             <!-- Ownership Proof -->
                                             <div>
                                                 <label class="block text-xs font-medium text-gray-700 mb-1">Ownership Proof *</label>

@@ -78,6 +78,9 @@ class Soils extends Component
     public $deleteReason = '';
     public $deleteSoilId = null;
 
+    public $soilPrice = '';
+    public $soilPriceDisplay = '';
+
     protected $rules = [
         'land_id' => 'required|exists:lands,id',
         'business_unit_id' => 'required|exists:business_units,id',
@@ -87,7 +90,7 @@ class Soils extends Component
         'soilDetails.*.tanggal_ppjb' => 'required|date',
         'soilDetails.*.letak_tanah' => 'required|string|max:255',
         'soilDetails.*.luas' => 'required|numeric|min:0.01',
-        'soilDetails.*.harga' => 'required|numeric|min:0.01',
+        // REMOVED: 'soilDetails.*.harga' => 'required|numeric|min:0.01',
         'soilDetails.*.bukti_kepemilikan' => 'required|string|max:255',
         'soilDetails.*.bukti_kepemilikan_details' => 'nullable|string|max:255',
         'soilDetails.*.atas_nama' => 'required|string|max:255',
@@ -298,8 +301,7 @@ class Soils extends Component
             'letak_tanah' => '',
             'luas' => '',
             'luas_display' => '',
-            'harga' => '',
-            'harga_display' => '',
+            // REMOVED: 'harga' => '', and 'harga_display' => '',
             'bukti_kepemilikan' => '',
             'bukti_kepemilikan_details' => '',
             'atas_nama' => '',
@@ -406,8 +408,7 @@ class Soils extends Component
                     'letak_tanah' => $this->soil->letak_tanah,
                     'luas' => $this->soil->luas,
                     'luas_display' => $this->formatNumber($this->soil->luas),
-                    'harga' => $this->soil->harga,
-                    'harga_display' => $this->formatNumber($this->soil->harga),
+                    // REMOVED: harga and harga_display
                     'bukti_kepemilikan' => $this->soil->bukti_kepemilikan,
                     'bukti_kepemilikan_details' => $this->soil->bukti_kepemilikan_details,
                     'atas_nama' => $this->soil->atas_nama,
@@ -424,6 +425,11 @@ class Soils extends Component
             
             $this->showForm = true;
         } elseif ($mode === 'costs') {
+            // Load soil price separately
+            $this->soilPrice = $this->soil->harga;
+            $this->soilPriceDisplay = $this->formatNumber($this->soil->harga);
+            
+            // Load additional costs
             $this->biayaTambahan = [];
             $this->descriptionSearch = [];
             
@@ -457,9 +463,8 @@ class Soils extends Component
         $this->validate();
 
         if ($this->isEdit && $this->editMode === 'details') {
-            // EXISTING EDIT LOGIC - Check if user has soil data approval permission (separate from costs)
+            // EXISTING EDIT LOGIC
             if (auth()->user()->can('soil-data.approval')) {
-                // User has approval permission - update directly
                 $soil = Soil::findOrFail($this->soilId);
                 $detail = $this->soilDetails[0];
                 
@@ -472,7 +477,7 @@ class Soils extends Component
                     'tanggal_ppjb' => $detail['tanggal_ppjb'],
                     'letak_tanah' => $detail['letak_tanah'],
                     'luas' => $this->parseFormattedNumber($detail['luas']),
-                    'harga' => $this->parseFormattedNumber($detail['harga']),
+                    // REMOVED: harga update
                     'bukti_kepemilikan' => $detail['bukti_kepemilikan'],
                     'bukti_kepemilikan_details' => $detail['bukti_kepemilikan_details'],
                     'atas_nama' => $detail['atas_nama'],
@@ -483,13 +488,13 @@ class Soils extends Component
                 
                 session()->flash('message', 'Soil record details updated successfully.');
             } else {
-                // User needs approval - create approval request
                 $soil = Soil::findOrFail($this->soilId);
                 $detail = $this->soilDetails[0];
                 
                 $oldData = $soil->only([
                     'land_id', 'business_unit_id', 'nama_penjual', 'alamat_penjual', 
-                    'nomor_ppjb', 'tanggal_ppjb', 'letak_tanah', 'luas', 'harga', 
+                    'nomor_ppjb', 'tanggal_ppjb', 'letak_tanah', 'luas',
+                    // REMOVED: 'harga',
                     'bukti_kepemilikan', 'bukti_kepemilikan_details', 'atas_nama', 
                     'nop_pbb', 'nama_notaris_ppat', 'keterangan'
                 ]);
@@ -503,7 +508,7 @@ class Soils extends Component
                     'tanggal_ppjb' => $detail['tanggal_ppjb'],
                     'letak_tanah' => $detail['letak_tanah'],
                     'luas' => $this->parseFormattedNumber($detail['luas']),
-                    'harga' => $this->parseFormattedNumber($detail['harga']),
+                    // REMOVED: harga
                     'bukti_kepemilikan' => $detail['bukti_kepemilikan'],
                     'bukti_kepemilikan_details' => $detail['bukti_kepemilikan_details'],
                     'atas_nama' => $detail['atas_nama'],
@@ -534,7 +539,7 @@ class Soils extends Component
             }
             
         } else {
-            // NEW: CREATE NEW RECORDS WITH APPROVAL WORKFLOW
+            // NEW: CREATE NEW RECORDS
             $validDetails = collect($this->soilDetails)->filter(function($detail) {
                 return !empty($detail['nama_penjual']) && 
                     !empty($detail['alamat_penjual']) && 
@@ -547,9 +552,7 @@ class Soils extends Component
                 return;
             }
             
-            // Check if user has soil data approval permission for creating records
             if (auth()->user()->can('soil-data.approval')) {
-                // User has approval permission - create directly
                 $createdCount = 0;
                 
                 foreach ($validDetails as $detail) {
@@ -562,7 +565,7 @@ class Soils extends Component
                         'tanggal_ppjb' => $detail['tanggal_ppjb'],
                         'letak_tanah' => trim($detail['letak_tanah']),
                         'luas' => $this->parseFormattedNumber($detail['luas'] ?? ''),
-                        'harga' => $this->parseFormattedNumber($detail['harga'] ?? ''),
+                        'harga' => 0, // Default value, will be set in costs management
                         'bukti_kepemilikan' => trim($detail['bukti_kepemilikan'] ?? ''),
                         'bukti_kepemilikan_details' => trim($detail['bukti_kepemilikan_details'] ?? ''),
                         'atas_nama' => trim($detail['atas_nama'] ?? ''),
@@ -575,10 +578,9 @@ class Soils extends Component
                     $createdCount++;
                 }
                 
-                session()->flash('message', $createdCount . ' soil record(s) created successfully.');
+                session()->flash('message', $createdCount . ' soil record(s) created successfully. Please set soil price in Manage Costs.');
                 
             } else {
-                // User needs approval - create approval requests for each new record
                 $requestCount = 0;
                 
                 foreach ($validDetails as $detail) {
@@ -591,7 +593,7 @@ class Soils extends Component
                         'tanggal_ppjb' => $detail['tanggal_ppjb'],
                         'letak_tanah' => trim($detail['letak_tanah']),
                         'luas' => $this->parseFormattedNumber($detail['luas'] ?? ''),
-                        'harga' => $this->parseFormattedNumber($detail['harga'] ?? ''),
+                        'harga' => 0, // Default value
                         'bukti_kepemilikan' => trim($detail['bukti_kepemilikan'] ?? ''),
                         'bukti_kepemilikan_details' => trim($detail['bukti_kepemilikan_details'] ?? ''),
                         'atas_nama' => trim($detail['atas_nama'] ?? ''),
@@ -600,14 +602,12 @@ class Soils extends Component
                         'keterangan' => trim($detail['keterangan'] ?? ''),
                     ];
                     
-                    // Create approval request for this new record
-                    // Note: For create operations, old_data will be empty and new_data contains the record to be created
                     SoilApproval::create([
-                        'soil_id' => null, // No soil_id yet since record doesn't exist
+                        'soil_id' => null,
                         'requested_by' => auth()->id(),
-                        'old_data' => [], // Empty for new records
+                        'old_data' => [],
                         'new_data' => $createData,
-                        'change_type' => 'create', // New change type for create operations
+                        'change_type' => 'create',
                         'status' => 'pending'
                     ]);
                     
@@ -625,6 +625,7 @@ class Soils extends Component
     public function saveAdditionalCosts()
     {
         $this->validate([
+            'soilPrice' => 'required|numeric|min:0',
             'biayaTambahan.*.description_id' => 'required|exists:description_biaya_tambahan_soils,id',
             'biayaTambahan.*.harga' => 'required|numeric|min:0',
             'biayaTambahan.*.cost_type' => 'required|in:standard,non_standard',
@@ -636,8 +637,16 @@ class Soils extends Component
         // MODIFIED: Check for separate soil cost approval permission
         if (auth()->user()->can('soil-data-costs.approval')) {
             // User has cost approval permission - update directly
+            
+            // Save soil price
+            $soil->update([
+                'harga' => $this->parseFormattedNumber($this->soilPrice)
+            ]);
+            
+            // Save additional costs
             $this->updateBiayaTambahan($soil, $this->biayaTambahan);
-            session()->flash('message', 'Additional costs updated successfully.');
+            
+            session()->flash('message', 'Soil price and additional costs updated successfully.');
         } else {
             // User needs approval - create approval request for costs
             $oldCostData = $soil->biayaTambahanSoils()->with('description')->get()->map(function($cost) {
@@ -663,11 +672,22 @@ class Soils extends Component
                 ];
             })->toArray();
 
+            // Include soil price in approval data
+            $oldData = [
+                'soil_price' => $soil->harga,
+                'additional_costs' => $oldCostData
+            ];
+            
+            $newData = [
+                'soil_price' => $this->parseFormattedNumber($this->soilPrice),
+                'additional_costs' => $newCostData
+            ];
+
             SoilApproval::create([
                 'soil_id' => $this->soilId,
                 'requested_by' => auth()->id(),
-                'old_data' => $oldCostData,
-                'new_data' => $newCostData,
+                'old_data' => $oldData,
+                'new_data' => $newData,
                 'change_type' => 'costs',
                 'status' => 'pending'
             ]);
@@ -683,6 +703,19 @@ class Soils extends Component
         } else {
             $this->showAdditionalCostsForm = false;
             $this->resetForm();
+        }
+    }
+
+    public function updatedSoilPrice($value)
+    {
+        $numericValue = $this->parseFormattedNumber($value);
+        
+        if ($numericValue) {
+            $this->soilPrice = $numericValue;
+            $this->soilPriceDisplay = $this->formatNumber($numericValue);
+        } else {
+            $this->soilPrice = '';
+            $this->soilPriceDisplay = '';
         }
     }
 
@@ -1292,22 +1325,6 @@ class Soils extends Component
         } else {
             $this->soilDetails[$index]['luas'] = '';
             $this->soilDetails[$index]['luas_display'] = '';
-        }
-    }
-
-    public function updatedSoilDetailsHarga($value, $propertyName)
-    {
-        $parts = explode('.', $propertyName);
-        $index = $parts[0];
-        
-        $numericValue = $this->parseFormattedNumber($value);
-        
-        if ($numericValue) {
-            $this->soilDetails[$index]['harga'] = $numericValue;
-            $this->soilDetails[$index]['harga_display'] = $this->formatNumber($numericValue);
-        } else {
-            $this->soilDetails[$index]['harga'] = '';
-            $this->soilDetails[$index]['harga_display'] = '';
         }
     }
 
