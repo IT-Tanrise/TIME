@@ -156,7 +156,29 @@
                                     <p class="text-xs text-indigo-600 mt-1">Click sidebar "Ownerships" for filtered view</p>
                                 </div>
                                 @endcan
-                                
+                                @can('lands.access')
+                                <div class="bg-yellow-50 rounded-lg p-4">
+                                    <div class="flex items-center justify-between">
+                                        <div>
+                                            <p class="text-sm font-medium text-indigo-600">Lands</p>
+                                            <p class="text-2xl font-bold text-indigo-900">
+                                                {{ App\Models\Land::whereHas('soils', function($query) use ($unit) {
+                                                    $query->where('business_unit_id', $unit->id);
+                                                })->count() }}
+                                            </p>
+                                        </div>
+                                        {{-- Updated link to use the filtered route --}}
+                                        <a href="{{ route('lands.by-business-unit', $unit) }}" 
+                                        class="text-indigo-600 hover:text-indigo-800">
+                                            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"></path>
+                                            </svg>
+                                        </a>
+                                    </div>
+                                    <p class="text-xs text-indigo-600 mt-1">Click sidebar "Lands" for filtered view</p>
+                                </div>
+                                @endcan
+                                @can('soils.access')
                                 <div class="bg-green-50 rounded-lg p-4">
                                     <div class="flex items-center justify-between">
                                         <div>
@@ -174,6 +196,7 @@
                                     </div>
                                     <p class="text-xs text-green-600 mt-1">Click sidebar "Soils" for filtered view</p>
                                 </div>
+                                @endcan
                             </div>
                             @canany(['business-units.edit', 'business-units.delete'])
                             <div class="mt-6 pt-6 border-gray-200">

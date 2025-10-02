@@ -154,6 +154,18 @@ class Land extends Model
             ->implode(', ');
     }
 
+    // Get business unit codes (for single business unit display)
+    public function getBusinessUnitCodesAttribute()
+    {
+        return $this->soils()
+            ->with('businessUnit')
+            ->get()
+            ->pluck('businessUnit.code')
+            ->filter()
+            ->unique()
+            ->implode(', ');
+    }
+
     // Get formatted nominal_b
     public function getFormattedNominalBAttribute()
     {

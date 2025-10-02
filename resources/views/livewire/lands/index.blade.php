@@ -143,6 +143,7 @@
                                 <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Acquisition Value</th>
                                 <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Total Soil Area</th>
                                 <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Avg Price/m²</th>
+                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Additional Costs</th>
                                 <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
                                 <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Related</th>
                                 <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
@@ -150,6 +151,12 @@
                         </thead>
                         <tbody class="bg-white divide-y divide-gray-200">
                             @forelse ($lands as $land)
+                                @php
+                                    // Calculate total additional costs for all soils in this land
+                                    $totalAdditionalCosts = $land->soils->sum(function($soil) {
+                                        return $soil->biayaTambahanSoils->sum('harga');
+                                    });
+                                @endphp
                                 <tr class="hover:bg-gray-50">
                                     <td class="px-6 py-4 whitespace-nowrap">
                                         <div class="text-sm font-medium text-gray-900">{{ $land->lokasi_lahan }}</div>
@@ -161,7 +168,7 @@
                                         @if($land->business_units_count > 0)
                                             <div class="text-sm text-gray-900">
                                                 @if($land->business_units_count == 1)
-                                                    <span class="font-medium">{{ $land->business_unit_names }}</span>
+                                                    <span class="font-medium">{{ $land->business_unit_codes }}</span>
                                                 @else
                                                     <div class="space-y-1">
                                                         @foreach($land->soils->pluck('businessUnit')->filter()->unique('id')->take(2) as $unit)
@@ -204,6 +211,20 @@
                                             <span class="text-gray-400">-</span>
                                         @endif
                                     </td>
+                                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                                        @if($totalAdditionalCosts > 0)
+                                            <div class="font-medium text-blue-900">
+                                                Rp {{ number_format($totalAdditionalCosts, 0, ',', '.') }}
+                                            </div>
+                                            @if($land->soils_count > 0)
+                                                <div class="text-xs text-gray-500">
+                                                    from {{ $land->soils_count }} soil(s)
+                                                </div>
+                                            @endif
+                                        @else
+                                            <span class="text-gray-400">Rp 0</span>
+                                        @endif
+                                    </td>
                                     <td class="px-6 py-4 whitespace-nowrap">
                                         <span class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full
                                             @if($land->status === 'Available') bg-green-100 text-green-800
@@ -243,7 +264,7 @@
                                 </tr>
                             @empty
                                 <tr>
-                                    <td colspan="10" class="px-6 py-4 whitespace-nowrap text-sm text-gray-500 text-center">
+                                    <td colspan="11" class="px-6 py-4 whitespace-nowrap text-sm text-gray-500 text-center">
                                         @if($this->isFiltered())
                                             No lands found for business unit "{{ $this->getCurrentBusinessUnitName() }}".
                                         @elseif($search || $filterBusinessUnit || $filterStatus || $filterKotaKabupaten)

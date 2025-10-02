@@ -124,30 +124,6 @@
                             @enderror
                         </div>
 
-                        <!-- Nominal B - WITH FORMATTING -->
-                        <div>
-                            <label for="nominal_b" class="block text-sm font-medium text-gray-700">Nominal B (Rp)</label>
-                            <input type="text" 
-                                   wire:model="nominal_b_display"
-                                   id="nominal_b"
-                                   placeholder="0"
-                                   class="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 sm:text-sm @error('nominal_b') border-red-300 @enderror"
-                                   x-data 
-                                   x-on:input="
-                                       let value = $event.target.value.replace(/[^\d]/g, '');
-                                       if (value) {
-                                           $event.target.value = new Intl.NumberFormat('id-ID').format(value);
-                                           @this.set('nominal_b', parseInt(value));
-                                       } else {
-                                           $event.target.value = '';
-                                           @this.set('nominal_b', '');
-                                       }
-                                   ">
-                            @error('nominal_b') 
-                                <span class="text-red-500 text-xs">{{ $message }}</span> 
-                            @enderror
-                        </div>
-
                         <!-- NJOP - WITH FORMATTING -->
                         <div>
                             <label for="njop" class="block text-sm font-medium text-gray-700">NJOP (Rp)</label>

@@ -56,7 +56,6 @@ class Lands extends Component
             'kota_kabupaten' => 'nullable|string|max:255',
             'status' => 'required|string|max:255',
             'keterangan' => 'nullable|string',
-            'nominal_b' => 'nullable|numeric|min:0',
             'njop' => 'nullable|numeric|min:0',
             'est_harga_pasar' => 'nullable|numeric|min:0'
         ];
@@ -87,6 +86,7 @@ class Lands extends Component
         $lands = Land::with([
                 'soils:id,land_id,luas,harga,business_unit_id', 
                 'soils.businessUnit:id,name,code', // Load business unit details through soils
+                'soils.biayaTambahanSoils:id,soil_id,harga',
                 'businessUnits'
             ])
             ->withCount(['projects', 'soils'])
@@ -185,7 +185,7 @@ class Lands extends Component
             'kota_kabupaten' => $this->kota_kabupaten,
             'status' => $this->status,
             'keterangan' => $this->keterangan,
-            'nominal_b' => $this->nominal_b ?: null, // Set to null if empty
+            'nominal_b' => null, // Set to null if empty
             'njop' => $this->njop ?: null, // Set to null if empty
             'est_harga_pasar' => $this->est_harga_pasar ?: null // Set to null if empty
         ];
