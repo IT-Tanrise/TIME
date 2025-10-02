@@ -18,6 +18,7 @@
                 </a>
                 @endcan
                 <!-- Lands -->
+                 @can('lands.access')
                 <a href="{{ $this->getLandsUrl() }}" 
                    class="block px-2 py-1 text-gray-800 rounded-lg hover:font-semibold transition-colors duration-200 {{ $this->isActive('lands') ? 'bg-blue-100 font-semibold' : '' }}">
                     Lands
@@ -27,6 +28,7 @@
                         </span>
                     @endif
                 </a>
+                @endcan
                 <!-- Soils -->
                 @can('soils.access')
                 <a href="{{ $this->getSoilsUrl() }}" 

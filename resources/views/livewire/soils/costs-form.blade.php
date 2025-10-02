@@ -3,6 +3,7 @@
     <div class="bg-white overflow-hidden shadow-xl sm:rounded-lg">
         <div class="p-6 bg-white border-b border-gray-200">
             <!-- Header -->
+            @can('soils.edit')
             <div class="bg-blue-50 p-4 rounded-lg border-2 border-blue-200">
                 <h3 class="text-lg font-medium text-blue-900 mb-4">Soil Price</h3>
                 
@@ -45,10 +46,12 @@
                     </div>
                 </div>
             </div>
+            @endcan
 
             <!-- Additional Costs Form -->
             <form wire:submit="saveAdditionalCosts">
                 <div class="space-y-6">
+                    @can('soil-costs.edit')
                     <!-- Additional Costs Section -->
                     <div class="bg-yellow-50 p-4 rounded-lg">
                         <div class="flex justify-between items-center mb-4">
@@ -221,6 +224,7 @@
                             </div>
                         </div>
                     </div>
+                    @endcan
 
                     <!-- Form Actions -->
                     <div class="flex justify-end space-x-3">
