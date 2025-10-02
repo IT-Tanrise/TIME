@@ -192,4 +192,14 @@ class Land extends Model
         }
         return null;
     }
+
+    public function approvals(): HasMany
+    {
+        return $this->hasMany(LandApproval::class);
+    }
+
+    public function pendingApprovals(): HasMany
+    {
+        return $this->approvals()->where('status', 'pending');
+    }
 }

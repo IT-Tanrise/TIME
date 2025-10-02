@@ -54,6 +54,89 @@
             </div>
 
             
+            <?php if (app(\Illuminate\Contracts\Auth\Access\Gate::class)->check('land-data.approval')): ?>
+                <div class="mt-8 bg-white overflow-hidden shadow-xl sm:rounded-lg">
+                    <div class="p-6 lg:p-8 bg-white">
+                        <div class="flex items-center justify-between mb-6">
+                            <button 
+                                onclick="toggleSection('pendingLandApprovals')" 
+                                class="flex items-center space-x-2 text-left w-full focus:outline-none group">
+                                <h2 class="text-xl font-semibold text-gray-900">
+                                    Pending Land Data Approvals
+                                </h2>
+                                <svg id="pendingLandApprovals-icon" class="w-5 h-5 text-gray-500 transform transition-transform duration-200" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/>
+                                </svg>
+                            </button>
+                            <div class="flex items-center space-x-2">
+                                <?php
+                                    $pendingLandDetailsCount = App\Models\LandApproval::pending()->where('change_type', 'details')->count();
+                                    $pendingLandDeleteCount = App\Models\LandApproval::pending()->where('change_type', 'delete')->count();
+                                    $pendingLandCreateCount = App\Models\LandApproval::pending()->where('change_type', 'create')->count();
+                                ?>
+                                <?php if($pendingLandDetailsCount > 0): ?>
+                                    <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
+                                        <?php echo e($pendingLandDetailsCount); ?> Land Data
+                                    </span>
+                                <?php endif; ?>
+                                <?php if($pendingLandCreateCount > 0): ?>
+                                    <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">
+                                        <?php echo e($pendingLandCreateCount); ?> New Records
+                                    </span>
+                                <?php endif; ?>
+                                <?php if($pendingLandDeleteCount > 0): ?>
+                                    <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-red-100 text-red-800">
+                                        <?php echo e($pendingLandDeleteCount); ?> Deletions
+                                    </span>
+                                <?php endif; ?>
+                            </div>
+                        </div>
+
+                        
+                        <div id="pendingLandApprovals-content" class="hidden">
+                            <?php
+                                $totalLandPending = App\Models\LandApproval::pending()->count();
+                            ?>
+
+                            <?php if($totalLandPending > 0): ?>
+                                <div class="mb-4 p-4 bg-yellow-50 border-l-4 border-yellow-400">
+                                    <div class="flex">
+                                        <div class="flex-shrink-0">
+                                            <svg class="h-5 w-5 text-yellow-400" fill="currentColor" viewBox="0 0 20 20">
+                                                <path fill-rule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z" clip-rule="evenodd"/>
+                                            </svg>
+                                        </div>
+                                        <div class="ml-3">
+                                            <p class="text-sm text-yellow-700">
+                                                You have approval permissions. Changes to land data require your review before being applied.
+                                            </p>
+                                        </div>
+                                    </div>
+                                </div>
+                            <?php endif; ?>
+
+                            <?php
+$__split = function ($name, $params = []) {
+    return [$name, $params];
+};
+[$__name, $__params] = $__split('land-approvals', []);
+
+$__html = app('livewire')->mount($__name, $__params, 'lw-476731992-0', $__slots ?? [], get_defined_vars());
+
+echo $__html;
+
+unset($__html);
+unset($__name);
+unset($__params);
+unset($__split);
+if (isset($__slots)) unset($__slots);
+?>
+                        </div>
+                    </div>
+                </div>
+            <?php endif; ?>
+
+            
             <?php if (app(\Illuminate\Contracts\Auth\Access\Gate::class)->any(['soil-data.approval', 'soil-data-costs.approval'])): ?>
                 <div class="mt-8 bg-white overflow-hidden shadow-xl sm:rounded-lg">
                     <div class="p-6 lg:p-8 bg-white">
@@ -132,7 +215,7 @@ $__split = function ($name, $params = []) {
 };
 [$__name, $__params] = $__split('soil-approvals', []);
 
-$__html = app('livewire')->mount($__name, $__params, 'lw-476731992-0', $__slots ?? [], get_defined_vars());
+$__html = app('livewire')->mount($__name, $__params, 'lw-476731992-1', $__slots ?? [], get_defined_vars());
 
 echo $__html;
 
@@ -166,21 +249,44 @@ if (isset($__slots)) unset($__slots);
                     
                     <div id="recentActivity-content" class="hidden">
                         <?php
-                            // Get recent approval activities - approved or rejected within last 30 days
-                            $recentApprovals = App\Models\SoilApproval::with(['soil.land', 'soil.businessUnit', 'requestedBy', 'approvedBy'])
+                            // Get recent soil approval activities
+                            $recentSoilApprovals = App\Models\SoilApproval::with(['soil.land', 'soil.businessUnit', 'requestedBy', 'approvedBy'])
                                 ->whereIn('status', ['approved', 'rejected'])
                                 ->where('updated_at', '>=', now()->subDays(30))
                                 ->latest('updated_at')
-                                ->limit(10)
+                                ->limit(5)
                                 ->get();
                                 
-                            // Get user's pending approvals if they have submitted any
-                            $userPendingApprovals = App\Models\SoilApproval::with(['soil.land', 'soil.businessUnit'])
+                            // Get recent land approval activities
+                            $recentLandApprovals = App\Models\LandApproval::with(['land', 'requestedBy', 'approvedBy'])
+                                ->whereIn('status', ['approved', 'rejected'])
+                                ->where('updated_at', '>=', now()->subDays(30))
+                                ->latest('updated_at')
+                                ->limit(5)
+                                ->get();
+                                
+                            // Merge and sort by updated_at
+                            $recentApprovals = $recentSoilApprovals->concat($recentLandApprovals)
+                                ->sortByDesc('updated_at')
+                                ->take(10);
+                                
+                            // Get user's pending approvals
+                            $userPendingSoilApprovals = App\Models\SoilApproval::with(['soil.land', 'soil.businessUnit'])
                                 ->where('requested_by', auth()->id())
                                 ->where('status', 'pending')
                                 ->latest('created_at')
-                                ->limit(5)
+                                ->limit(3)
                                 ->get();
+                                
+                            $userPendingLandApprovals = App\Models\LandApproval::with(['land'])
+                                ->where('requested_by', auth()->id())
+                                ->where('status', 'pending')
+                                ->latest('created_at')
+                                ->limit(3)
+                                ->get();
+                                
+                            $userPendingApprovals = $userPendingSoilApprovals->concat($userPendingLandApprovals)
+                                ->sortByDesc('created_at');
                         ?>
 
                         <?php if($userPendingApprovals->count() > 0): ?>
@@ -199,17 +305,35 @@ if (isset($__slots)) unset($__slots);
                                             <ul class="list-disc list-inside space-y-1">
                                                 <?php $__currentLoopData = $userPendingApprovals; $__env->addLoop($__currentLoopData); foreach($__currentLoopData as $approval): $__env->incrementLoopIndices(); $loop = $__env->getLastLoop(); ?>
                                                     <li>
-                                                       <?php if($approval->change_type === 'create'): ?>
+                                                        <?php if($approval instanceof App\Models\LandApproval): ?>
+                                                            <span class="inline-flex items-center px-1.5 py-0.5 rounded text-xs font-medium bg-orange-100 text-orange-800 mr-1">
+                                                                LAND
+                                                            </span>
+                                                        <?php else: ?>
+                                                            <span class="inline-flex items-center px-1.5 py-0.5 rounded text-xs font-medium bg-purple-100 text-purple-800 mr-1">
+                                                                SOIL
+                                                            </span>
+                                                        <?php endif; ?>
+                                                        
+                                                        <?php if($approval->change_type === 'create'): ?>
                                                             <span class="inline-flex items-center px-1.5 py-0.5 rounded text-xs font-medium bg-green-100 text-green-800 mr-1">
                                                                 CREATE
                                                             </span>
-                                                            <span class="font-medium text-gray-900">
-                                                                Creation request
-                                                            </span>
                                                         <?php elseif($approval->change_type === 'delete'): ?>
-                                                            <span class="font-medium"><?php echo e(ucfirst(str_replace('_', ' ', $approval->change_type))); ?></span>
+                                                            <span class="inline-flex items-center px-1.5 py-0.5 rounded text-xs font-medium bg-red-100 text-red-800 mr-1">
+                                                                DELETE
+                                                            </span>
                                                         <?php endif; ?>
-                                                        for <?php echo e($approval->soil->nama_penjual ?? 'Unknown'); ?> 
+                                                        
+                                                        <span class="font-medium text-gray-900">
+                                                            <?php if($approval instanceof App\Models\LandApproval): ?>
+                                                                <?php echo e($approval->land->lokasi_lahan ?? 'Land Record'); ?>
+
+                                                            <?php else: ?>
+                                                                <?php echo e($approval->soil->nama_penjual ?? 'Soil Record'); ?>
+
+                                                            <?php endif; ?>
+                                                        </span>
                                                         (<?php echo e($approval->created_at->diffForHumans()); ?>)
                                                     </li>
                                                 <?php endforeach; $__env->popLoop(); $loop = $__env->getLastLoop(); ?>
@@ -248,43 +372,44 @@ if (isset($__slots)) unset($__slots);
                                                     <div class="min-w-0 flex-1 pt-1.5 flex justify-between space-x-4">
                                                         <div>
                                                             <p class="text-sm text-gray-500">
+                                                                <?php if($approval instanceof App\Models\LandApproval): ?>
+                                                                    <span class="inline-flex items-center px-1.5 py-0.5 rounded text-xs font-medium bg-orange-100 text-orange-800 mr-1">
+                                                                        LAND
+                                                                    </span>
+                                                                <?php else: ?>
+                                                                    <span class="inline-flex items-center px-1.5 py-0.5 rounded text-xs font-medium bg-purple-100 text-purple-800 mr-1">
+                                                                        SOIL
+                                                                    </span>
+                                                                <?php endif; ?>
+                                                                
                                                                 <?php if($approval->change_type === 'delete'): ?>
                                                                     <span class="inline-flex items-center px-1.5 py-0.5 rounded text-xs font-medium bg-red-100 text-red-800 mr-1">
                                                                         DELETE
-                                                                    </span>
-                                                                    <span class="font-medium text-gray-900">
-                                                                        Deletion request
                                                                     </span>
                                                                 <?php elseif($approval->change_type === 'create'): ?>
                                                                     <span class="inline-flex items-center px-1.5 py-0.5 rounded text-xs font-medium bg-green-100 text-green-800 mr-1">
                                                                         CREATE
                                                                     </span>
-                                                                    <span class="font-medium text-gray-900">
-                                                                        Creation request
-                                                                    </span>
-                                                                <?php else: ?>
-                                                                    <span class="font-medium text-gray-900">
-                                                                        <?php echo e(ucfirst(str_replace('_', ' ', $approval->change_type))); ?> changes
-                                                                    </span>
                                                                 <?php endif; ?>
-                                                                for <?php echo e($approval->soil->nama_penjual ?? ($approval->change_type === 'delete' ? 'Deleted Record' : 'Unknown Seller')); ?>
+                                                                
+                                                                <span class="font-medium text-gray-900">
+                                                                    <?php if($approval instanceof App\Models\LandApproval): ?>
+                                                                        <?php echo e($approval->land->lokasi_lahan ?? 'Deleted Land Record'); ?>
 
+                                                                    <?php else: ?>
+                                                                        <?php echo e($approval->soil->nama_penjual ?? 'Deleted Soil Record'); ?>
+
+                                                                    <?php endif; ?>
+                                                                </span>
+                                                                
                                                                 <span class="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium <?php echo e($approval->status === 'approved' ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'); ?>">
                                                                     <?php echo e(ucfirst($approval->status)); ?>
 
                                                                 </span>
                                                             </p>
                                                             <p class="text-xs text-gray-400 mt-1">
-                                                                Requested by: <?php echo e($approval->requestedBy->name ?? 'Unknown'); ?> |
-                                                                <?php if($approval->soil): ?>
-                                                                    <?php echo e($approval->soil->nama_penjual ?? 'Unknown Seller'); ?>
+                                                                Requested by: <?php echo e($approval->requestedBy->name ?? 'Unknown'); ?>
 
-                                                                <?php elseif($approval->change_type === 'create' && $approval->new_data): ?>
-                                                                    <?php echo e($approval->new_data['nama_penjual'] ?? 'New Record'); ?>
-
-                                                                <?php else: ?>
-                                                                    <span class="text-red-500">Record has been deleted or doesn't exist</span>
-                                                                <?php endif; ?>
                                                             </p>
                                                             <?php if($approval->status === 'approved'): ?>
                                                                 <p class="text-xs text-green-600 mt-1">
@@ -305,14 +430,6 @@ if (isset($__slots)) unset($__slots);
                                                                     <?php endif; ?>
                                                                 </p>
                                                             <?php endif; ?>
-                                                            
-                                                            
-                                                            <?php if($approval->change_type === 'delete' && $approval->getDeletionReason()): ?>
-                                                                <p class="text-xs text-gray-600 mt-1 bg-gray-50 p-2 rounded">
-                                                                    <strong>Deletion Reason:</strong> <?php echo e(Str::limit($approval->getDeletionReason(), 100)); ?>
-
-                                                                </p>
-                                                            <?php endif; ?>
                                                         </div>
                                                         <div class="text-right text-sm whitespace-nowrap text-gray-500">
                                                             <time datetime="<?php echo e($approval->updated_at->toISOString()); ?>">
@@ -328,16 +445,24 @@ if (isset($__slots)) unset($__slots);
                                 </ul>
                             </div>
                             
-                            <?php if (app(\Illuminate\Contracts\Auth\Access\Gate::class)->any(['soil-data.approval', 'soil-data-costs.approval'])): ?>
-                                <div class="mt-6 text-center">
-                                    <a href="<?php echo e(route('soil-approvals')); ?>" class="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500">
-                                        View All Approvals
+                            <div class="mt-6 text-center space-x-2">
+                                <?php if (app(\Illuminate\Contracts\Auth\Access\Gate::class)->check('land-data.approval')): ?>
+                                    <a href="<?php echo e(route('land-approvals')); ?>" class="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md text-white bg-orange-600 hover:bg-orange-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-orange-500">
+                                        View All Land Approvals
                                         <svg class="ml-2 -mr-1 w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
                                             <path fill-rule="evenodd" d="M10.293 3.293a1 1 0 011.414 0l6 6a1 1 0 010 1.414l-6 6a1 1 0 01-1.414-1.414L14.586 11H3a1 1 0 110-2h11.586l-4.293-4.293a1 1 0 010-1.414z" clip-rule="evenodd"/>
                                         </svg>
                                     </a>
-                                </div>
-                            <?php endif; ?>
+                                <?php endif; ?>
+                                <?php if (app(\Illuminate\Contracts\Auth\Access\Gate::class)->any(['soil-data.approval', 'soil-data-costs.approval'])): ?>
+                                    <a href="<?php echo e(route('soil-approvals')); ?>" class="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500">
+                                        View All Soil Approvals
+                                        <svg class="ml-2 -mr-1 w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
+                                            <path fill-rule="evenodd" d="M10.293 3.293a1 1 0 011.414 0l6 6a1 1 0 010 1.414l-6 6a1 1 0 01-1.414-1.414L14.586 11H3a1 1 0 110-2h11.586l-4.293-4.293a1 1 0 010-1.414z" clip-rule="evenodd"/>
+                                        </svg>
+                                    </a>
+                                <?php endif; ?>
+                            </div>
                             
                         <?php else: ?>
                             <div class="text-center py-8">
@@ -346,11 +471,7 @@ if (isset($__slots)) unset($__slots);
                                 </svg>
                                 <h3 class="mt-2 text-sm font-medium text-gray-900">No recent approval activity</h3>
                                 <p class="mt-1 text-sm text-gray-500">
-                                    <?php if (app(\Illuminate\Contracts\Auth\Access\Gate::class)->any(['soil-data.approval', 'soil-data-costs.approval'])): ?>
-                                        No approval requests have been processed recently.
-                                    <?php else: ?>
-                                        No approval activities to show. Submit changes to soil data to see approval status here.
-                                    <?php endif; ?>
+                                    No approval requests have been processed recently.
                                 </p>
                             </div>
                         <?php endif; ?>

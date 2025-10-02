@@ -3,6 +3,7 @@
 namespace App\Livewire;
 
 use App\Models\Land;
+use App\Models\LandApproval;
 use App\Models\BusinessUnit;
 use Livewire\Component;
 use Livewire\WithPagination;
@@ -35,6 +36,11 @@ class Lands extends Component
     public $showDetailForm = false;
     public $isEdit = false;
     public $search = '';
+
+    // Delete confirmation
+    public $showDeleteModal = false;
+    public $deleteId = null;
+    public $deletionReason = '';
 
     // Add filter properties similar to soils
     public $filterBusinessUnit = '';
@@ -85,9 +91,10 @@ class Lands extends Component
         // Query lands with business unit filtering through related soils
         $lands = Land::with([
                 'soils:id,land_id,luas,harga,business_unit_id', 
-                'soils.businessUnit:id,name,code', // Load business unit details through soils
+                'soils.businessUnit:id,name,code',
                 'soils.biayaTambahanSoils:id,soil_id,harga',
-                'businessUnits'
+                'businessUnits',
+                'pendingApprovals'
             ])
             ->withCount(['projects', 'soils'])
             ->when($this->search, function($query) {
@@ -185,35 +192,100 @@ class Lands extends Component
             'kota_kabupaten' => $this->kota_kabupaten,
             'status' => $this->status,
             'keterangan' => $this->keterangan,
-            'nominal_b' => null, // Set to null if empty
-            'njop' => $this->njop ?: null, // Set to null if empty
-            'est_harga_pasar' => $this->est_harga_pasar ?: null // Set to null if empty
+            'nominal_b' => null,
+            'njop' => $this->njop ?: null,
+            'est_harga_pasar' => $this->est_harga_pasar ?: null
         ];
 
         if ($this->isEdit) {
-            $this->land->update($data);
-            session()->flash('message', 'Land updated successfully.');
+            // Check if user has direct permission to update
+            if (auth()->user()->can('land-data.update-direct')) {
+                $this->land->update($data);
+                session()->flash('message', 'Land updated successfully.');
+            } else {
+                // Create approval request for update
+                LandApproval::create([
+                    'land_id' => $this->land->id,
+                    'requested_by' => auth()->id(),
+                    'change_type' => 'details',
+                    'old_data' => $this->land->only(array_keys($data)),
+                    'new_data' => $data,
+                    'status' => 'pending'
+                ]);
+                session()->flash('message', 'Update request submitted for approval.');
+            }
         } else {
-            Land::create($data);
-            session()->flash('message', 'Land created successfully.');
+            // Check if user has direct permission to create
+            if (auth()->user()->can('land-data.create-direct')) {
+                Land::create($data);
+                session()->flash('message', 'Land created successfully.');
+            } else {
+                // Create approval request for new land
+                LandApproval::create([
+                    'requested_by' => auth()->id(),
+                    'change_type' => 'create',
+                    'new_data' => $data,
+                    'status' => 'pending'
+                ]);
+                session()->flash('message', 'Creation request submitted for approval.');
+            }
         }
 
         $this->resetForm();
         $this->showForm = false;
     }
 
-    public function delete($id)
+    public function confirmDelete($id)
     {
-        $land = Land::findOrFail($id);
+        $this->deleteId = $id;
+        $this->deletionReason = '';
+        $this->showDeleteModal = true;
+    }
+
+    public function hideDeleteModal()
+    {
+        $this->showDeleteModal = false;
+        $this->deleteId = null;
+        $this->deletionReason = '';
+        $this->resetValidation(['deletionReason']);
+    }
+
+    public function delete()
+    {
+        $this->validate([
+            'deletionReason' => 'required|string|min:10',
+        ], [
+            'deletionReason.required' => 'Please provide a reason for deletion.',
+            'deletionReason.min' => 'Reason must be at least 10 characters.',
+        ]);
+
+        $land = Land::findOrFail($this->deleteId);
         
         // Check if land has related projects or soils
         if ($land->projects()->count() > 0 || $land->soils()->count() > 0) {
             session()->flash('error', 'Cannot delete Land. It has related projects or soil records.');
+            $this->hideDeleteModal();
             return;
         }
 
-        $land->delete();
-        session()->flash('message', 'Land deleted successfully.');
+        // Check if user has direct permission to delete
+        if (auth()->user()->can('land-data.delete-direct')) {
+            $land->delete();
+            session()->flash('message', 'Land deleted successfully.');
+        } else {
+            // Create approval request for deletion
+            LandApproval::create([
+                'land_id' => $land->id,
+                'requested_by' => auth()->id(),
+                'change_type' => 'delete',
+                'old_data' => $land->toArray(),
+                'new_data' => ['deletion_reason' => $this->deletionReason],
+                'status' => 'pending'
+            ]);
+            session()->flash('message', 'Deletion request submitted for approval.');
+        }
+
+        $this->hideDeleteModal();
     }
 
     public function backToIndex()
