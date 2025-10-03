@@ -34,6 +34,67 @@ class Land extends Model
         'tahun_perolehan' => 'integer'
     ];
 
+    protected static function booted()
+    {
+        // Track creation (only for direct creation)
+        static::created(function ($land) {
+            if (auth()->check()) {
+                // Check if this was a direct creation or approval-based
+                $isDirect = auth()->user()->can('land-data.approval');
+                
+                if ($isDirect) {
+                    LandHistory::recordHistory(
+                        $land->id,
+                        'created',
+                        null,
+                        $land->only($land->fillable),
+                        null
+                    );
+                }
+            }
+        });
+
+        // Track updates (only for direct updates)
+        static::updated(function ($land) {
+            if (auth()->check()) {
+                $isDirect = auth()->user()->can('land-data.approval');
+                
+                if ($isDirect) {
+                    $changes = $land->getChanges();
+                    // Remove timestamp fields
+                    unset($changes['updated_at']);
+                    
+                    if (!empty($changes)) {
+                        LandHistory::recordHistory(
+                            $land->id,
+                            'updated',
+                            $land->getOriginal(),
+                            $changes,
+                            null
+                        );
+                    }
+                }
+            }
+        });
+
+        // Track deletion (only for direct deletion)
+        static::deleting(function ($land) {
+            if (auth()->check()) {
+                $isDirect = auth()->user()->can('land-data.approval');
+                
+                if ($isDirect) {
+                    LandHistory::recordHistory(
+                        $land->id,
+                        'deleted',
+                        $land->toArray(),
+                        null,
+                        null
+                    );
+                }
+            }
+        });
+    }
+
     // Add the missing soils relationship
     public function soils(): HasMany
     {
@@ -105,9 +166,9 @@ class Land extends Model
     {
         $total = $this->total_soil_area;
         if ($total > 0) {
-            return number_format($total, 0, ',', '.') . ' m²';
+            return number_format($total, 0, ',', '.') . ' mÂ²';
         }
-        return '0 m²';
+        return '0 mÂ²';
     }
 
     // Get formatted acquisition value
@@ -116,7 +177,7 @@ class Land extends Model
         return 'Rp ' . number_format($this->nilai_perolehan, 0, ',', '.');
     }
 
-    // Get average price per m² based on acquisition value and total soil area
+    // Get average price per mÂ² based on acquisition value and total soil area
     public function getAveragePricePerM2Attribute()
     {
         $totalArea = $this->total_soil_area;
@@ -126,7 +187,7 @@ class Land extends Model
         return 0;
     }
 
-    // Get formatted average price per m²
+    // Get formatted average price per mÂ²
     public function getFormattedAveragePricePerM2Attribute()
     {
         $avgPrice = $this->average_price_per_m2;

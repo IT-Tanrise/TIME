@@ -7,11 +7,28 @@
     <div class="px-6 py-4 border-b border-gray-200">
         <div class="flex justify-between items-center">
             <h2 class="text-xl font-semibold text-gray-800">Land Details</h2>
-            <div class="flex space-x-2">
-                <button wire:click="showEditForm({{ $land->id }})" 
-                        class="bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded">
-                    Edit
-                </button>
+            <div class="flex items-center space-x-2">
+                {{-- History Button --}}
+                <a href="{{ route('lands.history', ['landId' => $land->id]) }}" 
+                class="inline-flex items-center px-2 py-1.5 text-xs font-medium text-purple-600 bg-purple-50 border border-purple-200 rounded-md hover:bg-purple-100">
+                    <svg class="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                    </svg>
+                    History
+                </a>
+                
+                {{-- Edit Button --}}
+                @can('lands.edit')
+                    <button wire:click="showEditForm({{ $land->id }})" 
+                            class="inline-flex items-center px-2 py-1.5 text-xs font-medium text-white bg-blue-600 border border-transparent rounded-md hover:bg-blue-700">
+                        <svg class="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/>
+                        </svg>
+                        Edit
+                    </button>
+                @endcan
+                
+                {{-- Close Button --}}
                 <button wire:click="backToIndex" 
                         class="text-gray-600 hover:text-gray-800">
                     <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">

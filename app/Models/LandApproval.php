@@ -89,11 +89,61 @@ class LandApproval extends Model
 
         // Apply the changes based on change_type
         if ($this->change_type === 'details') {
+            // Get old data before update
+            $oldData = $this->land->only(array_keys($this->new_data));
+            
+            // Update land (this won't trigger history due to permission check in boot)
             $this->land->update($this->new_data);
+            
+            // Manually record approved update in history
+            LandHistory::recordHistory(
+                $this->land_id,
+                'approved_update',
+                $oldData,
+                $this->new_data,
+                [
+                    'approval_id' => $this->id,
+                    'approved_by' => $approverId,
+                    'requested_by' => $this->requested_by,
+                    'approval_reason' => $reason
+                ]
+            );
+            
         } elseif ($this->change_type === 'delete') {
+            // Record approved deletion in history BEFORE deleting
+            LandHistory::recordHistory(
+                $this->land_id,
+                'approved_deletion',
+                $this->old_data,
+                $this->new_data, // Contains deletion_reason
+                [
+                    'approval_id' => $this->id,
+                    'approved_by' => $approverId,
+                    'requested_by' => $this->requested_by,
+                    'approval_reason' => $reason
+                ]
+            );
+            
+            // Then delete the land
             $this->land->delete();
+            
         } elseif ($this->change_type === 'create') {
-            Land::create($this->new_data);
+            // Create new land (this won't trigger history due to permission check)
+            $newLand = Land::create($this->new_data);
+            
+            // Manually record approved creation in history
+            LandHistory::recordHistory(
+                $newLand->id,
+                'approved_creation',
+                null,
+                $this->new_data,
+                [
+                    'approval_id' => $this->id,
+                    'approved_by' => $approverId,
+                    'requested_by' => $this->requested_by,
+                    'approval_reason' => $reason
+                ]
+            );
         }
     }
 
@@ -104,5 +154,22 @@ class LandApproval extends Model
             'approved_by' => $approverId,
             'reason' => $reason,
         ]);
+
+        // Record rejection in history (if land_id exists)
+        if ($this->land_id) {
+            LandHistory::recordHistory(
+                $this->land_id,
+                'rejected',
+                $this->old_data,
+                $this->new_data,
+                [
+                    'approval_id' => $this->id,
+                    'rejected_by' => $approverId,
+                    'requested_by' => $this->requested_by,
+                    'rejection_reason' => $reason,
+                    'change_type' => $this->change_type
+                ]
+            );
+        }
     }
 }

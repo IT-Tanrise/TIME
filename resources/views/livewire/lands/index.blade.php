@@ -37,7 +37,7 @@
                                     </h3>
                                     <div class="mt-2">
                                         <p class="text-sm text-gray-500">
-                                            @if(auth()->user()->can('land-data.delete-direct'))
+                                            @if(auth()->user()->can('land-data.approval'))
                                                 Are you sure you want to delete this land record? This action cannot be undone.
                                             @else
                                                 This will create a deletion request that requires approval. Please provide a reason for the deletion.
@@ -66,7 +66,7 @@
                                 type="button" 
                                 wire:click="delete"
                                 class="inline-flex w-full justify-center rounded-md bg-red-600 px-3 py-2 text-sm font-semibold text-white shadow-sm hover:bg-red-500 sm:ml-3 sm:w-auto">
-                                {{ auth()->user()->can('land-data.delete-direct') ? 'Delete' : 'Submit Request' }}
+                                {{ auth()->user()->can('land-data.approval') ? 'Delete' : 'Submit Request' }}
                             </button>
                             <button 
                                 type="button" 
@@ -331,10 +331,9 @@
                                             </button>
                                             @endcan
                                             @can('lands.delete')
-                                            <button wire:click="delete({{ $land->id }})" 
-                                                    wire:confirm="Are you sure you want to delete this land?"
-                                                    title="Delete"
-                                                    class="text-red-600 hover:text-red-900 transition-colors">
+                                            <button wire:click="confirmDelete({{ $land->id }})" 
+                                                title="Delete"
+                                                class="text-red-600 hover:text-red-900 transition-colors">
                                                 <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path>
                                                 </svg>

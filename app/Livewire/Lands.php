@@ -199,7 +199,7 @@ class Lands extends Component
 
         if ($this->isEdit) {
             // Check if user has direct permission to update
-            if (auth()->user()->can('land-data.update-direct')) {
+            if (auth()->user()->can('land-data.approval')) {
                 $this->land->update($data);
                 session()->flash('message', 'Land updated successfully.');
             } else {
@@ -216,7 +216,7 @@ class Lands extends Component
             }
         } else {
             // Check if user has direct permission to create
-            if (auth()->user()->can('land-data.create-direct')) {
+            if (auth()->user()->can('land-data.approval')) {
                 Land::create($data);
                 session()->flash('message', 'Land created successfully.');
             } else {
