@@ -269,7 +269,7 @@ class Lands extends Component
         }
 
         // Check if user has direct permission to delete
-        if (auth()->user()->can('land-data.delete-direct')) {
+        if (auth()->user()->can('land-data.approval')) {
             $land->delete();
             session()->flash('message', 'Land deleted successfully.');
         } else {
