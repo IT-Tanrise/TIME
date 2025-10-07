@@ -8,17 +8,11 @@
 <?php $attributes = $attributes->except(\App\View\Components\AppLayout::ignoredParameterNames()); ?>
 <?php endif; ?>
 <?php $component->withAttributes([]); ?>
-     <?php $__env->slot('header', null, []); ?> 
-        <h2 class="font-semibold text-xl text-gray-800 leading-tight">
-            <?php echo e(__('Dashboard')); ?>
-
-        </h2>
-     <?php $__env->endSlot(); ?>
     
-    <div class="py-12">
+    <div class="py-8">
         <div class="max-w-7xl mx-auto sm:px-6 lg:px-8">
             
-            <div class="bg-white overflow-hidden shadow-xl sm:rounded-lg">
+            <div class="bg-white overflow-hidden shadow-xl sm:rounded-lg mb-8">
                 <div class="p-6 lg:p-8 bg-white border-b border-gray-200">
                     <h1 class="text-2xl font-medium text-gray-900">
                         Welcome, <?php echo e(auth()->user()->name); ?>!
@@ -52,92 +46,263 @@
                     <?php endif; ?>
                 </div>
             </div>
-
             
-            <?php if (app(\Illuminate\Contracts\Auth\Access\Gate::class)->check('land-data.approval')): ?>
-                <div class="mt-8 bg-white overflow-hidden shadow-xl sm:rounded-lg">
-                    <div class="p-6 lg:p-8 bg-white">
-                        <div class="flex items-center justify-between mb-6">
-                            <button 
-                                onclick="toggleSection('pendingLandApprovals')" 
-                                class="flex items-center space-x-2 text-left w-full focus:outline-none group">
-                                <h2 class="text-xl font-semibold text-gray-900">
-                                    Pending Land Data Approvals
-                                </h2>
-                                <svg id="pendingLandApprovals-icon" class="w-5 h-5 text-gray-500 transform transition-transform duration-200" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <div class="bg-white shadow-xl sm:rounded-lg mb-8">
+                <div class="p-6 lg:p-8 bg-gradient-to-r from-blue-50 to-indigo-50 overflow-visible">
+                    <h2 class="text-2xl font-bold text-gray-900 mb-6">Management Systems</h2>
+                    
+                    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 pb-2">
+                        
+                        <?php if (app(\Illuminate\Contracts\Auth\Access\Gate::class)->any(['lands.access', 'soils.access', 'ownerships.access'])): ?>
+                        <div class="relative bg-white rounded-lg shadow-md hover:shadow-xl transition-shadow duration-300">
+                            <button onclick="toggleMenu('adem')" class="w-full p-4 text-left flex items-center justify-between hover:bg-gray-50 rounded-t-lg">
+                                <div class="flex items-center space-x-3">
+                                    <div class="bg-blue-100 p-2 rounded-lg">
+                                        <svg class="w-6 h-6 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10"/>
+                                        </svg>
+                                    </div>
+                                    <div>
+                                        <h3 class="font-semibold text-gray-900">ADEM</h3>
+                                        <p class="text-xs text-gray-500">Asset Database</p>
+                                    </div>
+                                </div>
+                                <svg id="adem-icon" class="w-5 h-5 text-gray-400 transform transition-transform duration-200" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/>
                                 </svg>
                             </button>
-                            <div class="flex items-center space-x-2">
-                                <?php
-                                    $pendingLandDetailsCount = App\Models\LandApproval::pending()->where('change_type', 'details')->count();
-                                    $pendingLandDeleteCount = App\Models\LandApproval::pending()->where('change_type', 'delete')->count();
-                                    $pendingLandCreateCount = App\Models\LandApproval::pending()->where('change_type', 'create')->count();
-                                ?>
-                                <?php if($pendingLandDetailsCount > 0): ?>
-                                    <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
-                                        <?php echo e($pendingLandDetailsCount); ?> Land Data
-                                    </span>
+                            <div id="adem-menu" class="hidden absolute top-full left-0 right-0 mt-1 bg-white border border-gray-200 rounded-lg shadow-lg z-10">
+                                <?php if (app(\Illuminate\Contracts\Auth\Access\Gate::class)->check('ownerships.access')): ?>
+                                <a href="<?php echo e(route('partners.index')); ?>" class="block px-6 py-2.5 text-sm text-gray-700 hover:bg-blue-50 hover:text-blue-600 transition-colors rounded-t-lg">
+                                    🏢 Ownerships
+                                </a>
                                 <?php endif; ?>
-                                <?php if($pendingLandCreateCount > 0): ?>
-                                    <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">
-                                        <?php echo e($pendingLandCreateCount); ?> New Records
-                                    </span>
+                                
+                                <?php if (app(\Illuminate\Contracts\Auth\Access\Gate::class)->check('lands.access')): ?>
+                                <button onclick="showBusinessUnitModal('lands')" class="w-full text-left px-6 py-2.5 text-sm text-gray-700 hover:bg-blue-50 hover:text-blue-600 transition-colors">
+                                    🏞️ Lands
+                                </button>
                                 <?php endif; ?>
-                                <?php if($pendingLandDeleteCount > 0): ?>
-                                    <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-red-100 text-red-800">
-                                        <?php echo e($pendingLandDeleteCount); ?> Deletions
-                                    </span>
+                                
+                                <?php if (app(\Illuminate\Contracts\Auth\Access\Gate::class)->check('soils.access')): ?>
+                                <button onclick="showBusinessUnitModal('soils')" class="w-full text-left px-6 py-2.5 text-sm text-gray-700 hover:bg-blue-50 hover:text-blue-600 transition-colors rounded-b-lg">
+                                    🌱 Soils
+                                </button>
                                 <?php endif; ?>
+                            </div>
+                        </div>
+                        <?php endif; ?>
+
+                        
+                        <div class="relative bg-white rounded-lg shadow-md hover:shadow-xl transition-shadow duration-300">
+                            <button onclick="toggleMenu('risol')" class="w-full p-4 text-left flex items-center justify-between hover:bg-gray-50 rounded-t-lg">
+                                <div class="flex items-center space-x-3">
+                                    <div class="bg-green-100 p-2 rounded-lg">
+                                        <svg class="w-6 h-6 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"/>
+                                        </svg>
+                                    </div>
+                                    <div>
+                                        <h3 class="font-semibold text-gray-900">RISOL</h3>
+                                        <p class="text-xs text-gray-500">Rental Monitoring</p>
+                                    </div>
+                                </div>
+                                <svg id="risol-icon" class="w-5 h-5 text-gray-400 transform transition-transform duration-200" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/>
+                                </svg>
+                            </button>
+                            <div id="risol-menu" class="hidden absolute top-full left-0 right-0 mt-1 bg-white border border-gray-200 rounded-lg shadow-lg z-10">
+                                <a href="<?php echo e(route('rents.lands')); ?>" class="block px-6 py-2.5 text-sm text-gray-700 hover:bg-green-50 hover:text-green-600 transition-colors rounded-t-lg">
+                                    📋 Land Rentals
+                                </a>
+                                <a href="#" class="block px-6 py-2.5 text-sm text-gray-700 hover:bg-green-50 hover:text-green-600 transition-colors">
+                                    💰 Payment Tracking
+                                </a>
+                                <a href="#" class="block px-6 py-2.5 text-sm text-gray-700 hover:bg-green-50 hover:text-green-600 transition-colors rounded-b-lg">
+                                    📅 Rental Schedule
+                                </a>
                             </div>
                         </div>
 
                         
-                        <div id="pendingLandApprovals-content" class="hidden">
-                            <?php
-                                $totalLandPending = App\Models\LandApproval::pending()->count();
-                            ?>
-
-                            <?php if($totalLandPending > 0): ?>
-                                <div class="mb-4 p-4 bg-yellow-50 border-l-4 border-yellow-400">
-                                    <div class="flex">
-                                        <div class="flex-shrink-0">
-                                            <svg class="h-5 w-5 text-yellow-400" fill="currentColor" viewBox="0 0 20 20">
-                                                <path fill-rule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z" clip-rule="evenodd"/>
-                                            </svg>
-                                        </div>
-                                        <div class="ml-3">
-                                            <p class="text-sm text-yellow-700">
-                                                You have approval permissions. Changes to land data require your review before being applied.
-                                            </p>
-                                        </div>
+                        <div class="relative bg-white rounded-lg shadow-md hover:shadow-xl transition-shadow duration-300">
+                            <button onclick="toggleMenu('emas')" class="w-full p-4 text-left flex items-center justify-between hover:bg-gray-50 rounded-t-lg">
+                                <div class="flex items-center space-x-3">
+                                    <div class="bg-yellow-100 p-2 rounded-lg">
+                                        <svg class="w-6 h-6 text-yellow-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6"/>
+                                        </svg>
+                                    </div>
+                                    <div>
+                                        <h3 class="font-semibold text-gray-900">EMAS</h3>
+                                        <p class="text-xs text-gray-500">Estate Management</p>
                                     </div>
                                 </div>
-                            <?php endif; ?>
+                                <svg id="emas-icon" class="w-5 h-5 text-gray-400 transform transition-transform duration-200" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/>
+                                </svg>
+                            </button>
+                            <div id="emas-menu" class="hidden absolute top-full left-0 right-0 mt-1 bg-white border border-gray-200 rounded-lg shadow-lg z-10">
+                                <a href="#" class="block px-6 py-2.5 text-sm text-gray-700 hover:bg-yellow-50 hover:text-yellow-600 transition-colors rounded-t-lg">
+                                    🏢 Property List
+                                </a>
+                                <a href="#" class="block px-6 py-2.5 text-sm text-gray-700 hover:bg-yellow-50 hover:text-yellow-600 transition-colors rounded-b-lg">
+                                    🔧 Maintenance
+                                </a>
+                            </div>
+                        </div>
 
-                            <?php
-$__split = function ($name, $params = []) {
-    return [$name, $params];
-};
-[$__name, $__params] = $__split('land-approvals', []);
+                        
+                        <div class="relative bg-white rounded-lg shadow-md hover:shadow-xl transition-shadow duration-300">
+                            <button onclick="toggleMenu('dots')" class="w-full p-4 text-left flex items-center justify-between hover:bg-gray-50 rounded-t-lg">
+                                <div class="flex items-center space-x-3">
+                                    <div class="bg-purple-100 p-2 rounded-lg">
+                                        <svg class="w-6 h-6 text-purple-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                                        </svg>
+                                    </div>
+                                    <div>
+                                        <h3 class="font-semibold text-gray-900">DOTS</h3>
+                                        <p class="text-xs text-gray-500">Deposito Tracking</p>
+                                    </div>
+                                </div>
+                                <svg id="dots-icon" class="w-5 h-5 text-gray-400 transform transition-transform duration-200" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/>
+                                </svg>
+                            </button>
+                            <div id="dots-menu" class="hidden absolute top-full left-0 right-0 mt-1 bg-white border border-gray-200 rounded-lg shadow-lg z-10">
+                                <a href="#" class="block px-6 py-2.5 text-sm text-gray-700 hover:bg-purple-50 hover:text-purple-600 transition-colors rounded-t-lg">
+                                    💵 Deposits List
+                                </a>
+                                <a href="#" class="block px-6 py-2.5 text-sm text-gray-700 hover:bg-purple-50 hover:text-purple-600 transition-colors rounded-b-lg">
+                                    📈 Interest Tracking
+                                </a>
+                            </div>
+                        </div>
 
-$__html = app('livewire')->mount($__name, $__params, 'lw-476731992-0', $__slots ?? [], get_defined_vars());
-
-echo $__html;
-
-unset($__html);
-unset($__name);
-unset($__params);
-unset($__split);
-if (isset($__slots)) unset($__slots);
-?>
+                        
+                        <div class="relative bg-white rounded-lg shadow-md hover:shadow-xl transition-shadow duration-300">
+                            <button onclick="toggleMenu('coms')" class="w-full p-4 text-left flex items-center justify-between hover:bg-gray-50 rounded-t-lg">
+                                <div class="flex items-center space-x-3">
+                                    <div class="bg-red-100 p-2 rounded-lg">
+                                        <svg class="w-6 h-6 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4"/>
+                                        </svg>
+                                    </div>
+                                    <div>
+                                        <h3 class="font-semibold text-gray-900">COMS</h3>
+                                        <p class="text-xs text-gray-500">Construction Management</p>
+                                    </div>
+                                </div>
+                                <svg id="coms-icon" class="w-5 h-5 text-gray-400 transform transition-transform duration-200" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/>
+                                </svg>
+                            </button>
+                            <div id="coms-menu" class="hidden absolute top-full left-0 right-0 mt-1 bg-white border border-gray-200 rounded-lg shadow-lg z-10">
+                                <a href="<?php echo e(route('projects')); ?>" class="block px-6 py-2.5 text-sm text-gray-700 hover:bg-red-50 hover:text-red-600 transition-colors rounded-t-lg">
+                                    🗂️ Projects
+                                </a>
+                                <a href="#" class="block px-6 py-2.5 text-sm text-gray-700 hover:bg-red-50 hover:text-red-600 transition-colors rounded-b-lg">
+                                    👷 Contractors
+                                </a>
+                            </div>
                         </div>
                     </div>
                 </div>
-            <?php endif; ?>
+            </div>
 
             
-            <?php if (app(\Illuminate\Contracts\Auth\Access\Gate::class)->any(['soil-data.approval', 'soil-data-costs.approval'])): ?>
+            <div id="businessUnitModal" class="hidden fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full z-50">
+                <div class="relative top-20 mx-auto p-5 border w-11/12 md:w-3/4 lg:w-1/2 shadow-lg rounded-md bg-white">
+                    
+                    <div class="flex justify-between items-center mb-4">
+                        <h3 class="text-lg font-semibold text-gray-900" id="modalTitle">Select Business Unit</h3>
+                        <button onclick="closeBusinessUnitModal()" class="text-gray-400 hover:text-gray-600">
+                            <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
+                            </svg>
+                        </button>
+                    </div>
+                    
+                    
+                    <p class="text-sm text-gray-500 mb-4">Choose a business unit to view filtered data, or view all data</p>
+                    
+                    
+                    <div class="mb-4 relative">
+                        <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                            <svg class="h-5 w-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/>
+                            </svg>
+                        </div>
+                        <input 
+                            type="text" 
+                            id="businessUnitSearch"
+                            placeholder="Search by name or code..." 
+                            oninput="filterBusinessUnits()"
+                            class="w-full pl-10 pr-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent">
+                    </div>
+                    
+                    
+                    <div class="space-y-2 max-h-96 overflow-y-auto" id="businessUnitList">
+                        <?php
+                            $businessUnits = \App\Models\BusinessUnit::with('parent')->orderBy('name')->get();
+                        ?>
+                        
+                        
+                        <button onclick="navigateToModule('all')" class="business-unit-item w-full text-left px-4 py-3 bg-blue-50 hover:bg-blue-100 rounded-lg transition-colors border border-blue-200" data-search="view all data">
+                            <div class="flex items-center">
+                                <svg class="w-5 h-5 text-blue-600 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 10h16M4 14h16M4 18h16"/>
+                                </svg>
+                                <span class="font-semibold text-blue-900">View All Data</span>
+                            </div>
+                        </button>
+                        
+                        
+                        <?php $__currentLoopData = $businessUnits; $__env->addLoop($__currentLoopData); foreach($__currentLoopData as $unit): $__env->incrementLoopIndices(); $loop = $__env->getLastLoop(); ?>
+                        <button onclick="navigateToModule(<?php echo e($unit->id); ?>)" class="business-unit-item w-full text-left px-4 py-3 bg-gray-50 hover:bg-gray-100 rounded-lg transition-colors border border-gray-200" data-search="<?php echo e(strtolower($unit->name . ' ' . $unit->code)); ?>">
+                            <div class="flex items-center justify-between">
+                                <div class="flex items-center flex-1 min-w-0">
+                                    <svg class="w-5 h-5 text-gray-600 mr-3 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4"/>
+                                    </svg>
+                                    <div class="flex-1 min-w-0">
+                                        <span class="font-medium text-gray-900 block"><?php echo e($unit->name); ?></span>
+                                        <div class="flex items-center gap-2 mt-1">
+                                            <span class="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-blue-100 text-blue-800">
+                                                <?php echo e($unit->code); ?>
+
+                                            </span>
+                                            <?php if($unit->parent): ?>
+                                                <span class="text-xs text-gray-500 truncate">
+                                                    <svg class="w-3 h-3 inline mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 11l5-5m0 0l5 5m-5-5v12"/>
+                                                    </svg>
+                                                    <?php echo e($unit->parent->name); ?>
+
+                                                </span>
+                                            <?php endif; ?>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </button>
+                        <?php endforeach; $__env->popLoop(); $loop = $__env->getLastLoop(); ?>
+                    </div>
+
+                    
+                    <div id="noResults" class="hidden text-center py-8">
+                        <svg class="mx-auto h-12 w-12 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/>
+                        </svg>
+                        <h3 class="mt-2 text-sm font-medium text-gray-900">No business units found</h3>
+                        <p class="mt-1 text-sm text-gray-500">Try adjusting your search terms.</p>
+                    </div>
+                </div>
+            </div>
+
+            
+            <?php if (app(\Illuminate\Contracts\Auth\Access\Gate::class)->any(['land-data.approval', 'soil-data.approval', 'soil-data-costs.approval'])): ?>
                 <div class="mt-8 bg-white overflow-hidden shadow-xl sm:rounded-lg">
                     <div class="p-6 lg:p-8 bg-white">
                         <div class="flex items-center justify-between mb-6">
@@ -145,54 +310,44 @@ if (isset($__slots)) unset($__slots);
                                 onclick="toggleSection('pendingApprovals')" 
                                 class="flex items-center space-x-2 text-left w-full focus:outline-none group">
                                 <h2 class="text-xl font-semibold text-gray-900">
-                                    Pending Soil Data Approvals
+                                    Pending Approvals
                                 </h2>
                                 <svg id="pendingApprovals-icon" class="w-5 h-5 text-gray-500 transform transition-transform duration-200" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/>
                                 </svg>
                             </button>
                             <div class="flex items-center space-x-2">
-                                <?php if (app(\Illuminate\Contracts\Auth\Access\Gate::class)->check('soil-data.approval')): ?>
-                                    <?php
-                                        $pendingDetailsCount = App\Models\SoilApproval::pending()->where('change_type', 'details')->count();
-                                        $pendingDeleteCount = App\Models\SoilApproval::pending()->where('change_type', 'delete')->count();
-                                        $pendingCreateCount = App\Models\SoilApproval::pending()->where('change_type', 'create')->count();
-                                    ?>
-                                    <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
-                                        <?php echo e($pendingDetailsCount); ?> Soil Data
+                                <?php
+                                    $totalLandPending = 0;
+                                    $totalSoilPending = 0;
+                                    
+                                    if(auth()->user()->can('land-data.approval')) {
+                                        $totalLandPending = App\Models\LandApproval::pending()->count();
+                                    }
+                                    
+                                    if(auth()->user()->can('soil-data.approval')) {
+                                        $totalSoilPending += App\Models\SoilApproval::pending()->whereIn('change_type', ['details', 'delete', 'create'])->count();
+                                    }
+                                    if(auth()->user()->can('soil-data-costs.approval')) {
+                                        $totalSoilPending += App\Models\SoilApproval::pending()->where('change_type', 'costs')->count();
+                                    }
+                                ?>
+                                
+                                <?php if($totalLandPending > 0): ?>
+                                    <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-orange-100 text-orange-800">
+                                        <?php echo e($totalLandPending); ?> Land
                                     </span>
-                                    <?php if($pendingCreateCount > 0): ?>
-                                        <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">
-                                            <?php echo e($pendingCreateCount); ?> New Records
-                                        </span>
-                                    <?php endif; ?>
-                                    <?php if($pendingDeleteCount > 0): ?>
-                                        <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-red-100 text-red-800">
-                                            <?php echo e($pendingDeleteCount); ?> Deletions
-                                        </span>
-                                    <?php endif; ?>
                                 <?php endif; ?>
-                                <?php if (app(\Illuminate\Contracts\Auth\Access\Gate::class)->check('soil-data-costs.approval')): ?>
+                                <?php if($totalSoilPending > 0): ?>
                                     <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-purple-100 text-purple-800">
-                                        <?php echo e(App\Models\SoilApproval::pending()->where('change_type', 'costs')->count()); ?> Cost Data
+                                        <?php echo e($totalSoilPending); ?> Soil
                                     </span>
                                 <?php endif; ?>
                             </div>
                         </div>
 
-                        
                         <div id="pendingApprovals-content" class="hidden">
-                            <?php
-                                $totalPending = 0;
-                                if(auth()->user()->can('soil-data.approval')) {
-                                    $totalPending += App\Models\SoilApproval::pending()->whereIn('change_type', ['details', 'delete', 'create'])->count();
-                                }
-                                if(auth()->user()->can('soil-data-costs.approval')) {
-                                    $totalPending += App\Models\SoilApproval::pending()->where('change_type', 'costs')->count();
-                                }
-                            ?>
-
-                            <?php if($totalPending > 0): ?>
+                            <?php if($totalLandPending + $totalSoilPending > 0): ?>
                                 <div class="mb-4 p-4 bg-yellow-50 border-l-4 border-yellow-400">
                                     <div class="flex">
                                         <div class="flex-shrink-0">
@@ -202,7 +357,7 @@ if (isset($__slots)) unset($__slots);
                                         </div>
                                         <div class="ml-3">
                                             <p class="text-sm text-yellow-700">
-                                                You have approval permissions. Changes to soil data require your review before being applied.
+                                                You have approval permissions. Changes require your review before being applied.
                                             </p>
                                         </div>
                                     </div>
@@ -213,9 +368,9 @@ if (isset($__slots)) unset($__slots);
 $__split = function ($name, $params = []) {
     return [$name, $params];
 };
-[$__name, $__params] = $__split('soil-approvals', []);
+[$__name, $__params] = $__split('merged-approvals', []);
 
-$__html = app('livewire')->mount($__name, $__params, 'lw-476731992-1', $__slots ?? [], get_defined_vars());
+$__html = app('livewire')->mount($__name, $__params, 'lw-476731992-0', $__slots ?? [], get_defined_vars());
 
 echo $__html;
 
@@ -483,27 +638,149 @@ if (isset($__slots)) unset($__slots);
 
     
     <script>
+        let currentModule = '';
+
+        // Toggle main menu dropdowns
+        function toggleMenu(menuId) {
+            // Close all other menus first
+            const allMenus = ['adem', 'risol', 'emas', 'dots', 'coms'];
+            allMenus.forEach(id => {
+                if (id !== menuId) {
+                    const menu = document.getElementById(id + '-menu');
+                    const icon = document.getElementById(id + '-icon');
+                    if (menu && !menu.classList.contains('hidden')) {
+                        menu.classList.add('hidden');
+                        icon.style.transform = 'rotate(0deg)';
+                    }
+                }
+            });
+
+            // Toggle the clicked menu
+            const menu = document.getElementById(menuId + '-menu');
+            const icon = document.getElementById(menuId + '-icon');
+            
+            if (menu.classList.contains('hidden')) {
+                menu.classList.remove('hidden');
+                icon.style.transform = 'rotate(180deg)';
+            } else {
+                menu.classList.add('hidden');
+                icon.style.transform = 'rotate(0deg)';
+            }
+        }
+
+        // Close dropdown when clicking outside
+        document.addEventListener('click', function(e) {
+            if (!e.target.closest('button[onclick^="toggleMenu"]') && !e.target.closest('[id$="-menu"]')) {
+                const allMenus = ['adem', 'risol', 'emas', 'dots', 'coms'];
+                allMenus.forEach(id => {
+                    const menu = document.getElementById(id + '-menu');
+                    const icon = document.getElementById(id + '-icon');
+                    if (menu && !menu.classList.contains('hidden')) {
+                        menu.classList.add('hidden');
+                        icon.style.transform = 'rotate(0deg)';
+                    }
+                });
+            }
+        });
+
+        // Show business unit selection modal
+        function showBusinessUnitModal(module) {
+            currentModule = module;
+            const modal = document.getElementById('businessUnitModal');
+            const title = document.getElementById('modalTitle');
+            
+            if (module === 'lands') {
+                title.textContent = 'Select Business Unit for Lands';
+            } else if (module === 'soils') {
+                title.textContent = 'Select Business Unit for Soils';
+            }
+            
+            modal.classList.remove('hidden');
+        }
+
+        // Close business unit modal
+        function closeBusinessUnitModal() {
+            document.getElementById('businessUnitModal').classList.add('hidden');
+        }
+
+        // Navigate to selected module with business unit
+        function navigateToModule(businessUnitId) {
+            let url = '';
+            
+            if (businessUnitId === 'all') {
+                if (currentModule === 'lands') {
+                    url = '<?php echo e(route("lands")); ?>';
+                } else if (currentModule === 'soils') {
+                    url = '<?php echo e(route("soils")); ?>';
+                }
+            } else {
+                if (currentModule === 'lands') {
+                    url = '/lands/business-unit/' + businessUnitId;
+                } else if (currentModule === 'soils') {
+                    url = '/soils/business-unit/' + businessUnitId;
+                }
+            }
+            
+            if (url) {
+                window.location.href = url;
+            }
+        }
+
+        // Toggle collapsible sections
         function toggleSection(sectionId) {
             const content = document.getElementById(sectionId + '-content');
             const icon = document.getElementById(sectionId + '-icon');
             
             if (content.classList.contains('hidden')) {
-                // Show content
                 content.classList.remove('hidden');
                 icon.style.transform = 'rotate(180deg)';
             } else {
-                // Hide content
                 content.classList.add('hidden');
                 icon.style.transform = 'rotate(0deg)';
             }
         }
-        
-        // Optional: Add keyboard support
-        document.addEventListener('keydown', function(e) {
-            if (e.target.tagName === 'BUTTON' && e.key === 'Enter') {
-                e.target.click();
+
+        // Close modal when clicking outside
+        document.getElementById('businessUnitModal').addEventListener('click', function(e) {
+            if (e.target === this) {
+                closeBusinessUnitModal();
             }
         });
+        
+        // Keyboard support
+        document.addEventListener('keydown', function(e) {
+            if (e.key === 'Escape') {
+                closeBusinessUnitModal();
+            }
+        });
+
+        function filterBusinessUnits() {
+            const searchInput = document.getElementById('businessUnitSearch');
+            const searchTerm = searchInput ? searchInput.value.toLowerCase().trim() : '';
+            const items = document.querySelectorAll('.business-unit-item');
+            const noResults = document.getElementById('noResults');
+            let visibleCount = 0;
+
+            items.forEach(item => {
+                const searchData = item.getAttribute('data-search');
+                
+                if (searchData && searchData.includes(searchTerm)) {
+                    item.style.display = '';
+                    visibleCount++;
+                } else {
+                    item.style.display = 'none';
+                }
+            });
+
+            // Show/hide no results message
+            if (noResults) {
+                if (visibleCount === 0) {
+                    noResults.classList.remove('hidden');
+                } else {
+                    noResults.classList.add('hidden');
+                }
+            }
+        }
     </script>
  <?php echo $__env->renderComponent(); ?>
 <?php endif; ?>

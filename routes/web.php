@@ -21,6 +21,12 @@ use App\Http\Controllers\UserController;
 Route::get('posts', Posts::class)->name('posts')->middleware('auth');
 Route::get('tasks', Tasks::class)->name('tasks')->middleware('auth');
 
+Route::middleware(['auth'])->group(function () {
+    Route::get('/approvals', function() {
+        return view('approvals');
+    })->name('approvals');
+});
+
 // Partners Routes
 Route::middleware(['permission:ownerships.access'])->group(function () {
     Route::get('/partners', Partners::class)->name('partners.index');

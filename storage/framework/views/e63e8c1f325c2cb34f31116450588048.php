@@ -1,2 +1,2 @@
-<img src="<?php echo e(asset('storage/images/logo-tanrise-circle.png')); ?>" alt="Logo" class="w-20 h-20" />
+<img src="<?php echo e(asset('storage/images/logo-tanrise-circle.png')); ?>" alt="Logo" class="w-33 h-33" />
 <?php /**PATH C:\xampp\tanrise-portal2\resources\views/components/application-mark.blade.php ENDPATH**/ ?>
