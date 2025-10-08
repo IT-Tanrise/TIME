@@ -110,13 +110,11 @@ class LandHistory extends Model
         $labels = [
             'lokasi_lahan' => 'Location',
             'tahun_perolehan' => 'Acquisition Year',
-            'nilai_perolehan' => 'Acquisition Value',
             'alamat' => 'Address',
             'link_google_maps' => 'Google Maps Link',
             'kota_kabupaten' => 'City/Regency',
             'status' => 'Status',
             'keterangan' => 'Notes',
-            'nominal_b' => 'Nominal B',
             'njop' => 'NJOP',
             'est_harga_pasar' => 'Est. Market Price',
         ];

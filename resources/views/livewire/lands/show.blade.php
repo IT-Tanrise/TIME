@@ -92,21 +92,34 @@
                     </span>
                 </div>
             </div>
-
             <div class="space-y-4">
                 <div>
-                    <label class="block text-sm font-medium text-gray-500">Acquisition Value</label>
-                    <p class="mt-1 text-sm text-gray-900">{{ $land->formatted_nilai_perolehan }}</p>
+                    <label class="block text-sm font-medium text-gray-500">Total Soil Price</label>
+                    @if($land->total_soil_price > 0)
+                         <p class="mt-1 text-sm text-gray-900">{{ $land->formatted_total_soil_price }}</p>
+                    @else
+                        <p class="mt-1 text-sm text-gray-900">No soils</p>
+                    @endif
                 </div>
 
                 <div>
-                    <label class="block text-sm font-medium text-gray-500">Price/m² (average)(acq value)</label>
-                    @if($land->total_soil_area > 0)
+                    <label class="block text-sm font-medium text-gray-500">Price/m² (average)</label>
+                    @if($land->total_soil_area > 0 && $land->total_soil_price > 0)
                         <p class="mt-1 text-sm text-gray-900">
                             {{ $land->formatted_average_price_per_m2 }}/m²
                         </p>
+                        <p class="mt-1 text-xs text-gray-500">
+                            Calculated from total soil price ÷ total soil area
+                        </p>
                     @else
                         <p class="mt-1 text-sm text-gray-900">-</p>
+                        <p class="mt-1 text-xs text-red-600">
+                            @if($land->soils_count == 0)
+                                No soil records available
+                            @else
+                                No price data available
+                            @endif
+                        </p>
                     @endif
                 </div>
 
@@ -116,7 +129,7 @@
                         // Calculate total additional costs standart for all soils in this land
                         $totalAdditionalCostsStd = $land->soils->sum(function($soil) {
                             return $soil->biayaTambahanSoils
-                                ->where('cost_type', 'standard') // Note: it's 'standard' not 'standart'
+                                ->where('cost_type', 'standard')
                                 ->sum('harga');
                         });
                     @endphp

@@ -95,12 +95,16 @@
                             
                             <div class="mt-1 flex items-center space-x-4 text-sm text-gray-500">
                                 @if($approval->approval_type === 'land')
+                                    @if($approval->change_type != 'create')
                                     <span>{{ $approval->land->lokasi_lahan ?? 'N/A' }}</span>
+                                    @endif
                                 @else
                                     <span>{{ $approval->soil->nama_penjual ?? 'N/A' }} - {{ $approval->soil->letak_tanah ?? 'N/A' }}</span>
                                 @endif
+                                @if($approval->change_type != 'create')
                                 <span>•</span>
-                                <span>{{ $approval->requestedBy->name }}</span>
+                                @endif
+                                <span>Requested by: {{ $approval->requestedBy->name }}</span>
                                 <span>•</span>
                                 <span>{{ $approval->created_at->diffForHumans() }}</span>
                             </div>

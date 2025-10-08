@@ -78,13 +78,12 @@ class LandHistories extends Component
         return [
             ['value' => 'lokasi_lahan', 'label' => 'Location'],
             ['value' => 'tahun_perolehan', 'label' => 'Acquisition Year'],
-            ['value' => 'nilai_perolehan', 'label' => 'Acquisition Value'],
+            ['value' => 'business_unit_id', 'label' => 'Business Unit'],
             ['value' => 'alamat', 'label' => 'Address'],
             ['value' => 'link_google_maps', 'label' => 'Google Maps Link'],
             ['value' => 'kota_kabupaten', 'label' => 'City/Regency'],
             ['value' => 'status', 'label' => 'Status'],
             ['value' => 'keterangan', 'label' => 'Notes'],
-            ['value' => 'nominal_b', 'label' => 'Nominal B'],
             ['value' => 'njop', 'label' => 'NJOP'],
             ['value' => 'est_harga_pasar', 'label' => 'Est. Market Price'],
         ];
@@ -204,13 +203,12 @@ class LandHistories extends Component
         $labels = [
             'lokasi_lahan' => 'Location',
             'tahun_perolehan' => 'Acquisition Year',
-            'nilai_perolehan' => 'Acquisition Value',
+            'business_unit_id' => 'Business Unit',
             'alamat' => 'Address',
             'link_google_maps' => 'Google Maps Link',
             'kota_kabupaten' => 'City/Regency',
             'status' => 'Status',
             'keterangan' => 'Notes',
-            'nominal_b' => 'Nominal B',
             'njop' => 'NJOP',
             'est_harga_pasar' => 'Est. Market Price',
         ];
@@ -224,7 +222,14 @@ class LandHistories extends Component
             return 'N/A';
         }
 
-        $moneyFields = ['nilai_perolehan', 'nominal_b', 'njop', 'est_harga_pasar'];
+        // Handle business_unit_id - show the business unit name
+        if ($key === 'business_unit_id' && is_numeric($value)) {
+            $businessUnit = \App\Models\BusinessUnit::find($value);
+            echo $businessUnit;
+            return $businessUnit ? "{$businessUnit->name} ({$businessUnit->code})" : "ID: {$value}";
+        }
+
+        $moneyFields = ['njop', 'est_harga_pasar'];
         if (in_array($key, $moneyFields)) {
             $numericValue = is_numeric($value) ? (float)$value : 0;
             return 'Rp ' . number_format($numericValue, 0, ',', '.');

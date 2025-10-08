@@ -82,18 +82,20 @@
         <div class="bg-white shadow rounded-lg">
             <div class="px-6 py-4 border-b border-gray-200">
                 <div class="flex justify-between items-center">
-                    <div>
-                        <h2 class="text-2xl font-bold text-gray-900">
+                    <div class="flex items-center space-x-3">
+                        <button onclick="history.back()" 
+                                class="inline-flex items-center px-4 py-2.5 bg-gray-600 border border-transparent rounded-lg font-medium text-sm text-white hover:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-gray-500 focus:ring-offset-2 transition ease-in-out duration-150 mr-4">
+                            <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18"/>
+                            </svg>
+                            Back
+                        </button>
+                        <h1 class="text-xl font-semibold text-gray-900">
                             Lands
                             @if($businessUnit)
-                                <span class="text-lg text-blue-600">- {{ $businessUnit->name }}</span>
+                                <span class="text-base text-blue-600 font-normal">- <a href="{{ route('business-units', ['view' => 'show', 'id' => $businessUnit->id]) }}" class="hover:text-blue-800">{{ $businessUnit->name }} ({{ $businessUnit->code }})</a></span>
                             @endif
                         </h2>
-                        @if($businessUnit)
-                            <p class="text-sm text-gray-600 mt-1">
-                                Showing lands for business unit: <a href ="{{ route('business-units', ['view' => 'show', 'id' => $businessUnit->id]) }}"><strong>{{ $businessUnit->name }}</strong></a> ({{ $businessUnit->code }})
-                            </p>
-                        @endif
                     </div>    
                     <div class="flex space-x-3">
                         @if($businessUnit)
@@ -201,7 +203,7 @@
                                 <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Business Units</th>
                                 <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">City/Regency</th>
                                 <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Year</th>
-                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Acquisition Value</th>
+                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Total Soil Price</th>
                                 <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Total Soil Area</th>
                                 <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Avg Price/m²</th>
                                 <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Additional Costs</th>
@@ -256,7 +258,14 @@
                                         {{ $land->tahun_perolehan }}
                                     </td>
                                     <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                                        {{ $land->formatted_nilai_perolehan }}
+                                        @if($land->total_soil_price > 0)
+                                            {{ $land->formatted_total_soil_price }}
+                                        @else
+                                            <span class="text-gray-400">Rp 0</span>
+                                            @if($land->soils_count == 0)
+                                                <div class="text-xs text-red-500">No soils</div>
+                                            @endif
+                                        @endif
                                     </td>
                                     <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
                                         @if($land->total_soil_area > 0)

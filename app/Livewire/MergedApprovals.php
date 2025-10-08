@@ -534,8 +534,17 @@ class MergedApprovals extends Component
     private function formatLandValue($key, $value)
     {
         if (is_null($value) || $value === '') return 'N/A';
+
+        // Handle business_unit_id - show the business unit name
+        if ($key === 'business_unit_id' && is_numeric($value)) {
+            $businessUnit = \App\Models\BusinessUnit::find($value);
+            \Log::info('businessUnit: ', [
+                'businessUnit' => $businessUnit
+            ]);
+            return $businessUnit ? "{$businessUnit->name} ({$businessUnit->code})" : "ID: {$value}";
+        }
         
-        $moneyFields = ['nilai_perolehan', 'nominal_b', 'njop', 'est_harga_pasar'];
+        $moneyFields = ['nilai_perolehan', 'njop', 'est_harga_pasar'];
         if (in_array($key, $moneyFields)) {
             return 'Rp ' . number_format((float)$value, 0, ',', '.');
         }

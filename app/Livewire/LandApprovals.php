@@ -135,13 +135,12 @@ class LandApprovals extends Component
         $labels = [
             'lokasi_lahan' => 'Location',
             'tahun_perolehan' => 'Acquisition Year',
-            'nilai_perolehan' => 'Acquisition Value',
+            'business_unit_id' => 'Business Unit',
             'alamat' => 'Address',
             'link_google_maps' => 'Google Maps Link',
             'kota_kabupaten' => 'City/Regency',
             'status' => 'Status',
             'keterangan' => 'Notes',
-            'nominal_b' => 'Nominal B',
             'njop' => 'NJOP',
             'est_harga_pasar' => 'Est. Market Price',
         ];
@@ -155,9 +154,17 @@ class LandApprovals extends Component
             return 'N/A';
         }
 
-        $moneyFields = ['nilai_perolehan', 'nominal_b', 'njop', 'est_harga_pasar'];
+        // Handle business_unit_id - show the business unit name
+        if ($key === 'business_unit_id' && is_numeric($value)) {
+            $businessUnit = \App\Models\BusinessUnit::find($value);
+            \Log::info('businessUnit: ', [
+                'businessUnit' => $businessUnit
+            ]);
+            return $businessUnit ? "{$businessUnit->name} ({$businessUnit->code})" : "ID: {$value}";
+        }
+
+        $moneyFields = ['njop', 'est_harga_pasar'];
         if (in_array($key, $moneyFields)) {
-            // Cast to float to handle string values
             $numericValue = is_numeric($value) ? (float)$value : 0;
             return 'Rp ' . number_format($numericValue, 0, ',', '.');
         }

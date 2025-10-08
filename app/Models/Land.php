@@ -14,21 +14,18 @@ class Land extends Model
 
     protected $fillable = [
         'lokasi_lahan',
-        'tahun_perolehan', 
-        'nilai_perolehan',
+        'tahun_perolehan',
+        'business_unit_id',
         'alamat',
         'link_google_maps',
         'kota_kabupaten',
         'status',
         'keterangan',
-        'nominal_b',
         'njop',
         'est_harga_pasar'
     ];
 
     protected $casts = [
-        'nilai_perolehan' => 'decimal:2',
-        'nominal_b' => 'decimal:2',
         'njop' => 'decimal:2',
         'est_harga_pasar' => 'decimal:2',
         'tahun_perolehan' => 'integer'
@@ -36,10 +33,8 @@ class Land extends Model
 
     protected static function booted()
     {
-        // Track creation (only for direct creation)
         static::created(function ($land) {
             if (auth()->check()) {
-                // Check if this was a direct creation or approval-based
                 $isDirect = auth()->user()->can('land-data.approval');
                 
                 if ($isDirect) {
@@ -54,14 +49,12 @@ class Land extends Model
             }
         });
 
-        // Track updates (only for direct updates)
         static::updated(function ($land) {
             if (auth()->check()) {
                 $isDirect = auth()->user()->can('land-data.approval');
                 
                 if ($isDirect) {
                     $changes = $land->getChanges();
-                    // Remove timestamp fields
                     unset($changes['updated_at']);
                     
                     if (!empty($changes)) {
@@ -77,7 +70,6 @@ class Land extends Model
             }
         });
 
-        // Track deletion (only for direct deletion)
         static::deleting(function ($land) {
             if (auth()->check()) {
                 $isDirect = auth()->user()->can('land-data.approval');
@@ -95,29 +87,46 @@ class Land extends Model
         });
     }
 
-    // Add the missing soils relationship
+    // Direct Business Unit relationship
+    public function businessUnit(): BelongsTo
+    {
+        return $this->belongsTo(BusinessUnit::class, 'business_unit_id');
+    }
+
+    // Soils relationship
     public function soils(): HasMany
     {
         return $this->hasMany(Soil::class);
     }
 
-    // Add projects relationship if it exists
+    // Projects relationship
     public function projects(): HasMany
     {
         return $this->hasMany(Project::class);
     }
 
-    // Relationship to get business units through soils
+    // Business units through soils (for backward compatibility)
     public function businessUnits(): BelongsToMany
     {
         return $this->belongsToMany(BusinessUnit::class, 'soils', 'land_id', 'business_unit_id')
                     ->distinct();
     }
 
-    // Helper method to get associated business units
+    // Helper method to get associated business units (including direct and through soils)
     public function getAssociatedBusinessUnitsAttribute()
     {
-        return $this->businessUnits;
+        $units = collect();
+        
+        // Add direct business unit if exists
+        if ($this->businessUnit) {
+            $units->push($this->businessUnit);
+        }
+        
+        // Add business units from soils
+        $soilUnits = $this->businessUnits;
+        $units = $units->merge($soilUnits)->unique('id');
+        
+        return $units;
     }
 
     public function rentals(): HasMany
@@ -135,25 +144,20 @@ class Land extends Model
         return $this->rentals()->where('end_rent', '<', now());
     }
 
-    // Get current active rental (if any)
     public function getCurrentRentalAttribute()
     {
         return $this->activeRentals()->orderBy('end_rent', 'desc')->first();
     }
 
-    // Check if land is currently rented
     public function getIsRentedAttribute()
     {
         return $this->activeRentals()->exists();
     }
 
-    // Get total rented area (if partially rented)
     public function getTotalRentedAreaAttribute()
     {
         return $this->activeRentals()->sum('area_m2');
     }
-
-    // ======= MISSING METHODS FOR BLADE TEMPLATE =======
 
     // Get total soil area
     public function getTotalSoilAreaAttribute()
@@ -161,33 +165,45 @@ class Land extends Model
         return $this->soils()->sum('luas');
     }
 
+    // Get total soil price (sum of all soil prices)
+    public function getTotalSoilPriceAttribute()
+    {
+        return $this->soils()->sum('harga');
+    }
+
+    // Get formatted total soil price
+    public function getFormattedTotalSoilPriceAttribute()
+    {
+        $total = $this->total_soil_price;
+        if ($total > 0) {
+            return 'Rp ' . number_format($total, 0, ',', '.');
+        }
+        return 'Rp 0';
+    }
+
     // Get formatted total soil area
     public function getFormattedTotalSoilAreaAttribute()
     {
         $total = $this->total_soil_area;
         if ($total > 0) {
-            return number_format($total, 0, ',', '.') . ' mÂ²';
+            return number_format($total, 0, ',', '.') . ' m²';
         }
-        return '0 mÂ²';
+        return '0 m²';
     }
 
-    // Get formatted acquisition value
-    public function getFormattedNilaiPerolehanAttribute()
-    {
-        return 'Rp ' . number_format($this->nilai_perolehan, 0, ',', '.');
-    }
-
-    // Get average price per mÂ² based on acquisition value and total soil area
+    // Get average price per m² based on SOIL prices divided by SOIL area
     public function getAveragePricePerM2Attribute()
     {
         $totalArea = $this->total_soil_area;
-        if ($totalArea > 0 && $this->nilai_perolehan > 0) {
-            return $this->nilai_perolehan / $totalArea;
+        $totalPrice = $this->total_soil_price;
+        
+        if ($totalArea > 0 && $totalPrice > 0) {
+            return $totalPrice / $totalArea;
         }
         return 0;
     }
 
-    // Get formatted average price per mÂ²
+    // Get formatted average price per m²
     public function getFormattedAveragePricePerM2Attribute()
     {
         $avgPrice = $this->average_price_per_m2;
@@ -197,43 +213,63 @@ class Land extends Model
         return 'Rp 0';
     }
 
-    // Get business units count
+    // Get business units count (now includes direct BU + soil BUs)
     public function getBusinessUnitsCountAttribute()
     {
-        return $this->soils()->distinct('business_unit_id')->whereNotNull('business_unit_id')->count();
+        $count = 0;
+        
+        // Count direct business unit
+        if ($this->business_unit_id) {
+            $count++;
+        }
+        
+        // Count unique business units from soils
+        $soilBUCount = $this->soils()
+            ->distinct('business_unit_id')
+            ->whereNotNull('business_unit_id')
+            ->count();
+        
+        $count += $soilBUCount;
+        
+        return $count;
     }
 
-    // Get business unit names (for single business unit display)
+    // Get business unit names
     public function getBusinessUnitNamesAttribute()
     {
-        return $this->soils()
+        $names = collect();
+        
+        if ($this->businessUnit) {
+            $names->push($this->businessUnit->name);
+        }
+        
+        $soilNames = $this->soils()
             ->with('businessUnit')
             ->get()
             ->pluck('businessUnit.name')
             ->filter()
-            ->unique()
-            ->implode(', ');
+            ->unique();
+        
+        return $names->merge($soilNames)->unique()->implode(', ');
     }
 
-    // Get business unit codes (for single business unit display)
+    // Get business unit codes
     public function getBusinessUnitCodesAttribute()
     {
-        return $this->soils()
+        $codes = collect();
+        
+        if ($this->businessUnit) {
+            $codes->push($this->businessUnit->code);
+        }
+        
+        $soilCodes = $this->soils()
             ->with('businessUnit')
             ->get()
             ->pluck('businessUnit.code')
             ->filter()
-            ->unique()
-            ->implode(', ');
-    }
-
-    // Get formatted nominal_b
-    public function getFormattedNominalBAttribute()
-    {
-        if ($this->nominal_b) {
-            return 'Rp ' . number_format($this->nominal_b, 0, ',', '.');
-        }
-        return null;
+            ->unique();
+        
+        return $codes->merge($soilCodes)->unique()->implode(', ');
     }
 
     // Get formatted NJOP

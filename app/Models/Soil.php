@@ -384,16 +384,6 @@ class Soil extends Model
                 'ip_address' => request()->ip(),
                 'user_agent' => request()->userAgent(),
             ]);
-            \Log::info('Soil History '. $action . ': ', [
-                'soil_id' => $this->id,
-                'user_id' => $historyUserId,
-                'action' => $historyAction,
-                'changes' => [],
-                'old_values' => $oldValues,
-                'new_values' => $newValues,
-                'ip_address' => request()->ip(),
-                'user_agent' => request()->userAgent(),
-            ]);
         } catch (\Exception $e) {
             // Log the error but don't prevent the main operation
             \Log::error('Failed to create additional cost history: ' . $e->getMessage(), [
