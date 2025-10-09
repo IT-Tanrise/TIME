@@ -27,7 +27,11 @@ class LandHistories extends Component
     public function mount($landId)
     {
         $this->landId = $landId;
-        $this->land = Land::with(['businessUnits', 'soils.businessUnit'])->findOrFail($landId);
+        $this->land = Land::with([
+            'businessUnit', // Direct BelongsTo relationship
+            'soils.biayaTambahanSoils.description',
+            'projects'
+        ])->findOrFail($landId);
     }
 
     public function render()
@@ -225,7 +229,6 @@ class LandHistories extends Component
         // Handle business_unit_id - show the business unit name
         if ($key === 'business_unit_id' && is_numeric($value)) {
             $businessUnit = \App\Models\BusinessUnit::find($value);
-            echo $businessUnit;
             return $businessUnit ? "{$businessUnit->name} ({$businessUnit->code})" : "ID: {$value}";
         }
 

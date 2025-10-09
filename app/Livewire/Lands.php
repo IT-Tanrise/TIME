@@ -87,18 +87,17 @@ class Lands extends Component
     public function render()
     {
         $lands = Land::with([
-                'soils:id,land_id,luas,harga,business_unit_id', 
-                'soils.businessUnit:id,name,code',
+                'businessUnit:id,name,code', // Direct business unit
+                'soils:id,land_id,luas,harga', 
                 'soils.biayaTambahanSoils:id,soil_id,harga',
-                'businessUnits',
                 'pendingApprovals'
             ])
             ->withCount(['projects', 'soils'])
             ->when($this->search, function($query) {
                 $query->where('lokasi_lahan', 'like', '%' . $this->search . '%')
-                      ->orWhere('kota_kabupaten', 'like', '%' . $this->search . '%')
-                      ->orWhere('status', 'like', '%' . $this->search . '%')
-                      ->orWhere('alamat', 'like', '%' . $this->search . '%');
+                    ->orWhere('kota_kabupaten', 'like', '%' . $this->search . '%')
+                    ->orWhere('status', 'like', '%' . $this->search . '%')
+                    ->orWhere('alamat', 'like', '%' . $this->search . '%');
             })
             ->when($this->filterByBusinessUnit, function($query) {
                 $query->where('business_unit_id', $this->filterByBusinessUnit);

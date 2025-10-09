@@ -6,7 +6,6 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
-use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 
 class Land extends Model
 {
@@ -87,6 +86,8 @@ class Land extends Model
         });
     }
 
+    // RELATIONSHIPS
+    
     // Direct Business Unit relationship
     public function businessUnit(): BelongsTo
     {
@@ -105,30 +106,7 @@ class Land extends Model
         return $this->hasMany(Project::class);
     }
 
-    // Business units through soils (for backward compatibility)
-    public function businessUnits(): BelongsToMany
-    {
-        return $this->belongsToMany(BusinessUnit::class, 'soils', 'land_id', 'business_unit_id')
-                    ->distinct();
-    }
-
-    // Helper method to get associated business units (including direct and through soils)
-    public function getAssociatedBusinessUnitsAttribute()
-    {
-        $units = collect();
-        
-        // Add direct business unit if exists
-        if ($this->businessUnit) {
-            $units->push($this->businessUnit);
-        }
-        
-        // Add business units from soils
-        $soilUnits = $this->businessUnits;
-        $units = $units->merge($soilUnits)->unique('id');
-        
-        return $units;
-    }
-
+    // Rentals relationships
     public function rentals(): HasMany
     {
         return $this->hasMany(RentLand::class);
@@ -144,6 +122,18 @@ class Land extends Model
         return $this->rentals()->where('end_rent', '<', now());
     }
 
+    public function approvals(): HasMany
+    {
+        return $this->hasMany(LandApproval::class);
+    }
+
+    public function pendingApprovals(): HasMany
+    {
+        return $this->approvals()->where('status', 'pending');
+    }
+
+    // RENTAL ATTRIBUTES
+
     public function getCurrentRentalAttribute()
     {
         return $this->activeRentals()->orderBy('end_rent', 'desc')->first();
@@ -158,6 +148,8 @@ class Land extends Model
     {
         return $this->activeRentals()->sum('area_m2');
     }
+
+    // SOIL-RELATED ATTRIBUTES
 
     // Get total soil area
     public function getTotalSoilAreaAttribute()
@@ -213,64 +205,7 @@ class Land extends Model
         return 'Rp 0';
     }
 
-    // Get business units count (now includes direct BU + soil BUs)
-    public function getBusinessUnitsCountAttribute()
-    {
-        $count = 0;
-        
-        // Count direct business unit
-        if ($this->business_unit_id) {
-            $count++;
-        }
-        
-        // Count unique business units from soils
-        $soilBUCount = $this->soils()
-            ->distinct('business_unit_id')
-            ->whereNotNull('business_unit_id')
-            ->count();
-        
-        $count += $soilBUCount;
-        
-        return $count;
-    }
-
-    // Get business unit names
-    public function getBusinessUnitNamesAttribute()
-    {
-        $names = collect();
-        
-        if ($this->businessUnit) {
-            $names->push($this->businessUnit->name);
-        }
-        
-        $soilNames = $this->soils()
-            ->with('businessUnit')
-            ->get()
-            ->pluck('businessUnit.name')
-            ->filter()
-            ->unique();
-        
-        return $names->merge($soilNames)->unique()->implode(', ');
-    }
-
-    // Get business unit codes
-    public function getBusinessUnitCodesAttribute()
-    {
-        $codes = collect();
-        
-        if ($this->businessUnit) {
-            $codes->push($this->businessUnit->code);
-        }
-        
-        $soilCodes = $this->soils()
-            ->with('businessUnit')
-            ->get()
-            ->pluck('businessUnit.code')
-            ->filter()
-            ->unique();
-        
-        return $codes->merge($soilCodes)->unique()->implode(', ');
-    }
+    // FORMATTING ATTRIBUTES
 
     // Get formatted NJOP
     public function getFormattedNjopAttribute()
@@ -288,15 +223,5 @@ class Land extends Model
             return 'Rp ' . number_format($this->est_harga_pasar, 0, ',', '.');
         }
         return null;
-    }
-
-    public function approvals(): HasMany
-    {
-        return $this->hasMany(LandApproval::class);
-    }
-
-    public function pendingApprovals(): HasMany
-    {
-        return $this->approvals()->where('status', 'pending');
     }
 }

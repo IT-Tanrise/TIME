@@ -84,7 +84,7 @@
                 <div class="flex justify-between items-center">
                     <div class="flex items-center space-x-3">
                         <button onclick="history.back()" 
-                                class="inline-flex items-center px-4 py-2.5 bg-gray-600 border border-transparent rounded-lg font-medium text-sm text-white hover:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-gray-500 focus:ring-offset-2 transition ease-in-out duration-150 mr-4">
+                                class="inline-flex items-center px-2 py-2 bg-gray-600 border border-transparent rounded-lg font-medium text-xs text-white hover:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-gray-500 focus:ring-offset-2 transition ease-in-out duration-150 mr-2">
                             <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18"/>
                             </svg>
@@ -104,15 +104,15 @@
                                 Show All Lands
                             </button>
                         @endif
-                        <button wire:click="showCreateForm" class="bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded">
-                            Add New Land Record
+                        <button wire:click="showCreateForm" class="bg-blue-500 text-xs hover:bg-blue-700 text-white font-bold py-2 px-4 rounded">
+                            Add New
                         </button>
                     </div>
                 </div>
 
                 <!-- Filters and Search -->
                 @if(!$this->isFiltered())
-                <div class="mt-6 grid grid-cols-1 md:grid-cols-4 gap-4">
+                <div class="mt-4 grid grid-cols-1 md:grid-cols-5 gap-3">
                     <!-- Search -->
                     <div>
                         <label for="search" class="block text-sm font-medium text-gray-700">Search</label>
@@ -122,7 +122,18 @@
                                placeholder="Search by location, city, status..."
                                class="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 sm:text-sm">
                     </div>
-
+                    <!-- City/ Regency Filter -->
+                    <div>
+                        <label for="filterKotaKabupaten" class="block text-sm font-medium text-gray-700">City/ Regency</label>
+                        <select wire:model.live="filterKotaKabupaten" 
+                                id="filterKotaKabupaten"
+                                class="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 sm:text-sm">
+                            <option value="">All Cities/Regencies</option>
+                            @foreach($kotaKabupaten as $kota)
+                                <option value="{{ $kota }}">{{ $kota }}</option>
+                            @endforeach
+                        </select>
+                    </div>
                     <!-- Business Unit Filter -->
                     <div>
                         <label for="filterBusinessUnit" class="block text-sm font-medium text-gray-700">Business Unit</label>
@@ -156,25 +167,6 @@
                             Reset Filters
                         </button>
                     </div>
-                </div>
-
-                <!-- City/Regency Filter (on second row) -->
-                <div class="mt-4 grid grid-cols-1 md:grid-cols-4 gap-4">
-                    <div>
-                        <label for="filterKotaKabupaten" class="block text-sm font-medium text-gray-700">City/Regency</label>
-                        <select wire:model.live="filterKotaKabupaten" 
-                                id="filterKotaKabupaten"
-                                class="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 sm:text-sm">
-                            <option value="">All Cities/Regencies</option>
-                            @foreach($kotaKabupaten as $kota)
-                                <option value="{{ $kota }}">{{ $kota }}</option>
-                            @endforeach
-                        </select>
-                    </div>
-                    <!-- Empty columns to maintain layout -->
-                    <div></div>
-                    <div></div>
-                    <div></div>
                 </div>
                 @else
                 <div class="mt-4 flex justify-between items-center">
@@ -228,27 +220,14 @@
                                         @endif
                                     </td>
                                     <td class="px-6 py-4">
-                                        @if($land->business_units_count > 0)
+                                        @if($land->businessUnit)
                                             <div class="text-sm text-gray-900">
-                                                @if($land->business_units_count == 1)
-                                                    <span class="font-medium">{{ $land->business_unit_codes }}</span>
-                                                @else
-                                                    <div class="space-y-1">
-                                                        @foreach($land->soils->pluck('businessUnit')->filter()->unique('id')->take(2) as $unit)
-                                                            <div class="inline-flex items-center px-2 py-1 rounded-full text-xs bg-blue-100 text-blue-800 mr-1 mb-1">
-                                                                {{ $unit->name }}
-                                                            </div>
-                                                        @endforeach
-                                                        @if($land->business_units_count > 2)
-                                                            <div class="inline-flex items-center px-2 py-1 rounded-full text-xs bg-gray-100 text-gray-600">
-                                                                +{{ $land->business_units_count - 2 }} more
-                                                            </div>
-                                                        @endif
-                                                    </div>
-                                                @endif
+                                                <span class="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
+                                                    {{ $land->businessUnit->code }}
+                                                </span>
                                             </div>
                                         @else
-                                            <span class="text-sm text-gray-400">No business units</span>
+                                            <span class="text-sm text-gray-400">No business unit</span>
                                         @endif
                                     </td>
                                     <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
