@@ -23,54 +23,6 @@
                     <div class="bg-gray-50 p-3 rounded-lg">
                         <h3 class="text-sm font-medium text-gray-900 mb-3">Basic Information</h3>
                         <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
-                            <!-- Land with Dropdown Search -->
-                            <div class="relative">
-                                <label for="landSearch" class="block text-xs font-medium text-gray-700">Land *</label>
-                                <input type="text" 
-                                       wire:model.live.debounce.300ms="landSearch"
-                                       wire:focus="searchLands"
-                                       id="landSearch"
-                                       placeholder="Search or select land..."
-                                       class="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 text-xs @error('land_id') border-red-300 @enderror"
-                                       autocomplete="off">
-                                
-                                @if($showLandDropdown)
-                                    <div class="absolute z-50 mt-1 w-full bg-white shadow-lg rounded-md py-1 text-xs ring-1 ring-black ring-opacity-5 focus:outline-none"
-                                         style="max-height: 240px; overflow-y: auto; overflow-x: hidden;"
-                                         wire:click.stop>
-                                        @php
-                                            $lands = $this->getFilteredLands();
-                                        @endphp
-                                        
-                                        @if(empty($landSearch ?? '') && $lands->count() > 0)
-                                            <div class="px-3 py-1.5 text-xs text-blue-600 bg-blue-50 border-b border-blue-100 sticky top-0 z-10">
-                                                Showing available lands - start typing to filter
-                                            </div>
-                                        @endif
-                                        
-                                        <div class="max-h-48 overflow-y-auto">
-                                            @forelse($lands as $land)
-                                                <button type="button"
-                                                        wire:click.stop="selectLand({{ $land->id }}, '{{ addslashes($land->lokasi_lahan) }}')"
-                                                        class="w-full text-left px-3 py-1.5 text-xs text-gray-900 hover:bg-gray-100 focus:bg-gray-100 focus:outline-none">
-                                                    {{ $land->lokasi_lahan }}
-                                                </button>
-                                            @empty
-                                                <div class="px-3 py-1.5 text-xs text-gray-500">No lands found</div>
-                                            @endforelse
-                                        </div>
-                                        
-                                        @if($lands->count() >= 20)
-                                            <div class="px-3 py-1.5 text-xs text-gray-500 bg-gray-50 border-t border-gray-100 sticky bottom-0">
-                                                Showing first 20 results - type to search for more
-                                            </div>
-                                        @endif
-                                    </div>
-                                @endif
-                                
-                                @error('land_id') <span class="text-red-500 text-xs">{{ $message }}</span> @enderror
-                            </div>
-
                             <!-- Business Unit with Dropdown Search -->
                             <div class="relative">
                                 <label for="businessUnitSearch" class="block text-xs font-medium text-gray-700">Business Unit *</label>
@@ -143,6 +95,74 @@
                                 
                                 @error('business_unit_id') <span class="text-red-500 text-xs">{{ $message }}</span> @enderror
                             </div>
+                            <!-- Land with Dropdown Search -->
+                            <div class="relative">
+                                <label for="landSearch" class="block text-xs font-medium text-gray-700">Land *</label>
+                                <input type="text" 
+                                    wire:model.live.debounce.300ms="landSearch"
+                                    wire:focus="searchLands"
+                                    id="landSearch"
+                                    placeholder="{{ $business_unit_id ? 'Search lands for selected business unit...' : 'Select a business unit first...' }}"
+                                    class="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 text-xs @error('land_id') border-red-300 @enderror"
+                                    autocomplete="off"
+                                    @if(!$business_unit_id) disabled @endif>
+                                
+                                @if(!$business_unit_id)
+                                    <p class="mt-1 text-xs text-amber-600">
+                                        Please select a business unit first to see available lands
+                                    </p>
+                                @elseif($business_unit_id)
+                                    <p class="mt-1 text-xs text-blue-600">
+                                        Showing lands from: {{ $businessUnitSearch }}
+                                    </p>
+                                @endif
+                                
+                                @if($showLandDropdown && $business_unit_id)
+                                    <div class="absolute z-50 mt-1 w-full bg-white shadow-lg rounded-md py-1 text-xs ring-1 ring-black ring-opacity-5 focus:outline-none"
+                                        style="max-height: 240px; overflow-y: auto; overflow-x: hidden;"
+                                        wire:click.stop>
+                                        @php
+                                            $lands = $this->getFilteredLands();
+                                        @endphp
+                                        
+                                        @if(empty($landSearch ?? '') && $lands->count() > 0)
+                                            <div class="px-3 py-1.5 text-xs text-blue-600 bg-blue-50 border-b border-blue-100 sticky top-0 z-10">
+                                                Showing lands from {{ $businessUnitSearch }} - start typing to filter
+                                            </div>
+                                        @endif
+                                        
+                                        <div class="max-h-48 overflow-y-auto">
+                                            @forelse($lands as $land)
+                                                <button type="button"
+                                                        wire:click.stop="selectLand({{ $land->id }}, '{{ addslashes($land->lokasi_lahan) }}')"
+                                                        class="w-full text-left px-3 py-1.5 text-xs text-gray-900 hover:bg-gray-100 focus:bg-gray-100 focus:outline-none">
+                                                    {{ $land->lokasi_lahan }}
+                                                    @if($land->kota_kabupaten)
+                                                        <span class="text-gray-500"> - {{ $land->kota_kabupaten }}</span>
+                                                    @endif
+                                                </button>
+                                            @empty
+                                                <div class="px-3 py-1.5 text-xs text-gray-500">
+                                                    No lands found for this business unit
+                                                    @if(!empty($landSearch))
+                                                        matching "{{ $landSearch }}"
+                                                    @endif
+                                                </div>
+                                            @endforelse
+                                        </div>
+                                        
+                                        @if($lands->count() >= 20)
+                                            <div class="px-3 py-1.5 text-xs text-gray-500 bg-gray-50 border-t border-gray-100 sticky bottom-0">
+                                                Showing first 20 results - type to search for more
+                                            </div>
+                                        @endif
+                                    </div>
+                                @endif
+                                
+                                @error('land_id') <span class="text-red-500 text-xs">{{ $message }}</span> @enderror
+                            </div>
+
+                            
                         </div>
                     </div>
 

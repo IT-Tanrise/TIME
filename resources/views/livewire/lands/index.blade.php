@@ -112,7 +112,7 @@
 
                 <!-- Filters and Search -->
                 @if(!$this->isFiltered())
-                <div class="mt-4 grid grid-cols-1 md:grid-cols-5 gap-3">
+                <div class="mt-3 grid grid-cols-1 md:grid-cols-5 gap-3">
                     <!-- Search -->
                     <div>
                         <label for="search" class="block text-sm font-medium text-gray-700">Search</label>
@@ -169,7 +169,7 @@
                     </div>
                 </div>
                 @else
-                <div class="mt-4 flex justify-between items-center">
+                <div class="mt-3 flex justify-between items-center">
                     <input wire:model.live="search" 
                            type="text" 
                            placeholder="Search by location, city, status..." 
@@ -198,7 +198,6 @@
                                 <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Total Soil Price</th>
                                 <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Total Soil Area</th>
                                 <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Avg Price/m²</th>
-                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Additional Costs</th>
                                 <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
                                 <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Related</th>
                                 <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
@@ -245,6 +244,18 @@
                                                 <div class="text-xs text-red-500">No soils</div>
                                             @endif
                                         @endif
+                                        @if($totalAdditionalCosts > 0)
+                                            <div class="font-medium text-blue-900">
+                                                + Rp {{ number_format($totalAdditionalCosts, 0, ',', '.') }}
+                                            </div>
+                                            @if($land->soils_count > 0)
+                                                <div class="text-xs text-gray-500">
+                                                    from {{ $land->soils_count }} soil(s)
+                                                </div>
+                                            @endif
+                                        @else
+                                            <span class="text-gray-400">+ Rp 0</span>
+                                        @endif
                                     </td>
                                     <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
                                         @if($land->total_soil_area > 0)
@@ -258,20 +269,6 @@
                                             {{ $land->formatted_average_price_per_m2 }}
                                         @else
                                             <span class="text-gray-400">-</span>
-                                        @endif
-                                    </td>
-                                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                                        @if($totalAdditionalCosts > 0)
-                                            <div class="font-medium text-blue-900">
-                                                Rp {{ number_format($totalAdditionalCosts, 0, ',', '.') }}
-                                            </div>
-                                            @if($land->soils_count > 0)
-                                                <div class="text-xs text-gray-500">
-                                                    from {{ $land->soils_count }} soil(s)
-                                                </div>
-                                            @endif
-                                        @else
-                                            <span class="text-gray-400">Rp 0</span>
                                         @endif
                                     </td>
                                     <td class="px-6 py-4 whitespace-nowrap">

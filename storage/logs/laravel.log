@@ -905,3 +905,11 @@
 #78 C:\\xampp\\tanrise-portal2\\vendor\\laravel\\framework\\src\\Illuminate\\Foundation\\resources\\server.php(23): require_once('C:\\\\xampp\\\\tanris...')
 #79 {main}
 "} 
+[2025-10-09 05:08:23] local.ERROR: Cannot redeclare App\Livewire\Soils::getFilteredLands() {"exception":"[object] (Symfony\\Component\\ErrorHandler\\Error\\FatalError(code: 0): Cannot redeclare App\\Livewire\\Soils::getFilteredLands() at C:\\xampp\\tanrise-portal2\\app\\Livewire\\Soils.php:1646)
+[stacktrace]
+#0 {main}
+"} 
+[2025-10-09 05:08:25] local.ERROR: Cannot redeclare App\Livewire\Soils::getFilteredLands() {"exception":"[object] (Symfony\\Component\\ErrorHandler\\Error\\FatalError(code: 0): Cannot redeclare App\\Livewire\\Soils::getFilteredLands() at C:\\xampp\\tanrise-portal2\\app\\Livewire\\Soils.php:1646)
+[stacktrace]
+#0 {main}
+"} 

@@ -1380,8 +1380,10 @@ class Soils extends Component
 
     public function searchLands()
     {
-        $this->showLandDropdown = true;
-        $this->showBusinessUnitDropdown = false;
+        if (!empty($this->business_unit_id)) {
+            $this->showLandDropdown = true;
+            $this->showBusinessUnitDropdown = false;
+        }
     }
 
     public function selectLand($landId, $landName)
@@ -1397,8 +1399,20 @@ class Soils extends Component
         
         $query = Land::query();
         
+        // IMPORTANT: Only show lands if business unit is selected
+        if (!empty($this->business_unit_id)) {
+            $query->where('business_unit_id', $this->business_unit_id);
+        } else {
+            // If no business unit selected, return empty collection
+            return collect();
+        }
+        
+        // Apply search filter
         if (!empty(trim($search))) {
-            $query->where('lokasi_lahan', 'like', '%' . $search . '%');
+            $query->where(function($q) use ($search) {
+                $q->where('lokasi_lahan', 'like', '%' . $search . '%')
+                ->orWhere('kota_kabupaten', 'like', '%' . $search . '%');
+            });
         }
         
         return $query->orderBy('lokasi_lahan')->limit(20)->get();
@@ -1439,12 +1453,22 @@ class Soils extends Component
 
     public function selectBusinessUnit($businessUnitId, $businessUnitName)
     {
+        // Store old business unit id to check if it changed
+        $oldBusinessUnitId = $this->business_unit_id;
+        
         $this->business_unit_id = $businessUnitId;
         $this->businessUnitSearch = $businessUnitName;
         $this->showBusinessUnitDropdown = false;
 
-        if ($this->filterByBusinessUnit && $businessUnitId != $this->filterByBusinessUnit) {
-            session()->flash('warning', 'You have changed the business unit from the filtered selection.');
+        // Reset land selection if business unit changed
+        if ($oldBusinessUnitId != $businessUnitId) {
+            $this->land_id = '';
+            $this->landSearch = '';
+            $this->showLandDropdown = false;
+            
+            if ($this->filterByBusinessUnit && $businessUnitId != $this->filterByBusinessUnit) {
+                session()->flash('warning', 'You have changed the business unit from the filtered selection. Land options have been reset.');
+            }
         }
     }
 
@@ -1491,9 +1515,20 @@ class Soils extends Component
 
     public function selectBusinessUnitFilter($businessUnitId, $businessUnitName)
     {
+        // Store old filter to check if it changed
+        $oldFilterBusinessUnit = $this->filterBusinessUnit;
+        
         $this->filterBusinessUnit = $businessUnitId;
         $this->filterBusinessUnitSearch = $businessUnitName;
         $this->showBusinessUnitFilterDropdown = false;
+        
+        // Reset land filter if business unit filter changed
+        if ($oldFilterBusinessUnit != $businessUnitId) {
+            $this->filterLand = '';
+            $this->filterLandSearch = '';
+            $this->showLandFilterDropdown = false;
+        }
+        
         $this->resetPage();
     }
 
@@ -1502,6 +1537,12 @@ class Soils extends Component
         $this->filterBusinessUnit = '';
         $this->filterBusinessUnitSearch = '';
         $this->showBusinessUnitFilterDropdown = false;
+        
+        // Also clear land filter since it depends on business unit
+        $this->filterLand = '';
+        $this->filterLandSearch = '';
+        $this->showLandFilterDropdown = false;
+        
         $this->resetPage();
     }
 
@@ -1512,8 +1553,10 @@ class Soils extends Component
         $query = BusinessUnit::query();
         
         if (!empty(trim($search))) {
-            $query->where('name', 'like', '%' . $search . '%')
+            $query->where(function($q) use ($search) {
+                $q->where('name', 'like', '%' . $search . '%')
                 ->orWhere('code', 'like', '%' . $search . '%');
+            });
         }
         
         return $query->orderBy('name')->limit(20)->get();
@@ -1529,8 +1572,11 @@ class Soils extends Component
 
     public function openLandFilterDropdown()
     {
-        $this->showLandFilterDropdown = true;
-        $this->showBusinessUnitFilterDropdown = false;
+        // Only open if business unit filter is selected
+        if ($this->filterBusinessUnit || $this->filterByBusinessUnit) {
+            $this->showLandFilterDropdown = true;
+            $this->showBusinessUnitFilterDropdown = false;
+        }
     }
 
     public function selectLandFilter($landId, $landName)
@@ -1555,8 +1601,25 @@ class Soils extends Component
         
         $query = Land::query();
         
+        // Priority 1: Filter by business unit from filter dropdown
+        if (!empty($this->filterBusinessUnit)) {
+            $query->where('business_unit_id', $this->filterBusinessUnit);
+        }
+        // Priority 2: Filter by pre-selected business unit from route
+        elseif (!empty($this->filterByBusinessUnit)) {
+            $query->where('business_unit_id', $this->filterByBusinessUnit);
+        }
+        // If no business unit filter, return empty to prevent showing all lands
+        else {
+            return collect();
+        }
+        
+        // Apply search filter
         if (!empty(trim($search))) {
-            $query->where('lokasi_lahan', 'like', '%' . $search . '%');
+            $query->where(function($q) use ($search) {
+                $q->where('lokasi_lahan', 'like', '%' . $search . '%')
+                ->orWhere('kota_kabupaten', 'like', '%' . $search . '%');
+            });
         }
         
         return $query->orderBy('lokasi_lahan')->limit(20)->get();
@@ -1642,4 +1705,6 @@ class Soils extends Component
         
         return $value;
     }
+
+    
 }
