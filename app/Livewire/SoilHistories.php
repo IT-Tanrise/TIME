@@ -18,9 +18,8 @@ class SoilHistories extends Component
     public $filterUser = '';
     public $filterDateFrom = '';
     public $filterDateTo = '';
-    public $filterColumn = ''; // New filter for updated columns
+    public $filterColumn = '';
 
-    // Add these properties to track navigation context
     public $businessUnitId = null;
     public $fromShow = false;
 
@@ -39,16 +38,13 @@ class SoilHistories extends Component
         $this->soilId = $soilId;
         $this->soil = Soil::with(['land', 'businessUnit'])->findOrFail($soilId);
         
-        // Check if we came from a business unit filtered view or show page
         $referrer = request()->headers->get('referer');
         if ($referrer && str_contains($referrer, '/business-unit/')) {
-            // Extract business unit ID from the referrer URL
             preg_match('/\/business-unit\/(\d+)/', $referrer, $matches);
             if (isset($matches[1])) {
                 $this->businessUnitId = (int)$matches[1];
             }
         } elseif ($referrer && str_contains($referrer, '/show')) {
-            // We came from the show page
             $this->fromShow = true;
         }
     }
@@ -74,10 +70,10 @@ class SoilHistories extends Component
             ->orderBy('created_at', 'desc')
             ->paginate(10);
 
-        // Filter out additional_cost_updated entries with no meaningful changes
+        // Filter out entries with no meaningful changes
         $histories->getCollection()->transform(function($history) {
             if (!$this->hasMeaningfulChanges($history)) {
-                return null; // Mark for removal
+                return null;
             }
             return $history;
         });
@@ -85,27 +81,9 @@ class SoilHistories extends Component
         $filteredItems = $histories->getCollection()->filter()->values();
         $histories->setCollection($filteredItems);
 
-        // Get available actions and users for filters
-        $availableActions = SoilHistory::where('soil_id', $this->soilId)
-            ->distinct()
-            ->pluck('action')
-            ->map(function($action) {
-                return [
-                    'value' => $action,
-                    'label' => match($action) {
-                        'created' => 'Record Created',
-                        'updated' => 'Record Updated',
-                        'deleted' => 'Record Deleted',
-                        'restored' => 'Record Restored',
-                        'additional_cost_added' => 'Additional Cost Added',
-                        'additional_cost_updated' => 'Additional Cost Updated',
-                        'additional_cost_deleted' => 'Additional Cost Deleted',
-                        'rejected_cost_update' => 'Rejected Cost',
-                        default => ucfirst($action)
-                    }
-                ];
-            });
-
+        // Get available actions for filter
+        $availableActions = $this->getAvailableActions();
+        
         $availableUsers = SoilHistory::with('user')
             ->where('soil_id', $this->soilId)
             ->whereNotNull('user_id')
@@ -114,41 +92,69 @@ class SoilHistories extends Component
             ->unique()
             ->values();
 
-        // Get available columns that have been updated (only for 'updated' actions)
         $availableColumns = $this->getAvailableColumns();
 
         return view('livewire.soil-histories.index', compact('histories', 'availableActions', 'availableUsers', 'availableColumns'));
     }
 
+    // COMPLETE: Get all available actions
+    private function getAvailableActions()
+    {
+        return SoilHistory::where('soil_id', $this->soilId)
+            ->distinct()
+            ->pluck('action')
+            ->map(function($action) {
+                return [
+                    'value' => $action,
+                    'label' => match($action) {
+                        'created' => 'Record Created',
+                        'approved_creation' => 'Record Created (Approved)',
+                        'rejected_creation' => 'Record Creation (Rejected)',
+                        'updated' => 'Record Updated',
+                        'approved_update' => 'Record Updated (Approved)',
+                        'rejected_update' => 'Record Update (Rejected)',
+                        'deleted' => 'Record Deleted',
+                        'approved_deletion' => 'Record Deleted (Approved)',
+                        'rejected_deletion' => 'Record Deletion (Rejected)',
+                        'restored' => 'Record Restored',
+                        'additional_cost_added' => 'Additional Cost Added',
+                        'additional_cost_updated' => 'Additional Cost Updated',
+                        'additional_cost_deleted' => 'Additional Cost Deleted',
+                        'rejected_cost_update' => 'Additional Costs Update (Rejected)',
+                        default => ucfirst(str_replace('_', ' ', $action))
+                    }
+                ];
+            })
+            ->values()
+            ->toArray();
+    }
+
     private function hasMeaningfulChanges($history)
     {
-        // Don't filter approved changes - always show them
-        if ($history->isApprovedChange()) {
+        // Always show approved and rejected changes
+        if ($history->isApprovedChange() || $history->isRejectedChange()) {
             return true;
         }
         
-        if ($history->action !== 'additional_cost_updated') {
-            return true; // Always show non-update actions
+        // For other actions, check if there are actual changes
+        if ($history->action === 'additional_cost_updated') {
+            $changeDetails = $this->getChangeDetails($history);
+            return !empty($changeDetails);
         }
         
-        $changeDetails = $this->getChangeDetails($history);
-        return !empty($changeDetails); // Only show if there are actual changes
+        return true; // Show all other actions
     }
 
     public function backToSoil()
     {
-        // Determine the correct route based on context
         if ($this->fromShow) {
-            // Go back to the show page
             return redirect()->route('soils.show', ['soilId' => $this->soilId]);
         } elseif ($this->businessUnitId) {
-            // Go back to the business unit filtered view and show this soil's detail
             return redirect()->route('soils.by-business-unit', [
                 'businessUnit' => $this->businessUnitId,
                 'soilId' => $this->soilId
             ]);
         } else {
-            // Default: go back to soils show page
             return redirect()->route('soils.show', ['soilId' => $this->soilId]);
         }
     }
@@ -166,35 +172,16 @@ class SoilHistories extends Component
     public function updatingFilterAction()
     {
         $this->resetPage();
-        
-        // Reset column filter when action changes
-        // Column filter only applies to 'updated' actions, not additional cost actions
         if ($this->filterAction !== 'updated') {
             $this->filterColumn = '';
         }
     }
 
-    public function updatingFilterUser()
-    {
-        $this->resetPage();
-    }
+    public function updatingFilterUser() { $this->resetPage(); }
+    public function updatingFilterDateFrom() { $this->resetPage(); }
+    public function updatingFilterDateTo() { $this->resetPage(); }
+    public function updatingFilterColumn() { $this->resetPage(); }
 
-    public function updatingFilterDateFrom()
-    {
-        $this->resetPage();
-    }
-
-    public function updatingFilterDateTo()
-    {
-        $this->resetPage();
-    }
-
-    public function updatingFilterColumn()
-    {
-        $this->resetPage();
-    }
-
-    // Get available columns that have been updated in history
     private function getAvailableColumns()
     {
         $columns = SoilHistory::where('soil_id', $this->soilId)
@@ -217,82 +204,173 @@ class SoilHistories extends Component
         return $columns;
     }
 
-    // Helper method to get change details
+    // COMPLETE: Get change details for ALL scenarios
     public function getChangeDetails($history)
     {
-        // Special handling for additional cost actions
-        if (in_array($history->action, [
-            'additional_cost_added', 
-            'additional_cost_updated', 
-            'additional_cost_deleted',
-            'additional_cost_approved'  // Add this
-        ])) {
+        // Handle additional cost actions
+        if (str_contains($history->action, 'additional_cost')) {
             return $this->getAdditionalCostDetails($history);
         }
 
+        // Handle rejected cost update
+        if ($history->action === 'rejected_cost_update') {
+            return $this->getRejectedCostDetails($history);
+        }
+
+        // Handle rejected updates
+        if ($history->action === 'rejected_update') {
+            return $this->getRejectedDetailChanges($history);
+        }
+
+        // Handle rejected deletion
+        if ($history->action === 'rejected_deletion') {
+            return $this->getRejectedDeletionDetails($history);
+        }
+
+        // Handle rejected creation
+        if ($history->action === 'rejected_creation') {
+            return $this->getRejectedCreationDetails($history);
+        }
+
+        // Handle regular updates and approved updates
+        if (in_array($history->action, ['updated', 'approved_update'])) {
+            return $this->getRegularUpdateDetails($history);
+        }
+
+        // Handle creation
+        if (in_array($history->action, ['created', 'approved_creation'])) {
+            return $this->getCreationDetails($history);
+        }
+
+        // Handle deletion
+        if (in_array($history->action, ['deleted', 'approved_deletion'])) {
+            return $this->getDeletionDetails($history);
+        }
+
+        return null;
+    }
+
+    // Get regular update details
+    private function getRegularUpdateDetails($history)
+    {
         if (!$history->old_values || !$history->new_values) {
             return null;
         }
 
         $changes = [];
-        
-        // If changes array is empty or null, determine from old/new values
         $fieldsToCheck = $history->changes ?? array_keys(array_merge(
             $history->old_values ?? [],
             $history->new_values ?? []
         ));
 
         foreach ($fieldsToCheck as $field) {
+            // Skip metadata fields
+            if (str_starts_with($field, '_')) continue;
+            
             $oldValue = $history->old_values[$field] ?? '';
             $newValue = $history->new_values[$field] ?? '';
             
-            // Format values for display
-            $oldValue = $this->formatValue($field, $oldValue);
-            $newValue = $this->formatValue($field, $newValue);
-
-            $changes[] = [
-                'field' => $this->getFieldDisplayName($field),
-                'old' => $oldValue,
-                'new' => $newValue
-            ];
+            if ($oldValue != $newValue) {
+                $changes[] = [
+                    'field' => $this->getFieldDisplayName($field),
+                    'old' => $this->formatValue($field, $oldValue),
+                    'new' => $this->formatValue($field, $newValue),
+                    'type' => 'update'
+                ];
+            }
         }
+        
         return $changes;
     }
 
-    // New method to handle additional cost details
+    // Get creation details
+    private function getCreationDetails($history)
+    {
+        if (!$history->new_values) {
+            return null;
+        }
+
+        $details = [];
+        foreach ($history->new_values as $field => $value) {
+            if (str_starts_with($field, '_')) continue;
+            if ($value !== null && $value !== '') {
+                $details[] = [
+                    'field' => $this->getFieldDisplayName($field),
+                    'value' => $this->formatValue($field, $value),
+                    'type' => 'creation'
+                ];
+            }
+        }
+        
+        return $details;
+    }
+
+    // Get deletion details
+    private function getDeletionDetails($history)
+    {
+        $details = [];
+        
+        if ($history->old_values) {
+            foreach ($history->old_values as $field => $value) {
+                if (str_starts_with($field, '_')) continue;
+                if ($value !== null && $value !== '') {
+                    $details[] = [
+                        'field' => $this->getFieldDisplayName($field),
+                        'value' => $this->formatValue($field, $value),
+                        'type' => 'deletion'
+                    ];
+                }
+            }
+        }
+
+        // Add deletion reason if available
+        if ($history->new_values && isset($history->new_values['deletion_reason'])) {
+            $details[] = [
+                'field' => 'Deletion Reason',
+                'value' => $history->new_values['deletion_reason'],
+                'type' => 'reason'
+            ];
+        }
+        
+        return $details;
+    }
+
+    // COMPLETE: Get additional cost details
     private function getAdditionalCostDetails($history)
     {
         $details = [];
         
         if ($history->action === 'additional_cost_added' && $history->new_values) {
-            // For added costs, show the new values
             $nv = $history->new_values;
             
             $details[] = [
                 'field' => 'Cost Description',
                 'old' => '',
-                'new' => $nv['description'] ?? 'N/A'
+                'new' => $nv['description'] ?? 'N/A',
+                'type' => 'added'
             ];
             $details[] = [
                 'field' => 'Amount',
                 'old' => '',
-                'new' => $this->formatValue('additional_cost_amount', $nv['harga'] ?? 0)
+                'new' => $this->formatValue('additional_cost_amount', $nv['harga'] ?? 0),
+                'type' => 'added'
             ];
             $details[] = [
                 'field' => 'Cost Type',
                 'old' => '',
-                'new' => $this->formatValue('additional_cost_type', $nv['cost_type'] ?? 'standard')
+                'new' => $this->formatValue('additional_cost_type', $nv['cost_type'] ?? 'standard'),
+                'type' => 'added'
             ];
             if (isset($nv['date_cost'])) {
                 $details[] = [
                     'field' => 'Date',
                     'old' => '',
-                    'new' => $this->formatValue('additional_cost_date', $nv['date_cost'])
+                    'new' => $this->formatValue('additional_cost_date', $nv['date_cost']),
+                    'type' => 'added'
                 ];
             }
         } 
         elseif ($history->action === 'additional_cost_updated' && $history->old_values && $history->new_values) {
-            // For updated costs, show what changed
             $ov = $history->old_values;
             $nv = $history->new_values;
             
@@ -304,7 +382,8 @@ class SoilHistories extends Component
                     $details[] = [
                         'field' => 'Cost Description',
                         'old' => $oldDesc,
-                        'new' => $newDesc
+                        'new' => $newDesc,
+                        'type' => 'updated'
                     ];
                 }
             }
@@ -317,7 +396,8 @@ class SoilHistories extends Component
                     $details[] = [
                         'field' => 'Amount',
                         'old' => $this->formatValue('additional_cost_amount', $oldAmount),
-                        'new' => $this->formatValue('additional_cost_amount', $newAmount)
+                        'new' => $this->formatValue('additional_cost_amount', $newAmount),
+                        'type' => 'updated'
                     ];
                 }
             }
@@ -330,7 +410,8 @@ class SoilHistories extends Component
                     $details[] = [
                         'field' => 'Cost Type',
                         'old' => $this->formatValue('additional_cost_type', $oldType),
-                        'new' => $this->formatValue('additional_cost_type', $newType)
+                        'new' => $this->formatValue('additional_cost_type', $newType),
+                        'type' => 'updated'
                     ];
                 }
             }
@@ -343,40 +424,244 @@ class SoilHistories extends Component
                     $details[] = [
                         'field' => 'Date',
                         'old' => $this->formatValue('additional_cost_date', $oldDate),
-                        'new' => $this->formatValue('additional_cost_date', $newDate)
+                        'new' => $this->formatValue('additional_cost_date', $newDate),
+                        'type' => 'updated'
                     ];
                 }
             }
         } 
         elseif ($history->action === 'additional_cost_deleted' && $history->old_values) {
-            // For deleted costs, show what was deleted
             $ov = $history->old_values;
             
             $details[] = [
                 'field' => 'Cost Description',
                 'old' => $ov['description'] ?? 'N/A',
-                'new' => 'Deleted'
+                'new' => 'Deleted',
+                'type' => 'deleted'
             ];
             $details[] = [
                 'field' => 'Amount',
                 'old' => $this->formatValue('additional_cost_amount', $ov['harga'] ?? 0),
-                'new' => 'Deleted'
+                'new' => 'Deleted',
+                'type' => 'deleted'
             ];
             $details[] = [
                 'field' => 'Cost Type',
                 'old' => $this->formatValue('additional_cost_type', $ov['cost_type'] ?? 'standard'),
-                'new' => 'Deleted'
+                'new' => 'Deleted',
+                'type' => 'deleted'
             ];
             if (isset($ov['date_cost'])) {
                 $details[] = [
                     'field' => 'Date',
                     'old' => $this->formatValue('additional_cost_date', $ov['date_cost']),
-                    'new' => 'Deleted'
+                    'new' => 'Deleted',
+                    'type' => 'deleted'
                 ];
             }
         }
         
         return !empty($details) ? $details : null;
+    }
+
+    // NEW: Get rejected cost update details
+    private function getRejectedCostDetails($history)
+    {
+        if (!$history->old_values || !$history->new_values) {
+            return null;
+        }
+
+        $details = [];
+        $oldCosts = $history->old_values['costs'] ?? [];
+        $newCosts = $history->new_values['costs'] ?? [];
+
+        // Create lookup arrays
+        $oldCostsById = collect($oldCosts)->keyBy('id');
+        $newCostsById = collect($newCosts)->keyBy('id')->filter(fn($item) => !empty($item['id']));
+
+        // Track all IDs
+        $oldIds = $oldCostsById->keys();
+        $newIds = $newCostsById->keys();
+
+        // Check for costs that would be added (rejected)
+        $newCostsWithoutId = collect($newCosts)->filter(function ($cost) {
+            return empty($cost['id']) || is_null($cost['id']);
+        });
+
+        foreach ($newCostsWithoutId as $newCost) {
+            $details[] = [
+                'type' => 'rejected_add',
+                'description' => $newCost['description'] ?? 'Unknown',
+                'amount' => $this->formatValue('harga', $newCost['harga'] ?? 0),
+                'cost_type' => $this->formatValue('cost_type', $newCost['cost_type'] ?? 'standard'),
+                'date_cost' => $this->formatValue('date_cost', $newCost['date_cost'] ?? ''),
+            ];
+        }
+
+        // Check for costs that would be deleted (rejected)
+        $deletedIds = $oldIds->diff($newIds);
+        foreach ($deletedIds as $deletedId) {
+            $cost = $oldCostsById->get($deletedId);
+            $details[] = [
+                'type' => 'rejected_delete',
+                'description' => $cost['description'] ?? 'Unknown',
+                'amount' => $this->formatValue('harga', $cost['harga'] ?? 0),
+                'cost_type' => $this->formatValue('cost_type', $cost['cost_type'] ?? 'standard'),
+                'date_cost' => $this->formatValue('date_cost', $cost['date_cost'] ?? ''),
+            ];
+        }
+
+        // Check for costs that would be modified (rejected)
+        foreach ($newIds as $costId) {
+            $oldCost = $oldCostsById->get($costId);
+            $newCost = $newCostsById->get($costId);
+
+            if ($oldCost && $newCost) {
+                $hasChanges = (
+                    ($oldCost['description_id'] ?? null) != ($newCost['description_id'] ?? null) ||
+                    ($oldCost['harga'] ?? 0) != ($newCost['harga'] ?? 0) ||
+                    ($oldCost['cost_type'] ?? null) != ($newCost['cost_type'] ?? null) ||
+                    ($oldCost['date_cost'] ?? null) != ($newCost['date_cost'] ?? null)
+                );
+
+                if ($hasChanges) {
+                    $changeDetails = [];
+
+                    if (($oldCost['description'] ?? '') != ($newCost['description'] ?? '')) {
+                        $changeDetails[] = [
+                            'field' => 'Description',
+                            'old' => $oldCost['description'] ?? 'Unknown',
+                            'new' => $newCost['description'] ?? 'Unknown'
+                        ];
+                    }
+
+                    if (($oldCost['harga'] ?? 0) != ($newCost['harga'] ?? 0)) {
+                        $changeDetails[] = [
+                            'field' => 'Amount',
+                            'old' => $this->formatValue('harga', $oldCost['harga'] ?? 0),
+                            'new' => $this->formatValue('harga', $newCost['harga'] ?? 0)
+                        ];
+                    }
+
+                    if (($oldCost['cost_type'] ?? '') != ($newCost['cost_type'] ?? '')) {
+                        $changeDetails[] = [
+                            'field' => 'Cost Type',
+                            'old' => $this->formatValue('cost_type', $oldCost['cost_type'] ?? 'standard'),
+                            'new' => $this->formatValue('cost_type', $newCost['cost_type'] ?? 'standard')
+                        ];
+                    }
+
+                    if (($oldCost['date_cost'] ?? '') != ($newCost['date_cost'] ?? '')) {
+                        $changeDetails[] = [
+                            'field' => 'Date',
+                            'old' => $this->formatValue('date_cost', $oldCost['date_cost'] ?? ''),
+                            'new' => $this->formatValue('date_cost', $newCost['date_cost'] ?? '')
+                        ];
+                    }
+
+                    $details[] = [
+                        'type' => 'rejected_modify',
+                        'description' => $newCost['description'] ?? $oldCost['description'] ?? 'Unknown',
+                        'changes' => $changeDetails,
+                    ];
+                }
+            }
+        }
+
+        return $details;
+    }
+
+    // NEW: Get rejected detail changes
+    private function getRejectedDetailChanges($history)
+    {
+        if (!$history->old_values || !$history->new_values) {
+            return null;
+        }
+
+        $changes = [];
+        $oldData = $history->old_values;
+        $newData = $history->new_values;
+
+        // Remove metadata from display
+        if (isset($newData['_rejection_metadata'])) {
+            unset($newData['_rejection_metadata']);
+        }
+
+        $fieldsToCheck = $history->changes ?? array_keys($newData);
+
+        foreach ($fieldsToCheck as $field) {
+            if (str_starts_with($field, '_')) continue;
+            
+            if (isset($oldData[$field]) && isset($newData[$field])) {
+                $oldValue = $oldData[$field];
+                $newValue = $newData[$field];
+
+                if ($oldValue != $newValue) {
+                    $changes[] = [
+                        'field' => $this->getFieldDisplayName($field),
+                        'old' => $this->formatValue($field, $oldValue),
+                        'new' => $this->formatValue($field, $newValue),
+                        'type' => 'rejected_update',
+                        'status' => 'rejected'
+                    ];
+                }
+            }
+        }
+
+        return $changes;
+    }
+
+    // NEW: Get rejected deletion details
+    private function getRejectedDeletionDetails($history)
+    {
+        $details = [];
+        $oldData = $history->old_values;
+
+        if ($oldData) {
+            foreach ($oldData as $field => $value) {
+                if (str_starts_with($field, '_')) continue;
+                if ($value !== null && $value !== '') {
+                    $details[] = [
+                        'field' => $this->getFieldDisplayName($field),
+                        'value' => $this->formatValue($field, $value),
+                        'type' => 'rejected_deletion'
+                    ];
+                }
+            }
+        }
+
+        // Get deletion reason from new_values
+        if (isset($history->new_values['deletion_reason'])) {
+            $details[] = [
+                'field' => 'Requested Deletion Reason',
+                'value' => $history->new_values['deletion_reason'],
+                'type' => 'reason'
+            ];
+        }
+
+        return $details;
+    }
+
+    // NEW: Get rejected creation details
+    private function getRejectedCreationDetails($history)
+    {
+        if (!$history->new_values) {
+            return null;
+        }
+
+        $details = [];
+        foreach ($history->new_values as $field => $value) {
+            if (str_starts_with($field, '_')) continue;
+            if ($value !== null && $value !== '') {
+                $details[] = [
+                    'field' => $this->getFieldDisplayName($field),
+                    'value' => $this->formatValue($field, $value),
+                    'type' => 'rejected_creation'
+                ];
+            }
+        }
+        
+        return $details;
     }
 
     private function formatValue($field, $value)
@@ -397,10 +682,10 @@ class SoilHistories extends Component
             case 'additional_cost_date':
             case 'additional_cost_date_cost':
             case 'date':
+            case 'date_cost':
                 return $value ? \Carbon\Carbon::parse($value)->format('d/m/Y') : '-';
             case 'created_at':
             case 'updated_at':
-                // Handle datetime fields with GMT+7 timezone
                 if ($value) {
                     $date = \Carbon\Carbon::parse($value)->setTimezone('Asia/Jakarta');
                     return $date->format('d/m/Y H:i') . ' (GMT+7)';
@@ -454,47 +739,55 @@ class SoilHistories extends Component
             'additional_cost_date_cost' => 'Cost Date',
             'description' => 'Description',
             'amount' => 'Amount',
-            'harga' => 'Amount',
             'type' => 'Type',
             'cost_type' => 'Cost Type',
             'date' => 'Date',
+            'date_cost' => 'Cost Date',
+            'costs' => 'Additional Costs',
         ];
 
         return $fieldMap[$field] ?? ucfirst(str_replace('_', ' ', $field));
     }
 
-    // NEW: Get approval information for display
+    // Get approval/rejection information for display
     public function getApprovalInfo($history)
     {
-        if (!$history->isApprovedChange()) {
-            return null;
+        if ($history->isApprovedChange()) {
+            $approvalMetadata = $history->getApprovalMetadata();
+            if ($approvalMetadata && isset($approvalMetadata['approved_by'])) {
+                $approver = \App\Models\User::find($approvalMetadata['approved_by']);
+                if ($approver) {
+                    return [
+                        'type' => 'approved',
+                        'user_name' => $approver->name,
+                        'approval_id' => $approvalMetadata['approval_id'] ?? null,
+                    ];
+                }
+            }
         }
 
-        $approvalMetadata = $history->getApprovalMetadata();
-        if (!$approvalMetadata || !isset($approvalMetadata['approved_by'])) {
-            return null;
+        if ($history->isRejectedChange()) {
+            $rejectionMetadata = $history->getRejectionMetadata();
+            if ($rejectionMetadata && isset($rejectionMetadata['rejected_by'])) {
+                $rejector = \App\Models\User::find($rejectionMetadata['rejected_by']);
+                if ($rejector) {
+                    return [
+                        'type' => 'rejected',
+                        'user_name' => $rejector->name,
+                        'approval_id' => $rejectionMetadata['approval_id'] ?? null,
+                        'reason' => $rejectionMetadata['rejection_reason'] ?? null,
+                    ];
+                }
+            }
         }
 
-        $approver = \App\Models\User::find($approvalMetadata['approved_by']);
-        if (!$approver) {
-            return null;
-        }
-
-        return [
-            'approver_name' => $approver->name,
-            'approval_id' => $approvalMetadata['approval_id'] ?? null,
-            'is_approved_change' => $approvalMetadata['is_approved_change'] ?? false
-        ];
+        return null;
     }
 
-    // Helper method to check if history entry should show approval badge
-    public function shouldShowApprovalBadge($history)
+    // Helper method to check if history entry should show approval/rejection badge
+    public function shouldShowStatusBadge($history)
     {
-        return in_array($history->action, [
-            'approved_update', 
-            'approved_deletion', 
-            'additional_cost_approved'
-        ]) || $history->isApprovedChange();
+        return $history->isApprovedChange() || $history->isRejectedChange();
     }
 
     // Helper method to get the appropriate CSS classes for history action
@@ -510,8 +803,18 @@ class SoilHistories extends Component
             ];
         }
 
+        if ($history->isRejectedChange()) {
+            return [
+                'border' => 'border-red-200',
+                'bg' => 'bg-red-50',
+                'text' => 'text-red-600',
+                'badge_bg' => 'bg-red-100',
+                'badge_text' => 'text-red-800'
+            ];
+        }
+
         return match($history->action) {
-            'created', 'approved_creation' => [
+            'created' => [
                 'border' => 'border-green-200',
                 'bg' => 'bg-green-50', 
                 'text' => 'text-green-600',
@@ -538,222 +841,7 @@ class SoilHistories extends Component
                 'text' => 'text-orange-600',
                 'badge_bg' => 'bg-orange-100',
                 'badge_text' => 'text-orange-800'
-            ]
+            ],
         };
-    }
-
-    public function getRejectedChangeDetails($history)
-    {
-        if (!$history->isRejectedChange()) {
-            return null;
-        }
-
-        // Handle different rejection types
-        if ($history->action === 'rejected_update') {
-            return $this->getRejectedDetailChanges($history);
-        } elseif ($history->action === 'rejected_cost_update') {
-            return $this->getRejectedCostChanges($history);
-        } elseif ($history->action === 'rejected_deletion') {
-            return $this->getRejectedDeletionChanges($history);
-        }
-
-        return null;
-    }
-
-    // Get rejected detail changes
-    private function getRejectedDetailChanges($history)
-    {
-        if (!$history->old_values || !$history->new_values) {
-            return null;
-        }
-
-        $changes = [];
-        $oldData = $history->old_values;
-        $newData = $history->new_values;
-
-        // Remove metadata from display
-        unset($newData['_rejection_metadata']);
-
-        $fieldsToCheck = $history->changes ?? array_keys($newData);
-
-        foreach ($fieldsToCheck as $field) {
-            if (isset($oldData[$field]) && isset($newData[$field])) {
-                $oldValue = $oldData[$field];
-                $newValue = $newData[$field];
-
-                if ($oldValue != $newValue) {
-                    $changes[] = [
-                        'field' => $this->getFieldDisplayName($field),
-                        'old' => $this->formatValue($field, $oldValue),
-                        'new' => $this->formatValue($field, $newValue),
-                        'status' => 'rejected'
-                    ];
-                }
-            }
-        }
-
-        return $changes;
-    }
-
-    // Get rejected cost changes
-    private function getRejectedCostChanges($history)
-    {
-        if (!$history->old_values || !$history->new_values) {
-            return null;
-        }
-
-        $oldCosts = $history->old_values['costs'] ?? [];
-        $newCosts = $history->new_values['costs'] ?? [];
-
-        // Remove metadata
-        unset($history->new_values['_rejection_metadata']);
-
-        $changes = [];
-
-        // Create lookup arrays
-        $oldCostsById = collect($oldCosts)->keyBy('id');
-        $newCostsById = collect($newCosts)->keyBy('id')->filter(fn($item) => !empty($item['id']));
-
-        // Track all IDs
-        $oldIds = $oldCostsById->keys();
-        $newIds = $newCostsById->keys();
-
-        // Check for costs that would be added
-        $newCostsWithoutId = collect($newCosts)->filter(function ($cost) {
-            return empty($cost['id']) || is_null($cost['id']);
-        });
-
-        foreach ($newCostsWithoutId as $newCost) {
-            $changes[] = [
-                'type' => 'add',
-                'description' => $newCost['description'] ?? 'Unknown',
-                'amount' => $this->formatValue('harga', $newCost['harga'] ?? 0),
-                'cost_type' => $this->formatValue('cost_type', $newCost['cost_type'] ?? 'standard'),
-                'date_cost' => $this->formatValue('date_cost', $newCost['date_cost'] ?? ''),
-                'status' => 'rejected'
-            ];
-        }
-
-        // Check for costs that would be deleted
-        $deletedIds = $oldIds->diff($newIds);
-        foreach ($deletedIds as $deletedId) {
-            $cost = $oldCostsById->get($deletedId);
-            $changes[] = [
-                'type' => 'delete',
-                'description' => $cost['description'] ?? 'Unknown',
-                'amount' => $this->formatValue('harga', $cost['harga'] ?? 0),
-                'cost_type' => $this->formatValue('cost_type', $cost['cost_type'] ?? 'standard'),
-                'date_cost' => $this->formatValue('date_cost', $cost['date_cost'] ?? ''),
-                'status' => 'rejected'
-            ];
-        }
-
-        // Check for costs that would be modified
-        foreach ($newIds as $costId) {
-            $oldCost = $oldCostsById->get($costId);
-            $newCost = $newCostsById->get($costId);
-
-            if ($oldCost && $newCost) {
-                $hasChanges = (
-                    $oldCost['description_id'] != $newCost['description_id'] ||
-                    $oldCost['harga'] != $newCost['harga'] ||
-                    $oldCost['cost_type'] != $newCost['cost_type'] ||
-                    $oldCost['date_cost'] != $newCost['date_cost']
-                );
-
-                if ($hasChanges) {
-                    $changeDetails = [];
-
-                    if ($oldCost['description'] != $newCost['description']) {
-                        $changeDetails[] = [
-                            'field' => 'Description',
-                            'old' => $oldCost['description'] ?? 'Unknown',
-                            'new' => $newCost['description'] ?? 'Unknown'
-                        ];
-                    }
-
-                    if ($oldCost['harga'] != $newCost['harga']) {
-                        $changeDetails[] = [
-                            'field' => 'Amount',
-                            'old' => $this->formatValue('harga', $oldCost['harga']),
-                            'new' => $this->formatValue('harga', $newCost['harga'])
-                        ];
-                    }
-
-                    if ($oldCost['cost_type'] != $newCost['cost_type']) {
-                        $changeDetails[] = [
-                            'field' => 'Cost Type',
-                            'old' => $this->formatValue('cost_type', $oldCost['cost_type']),
-                            'new' => $this->formatValue('cost_type', $newCost['cost_type'])
-                        ];
-                    }
-
-                    if ($oldCost['date_cost'] != $newCost['date_cost']) {
-                        $changeDetails[] = [
-                            'field' => 'Date',
-                            'old' => $this->formatValue('date_cost', $oldCost['date_cost']),
-                            'new' => $this->formatValue('date_cost', $newCost['date_cost'])
-                        ];
-                    }
-
-                    $changes[] = [
-                        'type' => 'modify',
-                        'description' => $newCost['description'] ?? $oldCost['description'] ?? 'Unknown',
-                        'changes' => $changeDetails,
-                        'status' => 'rejected'
-                    ];
-                }
-            }
-        }
-
-        return $changes;
-    }
-
-    // Get rejected deletion changes
-    private function getRejectedDeletionChanges($history)
-    {
-        $details = [];
-        $oldData = $history->old_values;
-
-        if ($oldData) {
-            $details[] = [
-                'field' => 'Seller Name',
-                'value' => $oldData['nama_penjual'] ?? 'N/A'
-            ];
-
-            $details[] = [
-                'field' => 'Location',
-                'value' => $oldData['letak_tanah'] ?? 'N/A'
-            ];
-
-            $details[] = [
-                'field' => 'PPJB Number',
-                'value' => $oldData['nomor_ppjb'] ?? 'N/A'
-            ];
-
-            if (isset($oldData['luas'])) {
-                $details[] = [
-                    'field' => 'Area',
-                    'value' => $this->formatValue('luas', $oldData['luas'])
-                ];
-            }
-
-            if (isset($oldData['harga'])) {
-                $details[] = [
-                    'field' => 'Price',
-                    'value' => $this->formatValue('harga', $oldData['harga'])
-                ];
-            }
-        }
-
-        // Get deletion reason from new_values
-        if (isset($history->new_values['deletion_reason'])) {
-            $details[] = [
-                'field' => 'Requested Deletion Reason',
-                'value' => $history->new_values['deletion_reason']
-            ];
-        }
-
-        return $details;
     }
 }

@@ -66,20 +66,43 @@ class SoilHistory extends Model
         return $this->updated_at_gmt7->format('d/m/Y H:i') . ' (GMT+7)';
     }
 
-    // FIXED: Get action display name - added additional cost actions
+    // COMPLETE: Get action display name for ALL scenarios
     public function getActionDisplayAttribute()
     {
+        $isApproved = $this->isApprovedChange();
+        $isRejected = $this->isRejectedChange();
+        
         return match($this->action) {
+            // Creation actions
             'created' => 'Record Created',
-            'updated' => 'Record Updated', 
-            'deleted' => 'Record Deleted',
-            'restored' => 'Record Restored',
             'approved_creation' => 'Record Created (Approved)',
+            'rejected_creation' => 'Record Creation (Rejected)',
+            
+            // Update actions
+            'updated' => 'Record Updated', 
             'approved_update' => 'Record Updated (Approved)',
+            'rejected_update' => 'Record Update (Rejected)',
+            
+            // Deletion actions
+            'deleted' => 'Record Deleted',
             'approved_deletion' => 'Record Deleted (Approved)',
-            'additional_cost_added' => 'Additional Cost Added' . ($this->isApprovedChange() ? ' (Approved)' : ''),
-            'additional_cost_updated' => 'Additional Cost Updated' . ($this->isApprovedChange() ? ' (Approved)' : ''),
-            'additional_cost_deleted' => 'Additional Cost Deleted' . ($this->isApprovedChange() ? ' (Approved)' : ''),
+            'rejected_deletion' => 'Record Deletion (Rejected)',
+            
+            // Restoration
+            'restored' => 'Record Restored',
+            
+            // Additional cost actions - Added
+            'additional_cost_added' => 'Additional Cost Added' . ($isApproved ? ' (Approved)' : ($isRejected ? ' (Rejected)' : '')),
+            
+            // Additional cost actions - Updated
+            'additional_cost_updated' => 'Additional Cost Updated' . ($isApproved ? ' (Approved)' : ($isRejected ? ' (Rejected)' : '')),
+            
+            // Additional cost actions - Deleted
+            'additional_cost_deleted' => 'Additional Cost Deleted' . ($isApproved ? ' (Approved)' : ($isRejected ? ' (Rejected)' : '')),
+            
+            // Rejected cost update (standalone)
+            'rejected_cost_update' => 'Additional Costs Update (Rejected)',
+            
             default => ucfirst(str_replace('_', ' ', $this->action))
         };
     }
@@ -90,12 +113,17 @@ class SoilHistory extends Model
         return $this->user ? $this->user->name : 'System';
     }
 
-    // FIXED: Get changes summary
+    // COMPLETE: Get changes summary
     public function getChangesSummaryAttribute()
     {
         // Handle additional cost actions specially
-        if (in_array($this->action, ['additional_cost_added', 'additional_cost_updated', 'additional_cost_deleted'])) {
+        if (str_contains($this->action, 'additional_cost') || $this->action === 'rejected_cost_update') {
             return $this->getAdditionalCostChangesSummary();
+        }
+
+        // Handle rejected actions
+        if ($this->isRejectedChange()) {
+            return $this->getRejectedChangesSummary();
         }
 
         // Check if changes exist, is array, and is not empty
@@ -106,6 +134,9 @@ class SoilHistory extends Model
                 
                 // Compare old and new values to find actual changes
                 foreach ($this->new_values as $field => $newValue) {
+                    // Skip metadata fields
+                    if (str_starts_with($field, '_')) continue;
+                    
                     $oldValue = $this->old_values[$field] ?? null;
                     
                     // Handle different value types
@@ -119,7 +150,7 @@ class SoilHistory extends Model
                 }
             }
             
-            return 'No changes detected';
+            return 'No specific field changes detected';
         }
 
         $changesList = [];
@@ -130,7 +161,7 @@ class SoilHistory extends Model
         return implode(', ', $changesList);
     }
 
-    // NEW: Handle additional cost changes summary
+    // COMPLETE: Handle additional cost changes summary
     private function getAdditionalCostChangesSummary()
     {
         if ($this->action === 'additional_cost_added') {
@@ -156,7 +187,63 @@ class SoilHistory extends Model
             return "Updated: {$description}";
         }
 
+        if ($this->action === 'rejected_cost_update') {
+            $costs = $this->new_values['costs'] ?? [];
+            $count = is_array($costs) ? count($costs) : 0;
+            return "Rejected changes to {$count} cost item(s)";
+        }
+
         return 'Additional cost modified';
+    }
+
+    // NEW: Handle rejected changes summary
+    private function getRejectedChangesSummary()
+    {
+        if ($this->action === 'rejected_creation') {
+            $sellerName = $this->new_values['nama_penjual'] ?? 'Unknown Seller';
+            return "Rejected creation request for: {$sellerName}";
+        }
+
+        if ($this->action === 'rejected_deletion') {
+            return "Rejected deletion request";
+        }
+
+        if ($this->action === 'rejected_update') {
+            // Get changed fields from new_values
+            $newValues = $this->new_values;
+            if (isset($newValues['_rejection_metadata'])) {
+                unset($newValues['_rejection_metadata']);
+            }
+            
+            if (!empty($this->changes)) {
+                $fieldsList = array_map([$this, 'getFieldDisplayName'], $this->changes);
+                return "Rejected changes to: " . implode(', ', $fieldsList);
+            }
+            
+            if (!empty($newValues) && !empty($this->old_values)) {
+                $changedFields = [];
+                foreach ($newValues as $field => $newValue) {
+                    if (str_starts_with($field, '_')) continue;
+                    $oldValue = $this->old_values[$field] ?? null;
+                    if ($this->valuesAreDifferent($oldValue, $newValue)) {
+                        $changedFields[] = $this->getFieldDisplayName($field);
+                    }
+                }
+                if (!empty($changedFields)) {
+                    return "Rejected changes to: " . implode(', ', $changedFields);
+                }
+            }
+            
+            return "Rejected update request";
+        }
+
+        if ($this->action === 'rejected_cost_update') {
+            $costs = $this->new_values['costs'] ?? [];
+            $count = is_array($costs) ? count($costs) : 0;
+            return "Rejected cost changes ({$count} items)";
+        }
+
+        return 'Rejected change';
     }
 
     // Helper method to compare values properly
@@ -192,17 +279,18 @@ class SoilHistory extends Model
             'luas' => 'Area',
             'harga' => 'Price',
             'bukti_kepemilikan' => 'Ownership Proof',
-            'bukti_kepemilikan_details' => 'Ownership Proof Details',
+            'bukti_kepemilikan_details' => 'Ownership Details',
             'atas_nama' => 'Owner Name',
-            'nop_pbb' => 'NOP PBB',
+            'nop_pbb' => 'PBB Number',
             'nama_notaris_ppat' => 'Notaris/PPAT Name',
             'keterangan' => 'Notes',
             'land_id' => 'Land',
             'business_unit_id' => 'Business Unit',
             'description' => 'Description',
-            'harga' => 'Amount',
             'cost_type' => 'Cost Type',
             'date_cost' => 'Cost Date',
+            'costs' => 'Additional Costs',
+            'deletion_reason' => 'Deletion Reason',
         ];
 
         return $fieldMap[$field] ?? ucfirst(str_replace('_', ' ', $field));
@@ -220,22 +308,108 @@ class SoilHistory extends Model
         return $query->where('action', $action);
     }
 
-    // NEW: Check if this is an approved change
+    // COMPLETE: Check if this is an approved change
     public function isApprovedChange()
     {
-        return in_array($this->action, [
+        // Check action name first
+        if (in_array($this->action, [
             'approved_update', 
             'approved_deletion', 
-            'approved_creation', // Add this line
+            'approved_creation',
             'additional_cost_approved'
-        ]) || ($this->new_values && isset($this->new_values['_approval_metadata']));
+        ])) {
+            return true;
+        }
+        
+        // Check metadata in new_values
+        if ($this->new_values && isset($this->new_values['_approval_metadata'])) {
+            return true;
+        }
+        
+        return false;
     }
 
-    // NEW: Get approval metadata
+    // NEW: Check if this is a rejected change
+    public function isRejectedChange()
+    {
+        // Check action name
+        if (in_array($this->action, [
+            'rejected_update', 
+            'rejected_deletion', 
+            'rejected_creation',
+            'rejected_cost_update'
+        ])) {
+            return true;
+        }
+        
+        // Check metadata in new_values
+        if ($this->new_values && isset($this->new_values['_rejection_metadata'])) {
+            return true;
+        }
+        
+        return false;
+    }
+
+    // Get approval metadata
     public function getApprovalMetadata()
     {
         if ($this->new_values && isset($this->new_values['_approval_metadata'])) {
             return $this->new_values['_approval_metadata'];
+        }
+        return null;
+    }
+
+    // NEW: Get rejection metadata
+    public function getRejectionMetadata()
+    {
+        if ($this->new_values && isset($this->new_values['_rejection_metadata'])) {
+            return $this->new_values['_rejection_metadata'];
+        }
+        return null;
+    }
+
+    // NEW: Get rejector user
+    public function getRejectorUser()
+    {
+        $metadata = $this->getRejectionMetadata();
+        if ($metadata && isset($metadata['rejected_by'])) {
+            return \App\Models\User::find($metadata['rejected_by']);
+        }
+        return null;
+    }
+
+    // NEW: Get rejection reason
+    public function getRejectionReason()
+    {
+        $metadata = $this->getRejectionMetadata();
+        if ($metadata && isset($metadata['rejection_reason'])) {
+            return $metadata['rejection_reason'];
+        }
+        return null;
+    }
+
+    // NEW: Get approval ID
+    public function getApprovalId()
+    {
+        $approvalMetadata = $this->getApprovalMetadata();
+        if ($approvalMetadata && isset($approvalMetadata['approval_id'])) {
+            return $approvalMetadata['approval_id'];
+        }
+        
+        $rejectionMetadata = $this->getRejectionMetadata();
+        if ($rejectionMetadata && isset($rejectionMetadata['approval_id'])) {
+            return $rejectionMetadata['approval_id'];
+        }
+        
+        return null;
+    }
+
+    // NEW: Get approver user
+    public function getApproverUser()
+    {
+        $metadata = $this->getApprovalMetadata();
+        if ($metadata && isset($metadata['approved_by'])) {
+            return \App\Models\User::find($metadata['approved_by']);
         }
         return null;
     }

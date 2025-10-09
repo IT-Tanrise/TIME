@@ -1,46 +1,55 @@
 <x-app-layout>
     
-    <div class="py-8">
+    <div class="py-4">
         <div class="max-w-7xl mx-auto sm:px-6 lg:px-8">
-            {{-- Welcome Section --}}
-            <div class="bg-white overflow-hidden shadow-xl sm:rounded-lg mb-8">
-                <div class="p-6 lg:p-8 bg-white border-b border-gray-200">
-                    <h1 class="text-2xl font-medium text-gray-900">
-                        Welcome, {{ auth()->user()->name }}!
-                    </h1>
-                    <p class="mt-6 text-gray-500 leading-relaxed">
-                        Last login {{ auth()->user()->formatted_last_login }} 
-                    </p>
-                    @role('Super Admin')
-                    <p class="mt-6 text-gray-500 leading-relaxed">
-                        You are logged in!<br>Your current role(s):
-                        @foreach(auth()->user()->roles as $role)
-                            <span class="inline-block bg-blue-100 text-blue-800 text-sm px-2 py-1 rounded mr-1">
-                                {{ $role->name }}
-                            </span>
-                        @endforeach
-                    </p>
-                    <p class="mt-6 text-gray-500 leading-relaxed">
-                        Your current permission(s):
-                        @if(auth()->user()->getAllPermissions()->count() > 0)
-                            @foreach(auth()->user()->getAllPermissions() as $permission)
-                                <span class="inline-block bg-blue-100 text-blue-800 text-sm px-2 py-1 rounded mr-1 mt-2">
-                                    {{ $permission->name }}
-                                </span>
-                            @endforeach
-                        @else
-                            <span class="inline-block bg-blue-100 text-blue-800 text-sm px-2 py-1 rounded mr-1">No permissions available.</span>
-                        @endif
-                    </p>
-                    @endrole
-                </div>
-            </div>
             {{-- Main Systems Navigation Menu --}}
             <div class="bg-white shadow-xl sm:rounded-lg mb-8">
                 <div class="p-6 lg:p-8 bg-gradient-to-r from-blue-50 to-indigo-50 overflow-visible">
+                    <h1 class="text-2xl font-medium text-gray-900">
+                        Welcome, {{ auth()->user()->name }}!
+                    </h1>
+                    <!-- <p class="mt-6 text-gray-500 leading-relaxed">
+                        Last login {{ auth()->user()->formatted_last_login }} 
+                    </p> -->
+                    @role('Super Admin')
+                    <div class="flex items-center justify-between mb-6">
+                        <button 
+                            onclick="toggleSection('rolePermission')" 
+                            class="flex items-center space-x-2 text-left w-full focus:outline-none group">
+                            <h2 class="text-xl font-semibold text-gray-900">
+                                Your role & permission
+                            </h2>
+                            <svg id="rolePermission-icon" class="w-5 h-5 text-gray-500 transform transition-transform duration-200" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/>
+                            </svg>
+                        </button>
+                    </div>
+                    <div id="rolePermission-content" class="hidden">
+                        <p class="mt-6 text-gray-500 leading-relaxed">
+                            You are logged in!<br>Your current role(s):
+                            @foreach(auth()->user()->roles as $role)
+                                <span class="inline-block bg-blue-100 text-blue-800 text-sm px-2 py-1 rounded mr-1">
+                                    {{ $role->name }}
+                                </span>
+                            @endforeach
+                        </p>
+                        <p class="mt-6 text-gray-500 leading-relaxed">
+                            Your current permission(s):
+                            @if(auth()->user()->getAllPermissions()->count() > 0)
+                                @foreach(auth()->user()->getAllPermissions() as $permission)
+                                    <span class="inline-block bg-blue-100 text-blue-800 text-sm px-2 py-1 rounded mr-1 mt-2">
+                                        {{ $permission->name }}
+                                    </span>
+                                @endforeach
+                            @else
+                                <span class="inline-block bg-blue-100 text-blue-800 text-sm px-2 py-1 rounded mr-1">No permissions available.</span>
+                            @endif
+                        </p>
+                    </div>
+                    @endrole
                     <h2 class="text-2xl font-bold text-gray-900 mb-6">Management Systems</h2>
                     
-                    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 pb-2">
+                    <div class="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-5 gap-3 pb-2">
                         {{-- ADEM - Asset Database System --}}
                         @canany(['lands.access', 'soils.access', 'ownerships.access'])
                         <div class="relative bg-white rounded-lg shadow-md hover:shadow-xl transition-shadow duration-300">
@@ -321,14 +330,10 @@
                                 @endphp
                                 
                                 @if($totalLandPending > 0)
-                                    <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-orange-100 text-orange-800">
-                                        {{ $totalLandPending }} Land
-                                    </span>
+                                    <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-orange-100 text-orange-800">{{ $totalLandPending }} Land</span>
                                 @endif
                                 @if($totalSoilPending > 0)
-                                    <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-purple-100 text-purple-800">
-                                        {{ $totalSoilPending }} Soil
-                                    </span>
+                                    <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-purple-100 text-purple-800">{{ $totalSoilPending }} Soil</span>
                                 @endif
                             </div>
                         </div>

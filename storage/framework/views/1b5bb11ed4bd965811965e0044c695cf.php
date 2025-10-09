@@ -9,49 +9,58 @@
 <?php endif; ?>
 <?php $component->withAttributes([]); ?>
     
-    <div class="py-8">
+    <div class="py-4">
         <div class="max-w-7xl mx-auto sm:px-6 lg:px-8">
-            
-            <div class="bg-white overflow-hidden shadow-xl sm:rounded-lg mb-8">
-                <div class="p-6 lg:p-8 bg-white border-b border-gray-200">
-                    <h1 class="text-2xl font-medium text-gray-900">
-                        Welcome, <?php echo e(auth()->user()->name); ?>!
-                    </h1>
-                    <p class="mt-6 text-gray-500 leading-relaxed">
-                        Last login <?php echo e(auth()->user()->formatted_last_login); ?> 
-                    </p>
-                    <?php if (\Illuminate\Support\Facades\Blade::check('role', 'Super Admin')): ?>
-                    <p class="mt-6 text-gray-500 leading-relaxed">
-                        You are logged in!<br>Your current role(s):
-                        <?php $__currentLoopData = auth()->user()->roles; $__env->addLoop($__currentLoopData); foreach($__currentLoopData as $role): $__env->incrementLoopIndices(); $loop = $__env->getLastLoop(); ?>
-                            <span class="inline-block bg-blue-100 text-blue-800 text-sm px-2 py-1 rounded mr-1">
-                                <?php echo e($role->name); ?>
-
-                            </span>
-                        <?php endforeach; $__env->popLoop(); $loop = $__env->getLastLoop(); ?>
-                    </p>
-                    <p class="mt-6 text-gray-500 leading-relaxed">
-                        Your current permission(s):
-                        <?php if(auth()->user()->getAllPermissions()->count() > 0): ?>
-                            <?php $__currentLoopData = auth()->user()->getAllPermissions(); $__env->addLoop($__currentLoopData); foreach($__currentLoopData as $permission): $__env->incrementLoopIndices(); $loop = $__env->getLastLoop(); ?>
-                                <span class="inline-block bg-blue-100 text-blue-800 text-sm px-2 py-1 rounded mr-1 mt-2">
-                                    <?php echo e($permission->name); ?>
-
-                                </span>
-                            <?php endforeach; $__env->popLoop(); $loop = $__env->getLastLoop(); ?>
-                        <?php else: ?>
-                            <span class="inline-block bg-blue-100 text-blue-800 text-sm px-2 py-1 rounded mr-1">No permissions available.</span>
-                        <?php endif; ?>
-                    </p>
-                    <?php endif; ?>
-                </div>
-            </div>
             
             <div class="bg-white shadow-xl sm:rounded-lg mb-8">
                 <div class="p-6 lg:p-8 bg-gradient-to-r from-blue-50 to-indigo-50 overflow-visible">
+                    <h1 class="text-2xl font-medium text-gray-900">
+                        Welcome, <?php echo e(auth()->user()->name); ?>!
+                    </h1>
+                    <!-- <p class="mt-6 text-gray-500 leading-relaxed">
+                        Last login <?php echo e(auth()->user()->formatted_last_login); ?> 
+                    </p> -->
+                    <?php if (\Illuminate\Support\Facades\Blade::check('role', 'Super Admin')): ?>
+                    <div class="flex items-center justify-between mb-6">
+                        <button 
+                            onclick="toggleSection('rolePermission')" 
+                            class="flex items-center space-x-2 text-left w-full focus:outline-none group">
+                            <h2 class="text-xl font-semibold text-gray-900">
+                                Your role & permission
+                            </h2>
+                            <svg id="rolePermission-icon" class="w-5 h-5 text-gray-500 transform transition-transform duration-200" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/>
+                            </svg>
+                        </button>
+                    </div>
+                    <div id="rolePermission-content" class="hidden">
+                        <p class="mt-6 text-gray-500 leading-relaxed">
+                            You are logged in!<br>Your current role(s):
+                            <?php $__currentLoopData = auth()->user()->roles; $__env->addLoop($__currentLoopData); foreach($__currentLoopData as $role): $__env->incrementLoopIndices(); $loop = $__env->getLastLoop(); ?>
+                                <span class="inline-block bg-blue-100 text-blue-800 text-sm px-2 py-1 rounded mr-1">
+                                    <?php echo e($role->name); ?>
+
+                                </span>
+                            <?php endforeach; $__env->popLoop(); $loop = $__env->getLastLoop(); ?>
+                        </p>
+                        <p class="mt-6 text-gray-500 leading-relaxed">
+                            Your current permission(s):
+                            <?php if(auth()->user()->getAllPermissions()->count() > 0): ?>
+                                <?php $__currentLoopData = auth()->user()->getAllPermissions(); $__env->addLoop($__currentLoopData); foreach($__currentLoopData as $permission): $__env->incrementLoopIndices(); $loop = $__env->getLastLoop(); ?>
+                                    <span class="inline-block bg-blue-100 text-blue-800 text-sm px-2 py-1 rounded mr-1 mt-2">
+                                        <?php echo e($permission->name); ?>
+
+                                    </span>
+                                <?php endforeach; $__env->popLoop(); $loop = $__env->getLastLoop(); ?>
+                            <?php else: ?>
+                                <span class="inline-block bg-blue-100 text-blue-800 text-sm px-2 py-1 rounded mr-1">No permissions available.</span>
+                            <?php endif; ?>
+                        </p>
+                    </div>
+                    <?php endif; ?>
                     <h2 class="text-2xl font-bold text-gray-900 mb-6">Management Systems</h2>
                     
-                    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 pb-2">
+                    <div class="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-5 gap-3 pb-2">
                         
                         <?php if (app(\Illuminate\Contracts\Auth\Access\Gate::class)->any(['lands.access', 'soils.access', 'ownerships.access'])): ?>
                         <div class="relative bg-white rounded-lg shadow-md hover:shadow-xl transition-shadow duration-300">
@@ -334,14 +343,10 @@
                                 ?>
                                 
                                 <?php if($totalLandPending > 0): ?>
-                                    <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-orange-100 text-orange-800">
-                                        <?php echo e($totalLandPending); ?> Land
-                                    </span>
+                                    <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-orange-100 text-orange-800"><?php echo e($totalLandPending); ?> Land</span>
                                 <?php endif; ?>
                                 <?php if($totalSoilPending > 0): ?>
-                                    <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-purple-100 text-purple-800">
-                                        <?php echo e($totalSoilPending); ?> Soil
-                                    </span>
+                                    <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-purple-100 text-purple-800"><?php echo e($totalSoilPending); ?> Soil</span>
                                 <?php endif; ?>
                             </div>
                         </div>
