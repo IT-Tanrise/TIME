@@ -44,44 +44,68 @@
         @endif
     </div>
 
-    {{-- Select All Checkbox --}}
+    {{-- Approvals Table --}}
     @if($approvals->count() > 0)
-        <div class="mb-2 flex items-center">
-            <input 
-                type="checkbox" 
-                wire:model.live="selectAll"
-                class="rounded border-gray-300 text-indigo-600 shadow-sm focus:border-indigo-500 focus:ring-indigo-500">
-            <label class="ml-2 text-sm text-gray-600">Select All</label>
-        </div>
-    @endif
+        <div class="overflow-x-auto bg-white shadow-sm rounded-lg border border-gray-200">
+            <table class="min-w-full divide-y divide-gray-200">
+                <thead class="bg-gray-50">
+                    <tr>
+                        <th scope="col" class="w-12 px-4 py-3">
+                            <input 
+                                type="checkbox" 
+                                wire:model.live="selectAll"
+                                class="rounded border-gray-300 text-indigo-600 shadow-sm focus:border-indigo-500 focus:ring-indigo-500">
+                        </th>
+                        <th scope="col" class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                            ID
+                        </th>
+                        <th scope="col" class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                            Type
+                        </th>
+                        <th scope="col" class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                            Action
+                        </th>
+                        <th scope="col" class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                            Details
+                        </th>
+                        <th scope="col" class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                            Requested By
+                        </th>
+                        <th scope="col" class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                            Date
+                        </th>
+                        <th scope="col" class="px-4 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">
+                            Actions
+                        </th>
+                    </tr>
+                </thead>
+                <tbody class="bg-white divide-y divide-gray-200">
+                    @foreach ($approvals as $approval)
+                        <tr class="hover:bg-gray-50">
+                            {{-- Checkbox --}}
+                            <td class="px-4 py-3 whitespace-nowrap">
+                                <input 
+                                    type="checkbox" 
+                                    wire:model.live="selectedApprovals"
+                                    value="{{ $approval->unique_id }}"
+                                    class="rounded border-gray-300 text-indigo-600 shadow-sm focus:border-indigo-500 focus:ring-indigo-500">
+                            </td>
 
-    {{-- Approvals List --}}
-    <div class="space-y-4">
-        @forelse ($approvals as $approval)
-            <div class="bg-white border border-gray-200 rounded-lg shadow-sm">
-                <!-- Header -->
-                <div class="px-4 py-3 border-b border-gray-200 rounded-t-lg bg-gray-50">
-                    <div class="flex items-center space-x-3">
-                        {{-- Checkbox --}}
-                        <input 
-                            type="checkbox" 
-                            wire:model.live="selectedApprovals"
-                            value="{{ $approval->unique_id }}"
-                            class="rounded border-gray-300 text-indigo-600 shadow-sm focus:border-indigo-500 focus:ring-indigo-500">
-                        
-                        <div class="flex-1">
-                            <div class="flex items-center space-x-3">
-                                <h3 class="text-lg font-medium text-gray-900">
-                                    Approval Request #{{ $approval->id }}
-                                </h3>
-                                
-                                {{-- Type Badge --}}
+                            {{-- ID --}}
+                            <td class="px-4 py-3 whitespace-nowrap text-sm font-medium text-gray-900">
+                                #{{ $approval->id }}
+                            </td>
+
+                            {{-- Type Badge --}}
+                            <td class="px-4 py-3 whitespace-nowrap">
                                 <span class="inline-flex items-center px-2 py-1 rounded text-xs font-semibold
                                     {{ $approval->approval_type === 'land' ? 'bg-orange-100 text-orange-800' : 'bg-purple-100 text-purple-800' }}">
                                     {{ strtoupper($approval->approval_type) }}
                                 </span>
-                                
-                                {{-- Action Badge --}}
+                            </td>
+
+                            {{-- Action Badge --}}
+                            <td class="px-4 py-3 whitespace-nowrap">
                                 @if($approval->change_type === 'create')
                                     <span class="inline-flex items-center px-2 py-1 rounded text-xs font-semibold bg-green-100 text-green-800">
                                         CREATE
@@ -90,115 +114,158 @@
                                     <span class="inline-flex items-center px-2 py-1 rounded text-xs font-semibold bg-red-100 text-red-800">
                                         DELETE
                                     </span>
+                                @elseif($approval->change_type === 'costs')
+                                    <span class="inline-flex items-center px-2 py-1 rounded text-xs font-semibold bg-blue-100 text-blue-800">
+                                        COSTS
+                                    </span>
+                                @else
+                                    <span class="inline-flex items-center px-2 py-1 rounded text-xs font-semibold bg-yellow-100 text-yellow-800">
+                                        UPDATE
+                                    </span>
                                 @endif
-                            </div>
-                            
-                            <div class="mt-1 flex items-center space-x-4 text-sm text-gray-500">
+                            </td>
+
+                            {{-- Details --}}
+                            <td class="px-4 py-3 text-sm text-gray-900 max-w-xs">
                                 @if($approval->approval_type === 'land')
                                     @if($approval->change_type != 'create')
-                                    <span>{{ $approval->land->lokasi_lahan ?? 'N/A' }}</span>
+                                        <div class="truncate" title="{{ $approval->land->lokasi_lahan ?? 'N/A' }}">
+                                            {{ $approval->land->lokasi_lahan ?? 'N/A' }}
+                                        </div>
+                                    @else
+                                        <span class="text-gray-500 italic">New land entry</span>
                                     @endif
                                 @else
-                                    <span>{{ $approval->soil->nama_penjual ?? 'N/A' }} - {{ $approval->soil->letak_tanah ?? 'N/A' }}</span>
-                                @endif
-                                @if($approval->change_type != 'create')
-                                <span>•</span>
-                                @endif
-                                <span>Requested by: {{ $approval->requestedBy->name }}</span>
-                                <span>•</span>
-                                <span>{{ $approval->created_at->diffForHumans() }}</span>
-                            </div>
-                        </div>
-                        
-                        <button 
-                            wire:click="toggleDetails('{{ $approval->unique_id }}')"
-                            class="inline-flex items-center px-3 py-1.5 border border-gray-300 text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50">
-                            {{ isset($showDetails[$approval->unique_id]) && $showDetails[$approval->unique_id] ? 'Hide' : 'Show' }} Details
-                        </button>
-                    </div>
-                </div>
-
-                {{-- Details --}}
-                @if (isset($showDetails[$approval->unique_id]) && $showDetails[$approval->unique_id])
-                    <div class="px-4 py-3 border-b border-gray-200">
-                        <h4 class="text-sm font-medium text-gray-900 mb-3">Proposed Changes:</h4>
-                        
-                        @php $details = $this->getChangeDetails($approval);@endphp
-                        
-                        @if($approval->change_type === 'costs' && $approval->approval_type === 'soil')
-                            @php $changes = $this->getSoilCostChangeDetails($approval); @endphp
-                            @php $summary = $this->getCostChangeSummary($approval); @endphp
-                            @php $totals = $this->getCostDifference($approval); @endphp
-                            
-                            <div class="mt-4 p-4 bg-gray-50 rounded">
-                                <h4 class="font-medium">Cost Changes Summary:</h4>
-                                <p class="text-sm text-gray-600 mt-2">
-                                    {{ $summary['added'] }} added, {{ $summary['modified'] }} modified, {{ $summary['deleted'] }} deleted
-                                </p>
-                                <p class="text-sm text-gray-600">
-                                    Total change: {{ $totals['difference'] }}
-                                </p>
-                                
-                                @foreach($changes as $change)
-                                    <div class="mt-3 p-2 border-l-4 
-                                        @if($change['type'] === 'added') border-green-400 bg-green-50
-                                        @elseif($change['type'] === 'modified') border-yellow-400 bg-yellow-50
-                                        @else border-red-400 bg-red-50 @endif">
-                                        
-                                        <strong>{{ ucfirst($change['type']) }}:</strong> {{ $change['description'] }}
-                                        
-                                        @if($change['type'] === 'modified')
-                                            @foreach($change['changes'] as $field => $values)
-                                                <br><small>{{ ucfirst($field) }}: {{ $values['old'] }} → {{ $values['new'] }}</small>
-                                            @endforeach
-                                        @else
-                                            <br><small>{{ $change['cost_type'] ?? '' }} - {{ $change['amount'] ?? '' }} ({{ $change['date_cost'] ?? '' }})</small>
-                                        @endif
+                                    <div class="truncate" title="{{ $approval->soil->nama_penjual ?? 'N/A' }} - {{ $approval->soil->letak_tanah ?? 'N/A' }}">
+                                        {{ $approval->soil->nama_penjual ?? 'N/A' }} - {{ $approval->soil->letak_tanah ?? 'N/A' }}
                                     </div>
-                                @endforeach
-                            </div>
-                        @else
-                            <div class="space-y-2">
-                                @foreach ($details as $detail)
-                                    <div class="flex items-start space-x-4 text-sm">
-                                        <span class="font-medium text-gray-700 w-32 flex-shrink-0">{{ $detail['field'] }}:</span>
-                                        @if(isset($detail['old']) && isset($detail['new']))
-                                            <div class="flex-1">
-                                                <span class="text-red-600 line-through">{{ $detail['old'] }}</span>
-                                                <span class="mx-2">→</span>
-                                                <span class="text-green-600 font-medium">{{ $detail['new'] }}</span>
+                                @endif
+                            </td>
+
+                            {{-- Requested By --}}
+                            <td class="px-4 py-3 whitespace-nowrap text-sm text-gray-500">
+                                {{ $approval->requestedBy->name }}
+                            </td>
+
+                            {{-- Date --}}
+                            <td class="px-4 py-3 whitespace-nowrap text-sm text-gray-500">
+                                {{ $approval->created_at->diffForHumans() }}
+                            </td>
+
+                            {{-- Actions --}}
+                            <td class="px-4 py-3 whitespace-nowrap text-center text-sm font-medium">
+                                <div class="flex items-center justify-center space-x-2">
+                                    <button 
+                                        wire:click="toggleDetails('{{ $approval->unique_id }}')"
+                                        class="text-indigo-600 hover:text-indigo-900"
+                                        title="View Details">
+                                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/>
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"/>
+                                        </svg>
+                                    </button>
+                                    <button 
+                                        wire:click="showRejectModal('{{ $approval->unique_id }}')"
+                                        class="text-red-600 hover:text-red-900"
+                                        title="Reject">
+                                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
+                                        </svg>
+                                    </button>
+                                </div>
+                            </td>
+                        </tr>
+
+                        {{-- Expandable Details Row --}}
+                        @if (isset($showDetails[$approval->unique_id]) && $showDetails[$approval->unique_id])
+                            <tr>
+                                <td colspan="8" class="px-4 py-4 bg-gray-50">
+                                    <div class="text-sm">
+                                        <h4 class="font-medium text-gray-900 mb-3">Proposed Changes:</h4>
+                                        
+                                        @php $details = $this->getChangeDetails($approval);@endphp
+                                        
+                                        @if($approval->change_type === 'costs' && $approval->approval_type === 'soil')
+                                            @php $changes = $this->getSoilCostChangeDetails($approval); @endphp
+                                            @php $summary = $this->getCostChangeSummary($approval); @endphp
+                                            @php $totals = $this->getCostDifference($approval); @endphp
+                                            
+                                            <div class="mt-2 p-4 bg-white rounded border border-gray-200">
+                                                <h5 class="font-medium text-gray-900">Cost Changes Summary:</h5>
+                                                <p class="text-sm text-gray-600 mt-2">
+                                                    {{ $summary['added'] }} added, {{ $summary['modified'] }} modified, {{ $summary['deleted'] }} deleted
+                                                </p>
+                                                <p class="text-sm text-gray-600">
+                                                    Total change: {{ $totals['difference'] }}
+                                                </p>
+                                                
+                                                <div class="mt-3 space-y-2">
+                                                    @foreach($changes as $change)
+                                                        <div class="p-2 border-l-4 
+                                                            @if($change['type'] === 'added') border-green-400 bg-green-50
+                                                            @elseif($change['type'] === 'modified') border-yellow-400 bg-yellow-50
+                                                            @else border-red-400 bg-red-50 @endif">
+                                                            
+                                                            <strong>{{ ucfirst($change['type']) }}:</strong> {{ $change['description'] }}
+                                                            
+                                                            @if($change['type'] === 'modified')
+                                                                @foreach($change['changes'] as $field => $values)
+                                                                    <br><small>{{ ucfirst($field) }}: {{ $values['old'] }} → {{ $values['new'] }}</small>
+                                                                @endforeach
+                                                            @else
+                                                                <br><small>{{ $change['cost_type'] ?? '' }} - {{ $change['amount'] ?? '' }} ({{ $change['date_cost'] ?? '' }})</small>
+                                                            @endif
+                                                        </div>
+                                                    @endforeach
+                                                </div>
                                             </div>
                                         @else
-                                            <span class="text-gray-600">{{ $detail['value'] }}</span>
+                                            <div class="bg-white rounded border border-gray-200 overflow-hidden">
+                                                <table class="min-w-full divide-y divide-gray-200">
+                                                    <thead class="bg-gray-100">
+                                                        <tr>
+                                                            <th class="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">Field</th>
+                                                            @if(isset($details[0]['old']) && isset($details[0]['new']))
+                                                                <th class="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">Old Value</th>
+                                                                <th class="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">New Value</th>
+                                                            @else
+                                                                <th class="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">Value</th>
+                                                            @endif
+                                                        </tr>
+                                                    </thead>
+                                                    <tbody class="divide-y divide-gray-200">
+                                                        @foreach ($details as $detail)
+                                                            <tr>
+                                                                <td class="px-4 py-2 text-sm font-medium text-gray-700">{{ $detail['field'] }}</td>
+                                                                @if(isset($detail['old']) && isset($detail['new']))
+                                                                    <td class="px-4 py-2 text-sm text-red-600 line-through">{{ $detail['old'] }}</td>
+                                                                    <td class="px-4 py-2 text-sm text-green-600 font-medium">{{ $detail['new'] }}</td>
+                                                                @else
+                                                                    <td colspan="2" class="px-4 py-2 text-sm text-gray-600">{{ $detail['value'] }}</td>
+                                                                @endif
+                                                            </tr>
+                                                        @endforeach
+                                                    </tbody>
+                                                </table>
+                                            </div>
                                         @endif
                                     </div>
-                                @endforeach
-                            </div>
+                                </td>
+                            </tr>
                         @endif
-                    </div>
-                @endif
-
-                {{-- Actions --}}
-                <div class="px-4 py-3 bg-gray-50 rounded-b-lg">
-                    <div class="flex justify-end space-x-2">
-                        <button 
-                            wire:click="showRejectModal('{{ $approval->unique_id }}')"
-                            class="inline-flex items-center px-3 py-1.5 border border-transparent text-sm font-medium rounded-md text-white bg-red-600 hover:bg-red-700">
-                            Reject
-                        </button>
-                    </div>
-                </div>
-            </div>
-        @empty
-            <div class="text-center py-8">
-                <svg class="mx-auto h-12 w-12 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/>
-                </svg>
-                <h3 class="mt-2 text-sm font-medium text-gray-900">No pending approvals</h3>
-                <p class="mt-1 text-sm text-gray-500">All changes have been processed.</p>
-            </div>
-        @endforelse
-    </div>
+                    @endforeach
+                </tbody>
+            </table>
+        </div>
+    @else
+        <div class="text-center py-12 bg-white rounded-lg shadow-sm">
+            <svg class="mx-auto h-12 w-12 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/>
+            </svg>
+            <h3 class="mt-2 text-sm font-medium text-gray-900">No pending approvals</h3>
+            <p class="mt-1 text-sm text-gray-500">All changes have been processed.</p>
+        </div>
+    @endif
 
     {{-- Rejection Modal --}}
     @if ($showRejectionModal)

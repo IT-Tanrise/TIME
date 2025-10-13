@@ -79,278 +79,259 @@
                 </div>
             </div>
         @endif
+
         <div class="bg-white shadow rounded-lg">
-            <div class="px-6 py-4 border-b border-gray-200">
-                <div class="flex justify-between items-center">
-                    <div class="flex items-center space-x-3">
+            <!-- Compact Header -->
+            <div class="px-4 py-3 border-b border-gray-200">
+                <div class="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-3">
+                    <!-- Title Section -->
+                    <div class="flex items-center gap-2">
                         <button onclick="history.back()" 
-                                class="inline-flex items-center px-2 py-2 bg-gray-600 border border-transparent rounded-lg font-medium text-xs text-white hover:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-gray-500 focus:ring-offset-2 transition ease-in-out duration-150 mr-2">
-                            <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                class="inline-flex items-center p-1.5 bg-gray-600 rounded-lg text-white hover:bg-gray-700 transition">
+                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18"/>
                             </svg>
-                            Back
                         </button>
-                        <h1 class="text-xl font-semibold text-gray-900">
-                            Lands
+                        <div>
+                            <h1 class="text-lg font-semibold text-gray-900">Lands</h1>
                             @if($businessUnit)
-                                <span class="text-base text-blue-600 font-normal">- <a href="{{ route('business-units', ['view' => 'show', 'id' => $businessUnit->id]) }}" class="hover:text-blue-800">{{ $businessUnit->name }} ({{ $businessUnit->code }})</a></span>
+                                <a href="{{ route('business-units', ['view' => 'show', 'id' => $businessUnit->id]) }}" 
+                                   class="text-xs text-blue-600 hover:text-blue-800">
+                                    {{ $businessUnit->name }} ({{ $businessUnit->code }})
+                                </a>
                             @endif
-                        </h2>
-                    </div>    
-                    <div class="flex space-x-3">
+                        </div>
+                    </div>
+
+                    <!-- Action Buttons -->
+                    <div class="flex gap-2">
                         @if($businessUnit)
                             <button wire:click="clearBusinessUnitFilter" 
-                                    class="bg-gray-500 hover:bg-gray-600 text-white font-bold py-2 px-4 rounded">
-                                Show All Lands
+                                    class="px-3 py-1.5 bg-gray-500 hover:bg-gray-600 text-white text-xs font-medium rounded-lg transition">
+                                Show All
                             </button>
                         @endif
-                        <button wire:click="showCreateForm" class="bg-blue-500 text-xs hover:bg-blue-700 text-white font-bold py-2 px-4 rounded">
-                            Add New
+                        <button wire:click="showCreateForm" 
+                                class="px-3 py-1.5 bg-blue-500 hover:bg-blue-600 text-white text-xs font-medium rounded-lg transition">
+                                + Add New
                         </button>
                     </div>
                 </div>
 
-                <!-- Filters and Search -->
+                <!-- Compact Filters -->
                 @if(!$this->isFiltered())
-                <div class="mt-3 grid grid-cols-1 md:grid-cols-5 gap-3">
-                    <!-- Search -->
-                    <div>
-                        <label for="search" class="block text-sm font-medium text-gray-700">Search</label>
+                <div class="mt-3 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-6 gap-2">
+                    <div class="lg:col-span-2">
                         <input type="text" 
                                wire:model.live="search" 
-                               id="search"
-                               placeholder="Search by location, city, status..."
-                               class="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 sm:text-sm">
+                               placeholder="Search location, city, status..."
+                               class="w-full px-3 py-1.5 text-sm border-gray-300 rounded-lg focus:ring-blue-500 focus:border-blue-500">
                     </div>
-                    <!-- City/ Regency Filter -->
                     <div>
-                        <label for="filterKotaKabupaten" class="block text-sm font-medium text-gray-700">City/ Regency</label>
                         <select wire:model.live="filterKotaKabupaten" 
-                                id="filterKotaKabupaten"
-                                class="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 sm:text-sm">
-                            <option value="">All Cities/Regencies</option>
+                                class="w-full px-3 py-1.5 text-sm border-gray-300 rounded-lg focus:ring-blue-500 focus:border-blue-500">
+                            <option value="">All Cities</option>
                             @foreach($kotaKabupaten as $kota)
                                 <option value="{{ $kota }}">{{ $kota }}</option>
                             @endforeach
                         </select>
                     </div>
-                    <!-- Business Unit Filter -->
                     <div>
-                        <label for="filterBusinessUnit" class="block text-sm font-medium text-gray-700">Business Unit</label>
                         <select wire:model.live="filterBusinessUnit" 
-                                id="filterBusinessUnit"
-                                class="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 sm:text-sm">
-                            <option value="">All Business Units</option>
+                                class="w-full px-3 py-1.5 text-sm border-gray-300 rounded-lg focus:ring-blue-500 focus:border-blue-500">
+                            <option value="">All Units</option>
                             @foreach($businessUnits as $unit)
                                 <option value="{{ $unit->id }}">{{ $unit->name }}</option>
                             @endforeach
                         </select>
                     </div>
-
-                    <!-- Status Filter -->
                     <div>
-                        <label for="filterStatus" class="block text-sm font-medium text-gray-700">Status</label>
                         <select wire:model.live="filterStatus" 
-                                id="filterStatus"
-                                class="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 sm:text-sm">
-                            <option value="">All Statuses</option>
+                                class="w-full px-3 py-1.5 text-sm border-gray-300 rounded-lg focus:ring-blue-500 focus:border-blue-500">
+                            <option value="">All Status</option>
                             @foreach($statuses as $status)
                                 <option value="{{ $status }}">{{ $status }}</option>
                             @endforeach
                         </select>
                     </div>
-
-                    <!-- Reset Filters -->
-                    <div class="flex items-end">
+                    <div>
                         <button wire:click="resetFilters" 
-                                class="w-full px-4 py-2 bg-gray-500 border border-transparent rounded-md font-semibold text-xs text-white uppercase tracking-widest hover:bg-gray-600 focus:outline-none focus:border-gray-700 focus:shadow-outline-gray active:bg-gray-600 transition ease-in-out duration-150">
-                            Reset Filters
+                                class="w-full px-3 py-1.5 bg-gray-500 hover:bg-gray-600 text-white text-xs font-medium rounded-lg transition">
+                            Reset
                         </button>
                     </div>
                 </div>
                 @else
-                <div class="mt-3 flex justify-between items-center">
+                <div class="mt-3 flex items-center gap-2">
                     <input wire:model.live="search" 
                            type="text" 
-                           placeholder="Search by location, city, status..." 
-                           class="w-full md:w-64 px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-blue-500 focus:border-blue-500">
+                           placeholder="Search..." 
+                           class="flex-1 px-3 py-1.5 text-sm border-gray-300 rounded-lg focus:ring-blue-500 focus:border-blue-500">
                     @if($businessUnit)
-                        <div class="ml-4 flex items-center">
-                            <span class="bg-blue-100 text-blue-800 px-3 py-1 rounded-full text-sm">
-                                Filtered by: {{ $businessUnit->name }}
-                            </span>
-                        </div>
+                        <span class="bg-blue-100 text-blue-800 px-3 py-1 rounded-full text-xs font-medium whitespace-nowrap">
+                            {{ $businessUnit->name }}
+                        </span>
                     @endif
                 </div>
                 @endif
             </div>
 
-            <div class="p-6">
-                {{-- Lands Table --}}
-                <div class="overflow-x-auto">
-                    <table class="min-w-full divide-y divide-gray-200">
-                        <thead class="bg-gray-50">
-                            <tr>
-                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Location</th>
-                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Business Units</th>
-                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">City/Regency</th>
-                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Year</th>
-                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Total Soil Price</th>
-                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Total Soil Area</th>
-                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Avg Price/m²</th>
-                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
-                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Related</th>
-                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
-                            </tr>
-                        </thead>
-                        <tbody class="bg-white divide-y divide-gray-200">
-                            @forelse ($lands as $land)
-                                @php
-                                    // Calculate total additional costs for all soils in this land
-                                    $totalAdditionalCosts = $land->soils->sum(function($soil) {
-                                        return $soil->biayaTambahanSoils->sum('harga');
-                                    });
-                                @endphp
-                                <tr class="hover:bg-gray-50">
-                                    <td class="px-6 py-4 whitespace-nowrap">
-                                        <div class="text-sm font-medium text-gray-900">{{ $land->lokasi_lahan }}</div>
-                                        @if($land->alamat)
-                                            <div class="text-sm text-gray-500">{{ Str::limit($land->alamat, 50) }}</div>
-                                        @endif
-                                    </td>
-                                    <td class="px-6 py-4">
-                                        @if($land->businessUnit)
-                                            <div class="text-sm text-gray-900">
-                                                <span class="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
-                                                    {{ $land->businessUnit->code }}
-                                                </span>
-                                            </div>
-                                        @else
-                                            <span class="text-sm text-gray-400">No business unit</span>
-                                        @endif
-                                    </td>
-                                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                                        {{ $land->kota_kabupaten ?? '-' }}
-                                    </td>
-                                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                                        {{ $land->tahun_perolehan }}
-                                    </td>
-                                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                                        @if($land->total_soil_price > 0)
-                                            {{ $land->formatted_total_soil_price }}
-                                        @else
-                                            <span class="text-gray-400">Rp 0</span>
-                                            @if($land->soils_count == 0)
-                                                <div class="text-xs text-red-500">No soils</div>
-                                            @endif
-                                        @endif
-                                        @if($totalAdditionalCosts > 0)
-                                            <div class="font-medium text-blue-900">
-                                                + Rp {{ number_format($totalAdditionalCosts, 0, ',', '.') }}
-                                            </div>
-                                            @if($land->soils_count > 0)
-                                                <div class="text-xs text-gray-500">
-                                                    from {{ $land->soils_count }} soil(s)
-                                                </div>
-                                            @endif
-                                        @else
-                                            <span class="text-gray-400">+ Rp 0</span>
-                                        @endif
-                                    </td>
-                                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                                        @if($land->total_soil_area > 0)
-                                            {{ $land->formatted_total_soil_area }}
-                                        @else
-                                            <span class="text-gray-400">No soils</span>
-                                        @endif
-                                    </td>
-                                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                                        @if($land->total_soil_area > 0)
-                                            {{ $land->formatted_average_price_per_m2 }}
-                                        @else
-                                            <span class="text-gray-400">-</span>
-                                        @endif
-                                    </td>
-                                    <td class="px-6 py-4 whitespace-nowrap">
-                                        <span class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full
-                                            @if($land->status === 'Available') bg-green-100 text-green-800
-                                            @elseif($land->status === 'Reserved') bg-yellow-100 text-yellow-800
-                                            @elseif($land->status === 'Sold') bg-red-100 text-red-800
-                                            @elseif($land->status === 'Development') bg-blue-100 text-blue-800
-                                            @else bg-gray-100 text-gray-800
-                                            @endif">
-                                            {{ $land->status }}
+            <!-- Compact Table -->
+            <div class="overflow-x-auto">
+                <table class="min-w-full divide-y divide-gray-200">
+                    <thead class="bg-gray-50">
+                        <tr>
+                            <th class="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase">Location</th>
+                            <th class="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase">BU</th>
+                            <th class="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase">City</th>
+                            <th class="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase">Year</th>
+                            <th class="px-3 py-2 text-right text-xs font-medium text-gray-500 uppercase">Price</th>
+                            <th class="px-3 py-2 text-right text-xs font-medium text-gray-500 uppercase">Area</th>
+                            <th class="px-3 py-2 text-right text-xs font-medium text-gray-500 uppercase">Price/m²</th>
+                            <th class="px-3 py-2 text-center text-xs font-medium text-gray-500 uppercase">Status</th>
+                            <th class="px-3 py-2 text-center text-xs font-medium text-gray-500 uppercase">Related</th>
+                            <th class="px-3 py-2 text-center text-xs font-medium text-gray-500 uppercase">Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody class="bg-white divide-y divide-gray-200">
+                        @forelse ($lands as $land)
+                            @php
+                                $totalAdditionalCosts = $land->soils->sum(function($soil) {
+                                    return $soil->biayaTambahanSoils->sum('harga');
+                                });
+                            @endphp
+                            <tr class="hover:bg-gray-50">
+                                <td class="px-3 py-2">
+                                    <div class="text-sm font-medium text-gray-900">{{ $land->lokasi_lahan }}</div>
+                                    @if($land->alamat)
+                                        <div class="text-xs text-gray-500">{{ Str::limit($land->alamat, 40) }}</div>
+                                    @endif
+                                </td>
+                                <td class="px-3 py-2">
+                                    @if($land->businessUnit)
+                                        <span class="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-blue-100 text-blue-800">
+                                            {{ $land->businessUnit->code }}
                                         </span>
-                                    </td>
-                                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                                        <div class="flex space-x-1">
-                                            @if($land->soils_count > 0)
-                                                <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">
-                                                    {{ $land->soils_count }} Soils
-                                                </span>
-                                            @endif
-                                            @if($land->projects_count > 0)
-                                                <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
-                                                    {{ $land->projects_count }} Projects
-                                                </span>
-                                            @endif
-                                        </div>
-                                    </td>
-                                    <td class="px-6 py-4 whitespace-nowrap text-sm font-medium">
-                                        <div class="flex space-x-3">
-                                            <button wire:click="showDetail({{ $land->id }})" 
-                                                    title="View"
-                                                    class="text-blue-600 hover:text-blue-900 transition-colors">
-                                                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path>
-                                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"></path>
-                                                </svg>
-                                            </button>
-                                            @can('lands.edit')
-                                            <button wire:click="showEditForm({{ $land->id }})" 
-                                                    title="Edit"
-                                                    class="text-indigo-600 hover:text-indigo-900 transition-colors">
-                                                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"></path>
-                                                </svg>
-                                            </button>
-                                            @endcan
-                                            @can('lands.delete')
-                                            <button wire:click="confirmDelete({{ $land->id }})" 
-                                                title="Delete"
-                                                class="text-red-600 hover:text-red-900 transition-colors">
-                                                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path>
-                                                </svg>
-                                            </button>
-                                            @endcan
-                                        </div>
-                                    </td>
-                                </tr>
-                            @empty
-                                <tr>
-                                    <td colspan="11" class="px-6 py-4 whitespace-nowrap text-sm text-gray-500 text-center">
-                                        @if($this->isFiltered())
-                                            No lands found for business unit "{{ $this->getCurrentBusinessUnitName() }}".
-                                        @elseif($search || $filterBusinessUnit || $filterStatus || $filterKotaKabupaten)
-                                            No lands found matching the selected filters.
-                                        @else
-                                            No lands found.
+                                    @else
+                                        <span class="text-xs text-gray-400">-</span>
+                                    @endif
+                                </td>
+                                <td class="px-3 py-2 text-sm text-gray-900">
+                                    {{ $land->kota_kabupaten ?? '-' }}
+                                </td>
+                                <td class="px-3 py-2 text-sm text-gray-900">
+                                    {{ $land->tahun_perolehan }}
+                                </td>
+                                <td class="px-3 py-2 text-right">
+                                    @if($land->total_soil_price > 0)
+                                        <div class="text-sm font-medium text-gray-900">{{ $land->formatted_total_soil_price }}</div>
+                                    @else
+                                        <div class="text-xs text-gray-400">Rp 0</div>
+                                    @endif
+                                    @if($totalAdditionalCosts > 0)
+                                        <div class="text-xs text-blue-700">+{{ number_format($totalAdditionalCosts, 0, ',', '.') }}</div>
+                                    @endif
+                                </td>
+                                <td class="px-3 py-2 text-right text-sm text-gray-900">
+                                    @if($land->total_soil_area > 0)
+                                        {{ $land->formatted_total_soil_area }}
+                                    @else
+                                        <span class="text-xs text-gray-400">-</span>
+                                    @endif
+                                </td>
+                                <td class="px-3 py-2 text-right text-sm text-gray-900">
+                                    @if($land->total_soil_area > 0)
+                                        {{ $land->formatted_average_price_per_m2 }}
+                                    @else
+                                        <span class="text-xs text-gray-400">-</span>
+                                    @endif
+                                </td>
+                                <td class="px-3 py-2 text-center">
+                                    <span class="inline-flex px-2 py-0.5 text-xs font-medium rounded-full
+                                        @if($land->status === 'Available') bg-green-100 text-green-800
+                                        @elseif($land->status === 'Reserved') bg-yellow-100 text-yellow-800
+                                        @elseif($land->status === 'Sold') bg-red-100 text-red-800
+                                        @elseif($land->status === 'Development') bg-blue-100 text-blue-800
+                                        @else bg-gray-100 text-gray-800
+                                        @endif">
+                                        {{ $land->status }}
+                                    </span>
+                                </td>
+                                <td class="px-3 py-2">
+                                    <div class="flex flex-wrap gap-1 justify-center">
+                                        @if($land->soils_count > 0)
+                                            <span class="inline-flex items-center px-1.5 py-0.5 rounded text-xs font-medium bg-green-100 text-green-800">
+                                                {{ $land->soils_count }}S
+                                            </span>
                                         @endif
-                                    </td>
-                                </tr>
-                            @endforelse
-                        </tbody>
-                    </table>
-                </div>
-
-                {{-- Pagination --}}
-                @if($lands->hasPages())
-                    <div class="mt-4">
-                        {{ $lands->links() }}
-                    </div>
-                @endif
+                                        @if($land->projects_count > 0)
+                                            <span class="inline-flex items-center px-1.5 py-0.5 rounded text-xs font-medium bg-blue-100 text-blue-800">
+                                                {{ $land->projects_count }}P
+                                            </span>
+                                        @endif
+                                    </div>
+                                </td>
+                                <td class="px-3 py-2">
+                                    <div class="flex items-center justify-center gap-2">
+                                        <button wire:click="showDetail({{ $land->id }})" 
+                                                title="View"
+                                                class="text-blue-600 hover:text-blue-900 p-1 hover:bg-blue-50 rounded transition">
+                                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path>
+                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"></path>
+                                            </svg>
+                                        </button>
+                                        @can('lands.edit')
+                                        <button wire:click="showEditForm({{ $land->id }})" 
+                                                title="Edit"
+                                                class="text-indigo-600 hover:text-indigo-900 p-1 hover:bg-indigo-50 rounded transition">
+                                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"></path>
+                                            </svg>
+                                        </button>
+                                        @endcan
+                                        @can('lands.delete')
+                                        <button wire:click="confirmDelete({{ $land->id }})" 
+                                            title="Delete"
+                                            class="text-red-600 hover:text-red-900 p-1 hover:bg-red-50 rounded transition">
+                                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path>
+                                            </svg>
+                                        </button>
+                                        @endcan
+                                    </div>
+                                </td>
+                            </tr>
+                        @empty
+                            <tr>
+                                <td colspan="10" class="px-6 py-8 text-center">
+                                    <div class="text-gray-400">
+                                        <svg class="mx-auto h-12 w-12 mb-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 13V6a2 2 0 00-2-2H6a2 2 0 00-2 2v7m16 0v5a2 2 0 01-2 2H6a2 2 0 01-2-2v-5m16 0h-2.586a1 1 0 00-.707.293l-2.414 2.414a1 1 0 01-.707.293h-3.172a1 1 0 01-.707-.293l-2.414-2.414A1 1 0 006.586 13H4"></path>
+                                        </svg>
+                                        <p class="text-sm font-medium">
+                                            @if($this->isFiltered())
+                                                No lands found for "{{ $this->getCurrentBusinessUnitName() }}"
+                                            @elseif($search || $filterBusinessUnit || $filterStatus || $filterKotaKabupaten)
+                                                No lands match your filters
+                                            @else
+                                                No lands available
+                                            @endif
+                                        </p>
+                                    </div>
+                                </td>
+                            </tr>
+                        @endforelse
+                    </tbody>
+                </table>
             </div>
+
+            <!-- Pagination -->
+            @if($lands->hasPages())
+                <div class="px-4 py-3 border-t border-gray-200">
+                    {{ $lands->links() }}
+                </div>
+            @endif
         </div>
     @endif
 </div>

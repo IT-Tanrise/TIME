@@ -8,213 +8,227 @@
 <?php $attributes = $attributes->except(\App\View\Components\AppLayout::ignoredParameterNames()); ?>
 <?php endif; ?>
 <?php $component->withAttributes([]); ?>
-    
-    <div class="py-4">
+    <div class="py-3">
         <div class="max-w-7xl mx-auto sm:px-6 lg:px-8">
             
-            <div class="bg-white shadow-xl sm:rounded-lg mb-8">
-                <div class="p-6 lg:p-8 bg-gradient-to-r from-blue-50 to-indigo-50 overflow-visible">
-                    <h1 class="text-2xl font-medium text-gray-900">
-                        Welcome, <?php echo e(auth()->user()->name); ?>!
-                    </h1>
-                    <!-- <p class="mt-6 text-gray-500 leading-relaxed">
-                        Last login <?php echo e(auth()->user()->formatted_last_login); ?> 
-                    </p> -->
-                    <?php if (\Illuminate\Support\Facades\Blade::check('role', 'Super Admin')): ?>
-                    <div class="flex items-center justify-between mb-6">
+            <div class="bg-gradient-to-r from-blue-50 to-indigo-50 shadow-sm sm:rounded-lg mb-4 p-4">
+                <div class="flex items-center justify-between">
+                    <div>
+                        <h1 class="text-lg font-bold text-gray-900">Welcome, <?php echo e(auth()->user()->name); ?>!</h1>
+                        <?php if (\Illuminate\Support\Facades\Blade::check('role', 'Super Admin')): ?>
                         <button 
                             onclick="toggleSection('rolePermission')" 
-                            class="flex items-center space-x-2 text-left w-full focus:outline-none group">
-                            <h2 class="text-xl font-semibold text-gray-900">
-                                Your role & permission
-                            </h2>
-                            <svg id="rolePermission-icon" class="w-5 h-5 text-gray-500 transform transition-transform duration-200" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            class="mt-1 text-xs text-blue-600 hover:text-blue-800 flex items-center">
+                            View role & permissions
+                            <svg id="rolePermission-icon" class="w-3 h-3 ml-1 transform transition-transform duration-200" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/>
                             </svg>
                         </button>
+                        <?php endif; ?>
                     </div>
-                    <div id="rolePermission-content" class="hidden">
-                        <p class="mt-6 text-gray-500 leading-relaxed">
-                            You are logged in!<br>Your current role(s):
-                            <?php $__currentLoopData = auth()->user()->roles; $__env->addLoop($__currentLoopData); foreach($__currentLoopData as $role): $__env->incrementLoopIndices(); $loop = $__env->getLastLoop(); ?>
-                                <span class="inline-block bg-blue-100 text-blue-800 text-sm px-2 py-1 rounded mr-1">
-                                    <?php echo e($role->name); ?>
+                    
+                    
+                    <?php if (app(\Illuminate\Contracts\Auth\Access\Gate::class)->any(['land-data.approval', 'soil-data.approval', 'soil-data-costs.approval'])): ?>
+                        <?php
+                            $totalLandPending = 0;
+                            $totalSoilPending = 0;
+                            
+                            if(auth()->user()->can('land-data.approval')) {
+                                $totalLandPending = App\Models\LandApproval::pending()->count();
+                            }
+                            
+                            if(auth()->user()->can('soil-data.approval')) {
+                                $totalSoilPending += App\Models\SoilApproval::pending()->whereIn('change_type', ['details', 'delete', 'create'])->count();
+                            }
+                            if(auth()->user()->can('soil-data-costs.approval')) {
+                                $totalSoilPending += App\Models\SoilApproval::pending()->where('change_type', 'costs')->count();
+                            }
+                            $totalPending = $totalLandPending + $totalSoilPending;
+                        ?>
+                        
+                        <?php if($totalPending > 0): ?>
+                            <button 
+                                onclick="toggleSection('pendingApprovals')"
+                                class="flex items-center space-x-2 px-4 py-2 bg-yellow-100 hover:bg-yellow-200 rounded-lg transition-colors">
+                                <svg class="w-5 h-5 text-yellow-600" fill="currentColor" viewBox="0 0 20 20">
+                                    <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm1-12a1 1 0 10-2 0v4a1 1 0 00.293.707l2.828 2.829a1 1 0 101.415-1.415L11 9.586V6z" clip-rule="evenodd"/>
+                                </svg>
+                                <div class="text-left">
+                                    <div class="text-xs text-yellow-800 font-medium">Pending Approvals</div>
+                                    <div class="text-lg font-bold text-yellow-900"><?php echo e($totalPending); ?></div>
+                                </div>
+                            </button>
+                        <?php endif; ?>
+                    <?php endif; ?>
+                </div>
 
-                                </span>
-                            <?php endforeach; $__env->popLoop(); $loop = $__env->getLastLoop(); ?>
-                        </p>
-                        <p class="mt-6 text-gray-500 leading-relaxed">
-                            Your current permission(s):
-                            <?php if(auth()->user()->getAllPermissions()->count() > 0): ?>
-                                <?php $__currentLoopData = auth()->user()->getAllPermissions(); $__env->addLoop($__currentLoopData); foreach($__currentLoopData as $permission): $__env->incrementLoopIndices(); $loop = $__env->getLastLoop(); ?>
-                                    <span class="inline-block bg-blue-100 text-blue-800 text-sm px-2 py-1 rounded mr-1 mt-2">
-                                        <?php echo e($permission->name); ?>
+                
+                <?php if (\Illuminate\Support\Facades\Blade::check('role', 'Super Admin')): ?>
+                <div id="rolePermission-content" class="hidden mt-3 pt-3 border-t border-blue-200">
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
+                        <div>
+                            <p class="text-xs font-medium text-gray-700 mb-1">Your Roles:</p>
+                            <div class="flex flex-wrap gap-1">
+                                <?php $__currentLoopData = auth()->user()->roles; $__env->addLoop($__currentLoopData); foreach($__currentLoopData as $role): $__env->incrementLoopIndices(); $loop = $__env->getLastLoop(); ?>
+                                    <span class="inline-block bg-blue-100 text-blue-800 text-xs px-2 py-0.5 rounded">
+                                        <?php echo e($role->name); ?>
 
                                     </span>
                                 <?php endforeach; $__env->popLoop(); $loop = $__env->getLastLoop(); ?>
-                            <?php else: ?>
-                                <span class="inline-block bg-blue-100 text-blue-800 text-sm px-2 py-1 rounded mr-1">No permissions available.</span>
+                            </div>
+                        </div>
+                        <div>
+                            <p class="text-xs font-medium text-gray-700 mb-1">Your Permissions:</p>
+                            <div class="flex flex-wrap gap-1 max-h-20 overflow-y-auto">
+                                <?php if(auth()->user()->getAllPermissions()->count() > 0): ?>
+                                    <?php $__currentLoopData = auth()->user()->getAllPermissions(); $__env->addLoop($__currentLoopData); foreach($__currentLoopData as $permission): $__env->incrementLoopIndices(); $loop = $__env->getLastLoop(); ?>
+                                        <span class="inline-block bg-blue-100 text-blue-800 text-xs px-2 py-0.5 rounded">
+                                            <?php echo e($permission->name); ?>
+
+                                        </span>
+                                    <?php endforeach; $__env->popLoop(); $loop = $__env->getLastLoop(); ?>
+                                <?php else: ?>
+                                    <span class="text-xs text-gray-500">No permissions available.</span>
+                                <?php endif; ?>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <?php endif; ?>
+            </div>
+
+            
+            <div class="bg-white shadow-sm sm:rounded-lg mb-4 p-4">
+                <h2 class="text-base font-bold text-gray-900 mb-3">Management Systems</h2>
+                
+                <div class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-2">
+                    
+                    <?php if (app(\Illuminate\Contracts\Auth\Access\Gate::class)->any(['lands.access', 'soils.access', 'ownerships.access'])): ?>
+                    <div class="relative">
+                        <button onclick="toggleMenu('adem')" class="w-full p-2 text-left flex items-center justify-between bg-blue-50 hover:bg-blue-100 rounded-lg transition-colors">
+                            <div class="flex items-center space-x-2">
+                                <div class="bg-blue-200 p-1.5 rounded">
+                                    <svg class="w-4 h-4 text-blue-700" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10"/>
+                                    </svg>
+                                </div>
+                                <div>
+                                    <h3 class="text-sm font-semibold text-gray-900">ADEM</h3>
+                                    <p class="text-xs text-gray-600">Asset Database</p>
+                                </div>
+                            </div>
+                            <svg id="adem-icon" class="w-4 h-4 text-gray-400 transform transition-transform duration-200" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/>
+                            </svg>
+                        </button>
+                        <div id="adem-menu" class="hidden absolute top-full left-0 right-0 mt-1 bg-white border border-gray-200 rounded-lg shadow-lg z-10 min-w-max">
+                            <?php if (app(\Illuminate\Contracts\Auth\Access\Gate::class)->check('ownerships.access')): ?>
+                            <a href="<?php echo e(route('partners.index')); ?>" class="block px-3 py-1.5 text-xs text-gray-700 hover:bg-blue-50 rounded-t-lg">🏢 Ownerships</a>
                             <?php endif; ?>
-                        </p>
+                            <?php if (app(\Illuminate\Contracts\Auth\Access\Gate::class)->check('lands.access')): ?>
+                            <button onclick="showBusinessUnitModal('lands')" class="w-full text-left px-3 py-1.5 text-xs text-gray-700 hover:bg-blue-50">🏞️ Lands</button>
+                            <?php endif; ?>
+                            <?php if (app(\Illuminate\Contracts\Auth\Access\Gate::class)->check('soils.access')): ?>
+                            <button onclick="showBusinessUnitModal('soils')" class="w-full text-left px-3 py-1.5 text-xs text-gray-700 hover:bg-blue-50 rounded-b-lg">🌱 Soils</button>
+                            <?php endif; ?>
+                        </div>
                     </div>
                     <?php endif; ?>
-                    <h2 class="text-2xl font-bold text-gray-900 mb-6">Management Systems</h2>
+
                     
-                    <div class="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-5 gap-3 pb-2">
-                        
-                        <?php if (app(\Illuminate\Contracts\Auth\Access\Gate::class)->any(['lands.access', 'soils.access', 'ownerships.access'])): ?>
-                        <div class="relative bg-white rounded-lg shadow-md hover:shadow-xl transition-shadow duration-300">
-                            <button onclick="toggleMenu('adem')" class="w-full p-4 text-left flex items-center justify-between hover:bg-gray-50 rounded-t-lg">
-                                <div class="flex items-center space-x-3">
-                                    <div class="bg-blue-100 p-2 rounded-lg">
-                                        <svg class="w-6 h-6 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10"/>
-                                        </svg>
-                                    </div>
-                                    <div>
-                                        <h3 class="font-semibold text-gray-900">ADEM</h3>
-                                        <p class="text-xs text-gray-500">Asset Database</p>
-                                    </div>
+                    <div class="relative">
+                        <button onclick="toggleMenu('risol')" class="w-full p-2 text-left flex items-center justify-between bg-green-50 hover:bg-green-100 rounded-lg transition-colors">
+                            <div class="flex items-center space-x-2">
+                                <div class="bg-green-200 p-1.5 rounded">
+                                    <svg class="w-4 h-4 text-green-700" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"/>
+                                    </svg>
                                 </div>
-                                <svg id="adem-icon" class="w-5 h-5 text-gray-400 transform transition-transform duration-200" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/>
-                                </svg>
-                            </button>
-                            <div id="adem-menu" class="hidden absolute top-full left-0 right-0 mt-1 bg-white border border-gray-200 rounded-lg shadow-lg z-10">
-                                <?php if (app(\Illuminate\Contracts\Auth\Access\Gate::class)->check('ownerships.access')): ?>
-                                <a href="<?php echo e(route('partners.index')); ?>" class="block px-6 py-2.5 text-sm text-gray-700 hover:bg-blue-50 hover:text-blue-600 transition-colors rounded-t-lg">
-                                    🏢 Ownerships
-                                </a>
-                                <?php endif; ?>
-                                
-                                <?php if (app(\Illuminate\Contracts\Auth\Access\Gate::class)->check('lands.access')): ?>
-                                <button onclick="showBusinessUnitModal('lands')" class="w-full text-left px-6 py-2.5 text-sm text-gray-700 hover:bg-blue-50 hover:text-blue-600 transition-colors">
-                                    🏞️ Lands
-                                </button>
-                                <?php endif; ?>
-                                
-                                <?php if (app(\Illuminate\Contracts\Auth\Access\Gate::class)->check('soils.access')): ?>
-                                <button onclick="showBusinessUnitModal('soils')" class="w-full text-left px-6 py-2.5 text-sm text-gray-700 hover:bg-blue-50 hover:text-blue-600 transition-colors rounded-b-lg">
-                                    🌱 Soils
-                                </button>
-                                <?php endif; ?>
+                                <div>
+                                    <h3 class="text-sm font-semibold text-gray-900">RISOL</h3>
+                                    <p class="text-xs text-gray-600">Rental</p>
+                                </div>
                             </div>
+                            <svg id="risol-icon" class="w-4 h-4 text-gray-400 transform transition-transform duration-200" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/>
+                            </svg>
+                        </button>
+                        <div id="risol-menu" class="hidden absolute top-full left-0 right-0 mt-1 bg-white border border-gray-200 rounded-lg shadow-lg z-10 min-w-max">
+                            <a href="<?php echo e(route('rents.lands')); ?>" class="block px-3 py-1.5 text-xs text-gray-700 hover:bg-green-50 rounded-t-lg">📋 Land Rentals</a>
+                            <a href="#" class="block px-3 py-1.5 text-xs text-gray-700 hover:bg-green-50">💰 Payment Tracking</a>
+                            <a href="#" class="block px-3 py-1.5 text-xs text-gray-700 hover:bg-green-50 rounded-b-lg">📅 Rental Schedule</a>
                         </div>
-                        <?php endif; ?>
+                    </div>
 
-                        
-                        <div class="relative bg-white rounded-lg shadow-md hover:shadow-xl transition-shadow duration-300">
-                            <button onclick="toggleMenu('risol')" class="w-full p-4 text-left flex items-center justify-between hover:bg-gray-50 rounded-t-lg">
-                                <div class="flex items-center space-x-3">
-                                    <div class="bg-green-100 p-2 rounded-lg">
-                                        <svg class="w-6 h-6 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"/>
-                                        </svg>
-                                    </div>
-                                    <div>
-                                        <h3 class="font-semibold text-gray-900">RISOL</h3>
-                                        <p class="text-xs text-gray-500">Rental Monitoring</p>
-                                    </div>
+                    
+                    <div class="relative">
+                        <button onclick="toggleMenu('emas')" class="w-full p-2 text-left flex items-center justify-between bg-yellow-50 hover:bg-yellow-100 rounded-lg transition-colors">
+                            <div class="flex items-center space-x-2">
+                                <div class="bg-yellow-200 p-1.5 rounded">
+                                    <svg class="w-4 h-4 text-yellow-700" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6"/>
+                                    </svg>
                                 </div>
-                                <svg id="risol-icon" class="w-5 h-5 text-gray-400 transform transition-transform duration-200" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/>
-                                </svg>
-                            </button>
-                            <div id="risol-menu" class="hidden absolute top-full left-0 right-0 mt-1 bg-white border border-gray-200 rounded-lg shadow-lg z-10">
-                                <a href="<?php echo e(route('rents.lands')); ?>" class="block px-6 py-2.5 text-sm text-gray-700 hover:bg-green-50 hover:text-green-600 transition-colors rounded-t-lg">
-                                    📋 Land Rentals
-                                </a>
-                                <a href="#" class="block px-6 py-2.5 text-sm text-gray-700 hover:bg-green-50 hover:text-green-600 transition-colors">
-                                    💰 Payment Tracking
-                                </a>
-                                <a href="#" class="block px-6 py-2.5 text-sm text-gray-700 hover:bg-green-50 hover:text-green-600 transition-colors rounded-b-lg">
-                                    📅 Rental Schedule
-                                </a>
+                                <div>
+                                    <h3 class="text-sm font-semibold text-gray-900">EMAS</h3>
+                                    <p class="text-xs text-gray-600">Estate</p>
+                                </div>
                             </div>
+                            <svg id="emas-icon" class="w-4 h-4 text-gray-400 transform transition-transform duration-200" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/>
+                            </svg>
+                        </button>
+                        <div id="emas-menu" class="hidden absolute top-full left-0 right-0 mt-1 bg-white border border-gray-200 rounded-lg shadow-lg z-10 min-w-max">
+                            <a href="#" class="block px-3 py-1.5 text-xs text-gray-700 hover:bg-yellow-50 rounded-t-lg">🏢 Property List</a>
+                            <a href="#" class="block px-3 py-1.5 text-xs text-gray-700 hover:bg-yellow-50 rounded-b-lg">🔧 Maintenance</a>
                         </div>
+                    </div>
 
-                        
-                        <div class="relative bg-white rounded-lg shadow-md hover:shadow-xl transition-shadow duration-300">
-                            <button onclick="toggleMenu('emas')" class="w-full p-4 text-left flex items-center justify-between hover:bg-gray-50 rounded-t-lg">
-                                <div class="flex items-center space-x-3">
-                                    <div class="bg-yellow-100 p-2 rounded-lg">
-                                        <svg class="w-6 h-6 text-yellow-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6"/>
-                                        </svg>
-                                    </div>
-                                    <div>
-                                        <h3 class="font-semibold text-gray-900">EMAS</h3>
-                                        <p class="text-xs text-gray-500">Estate Management</p>
-                                    </div>
+                    
+                    <div class="relative">
+                        <button onclick="toggleMenu('dots')" class="w-full p-2 text-left flex items-center justify-between bg-purple-50 hover:bg-purple-100 rounded-lg transition-colors">
+                            <div class="flex items-center space-x-2">
+                                <div class="bg-purple-200 p-1.5 rounded">
+                                    <svg class="w-4 h-4 text-purple-700" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                                    </svg>
                                 </div>
-                                <svg id="emas-icon" class="w-5 h-5 text-gray-400 transform transition-transform duration-200" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/>
-                                </svg>
-                            </button>
-                            <div id="emas-menu" class="hidden absolute top-full left-0 right-0 mt-1 bg-white border border-gray-200 rounded-lg shadow-lg z-10">
-                                <a href="#" class="block px-6 py-2.5 text-sm text-gray-700 hover:bg-yellow-50 hover:text-yellow-600 transition-colors rounded-t-lg">
-                                    🏢 Property List
-                                </a>
-                                <a href="#" class="block px-6 py-2.5 text-sm text-gray-700 hover:bg-yellow-50 hover:text-yellow-600 transition-colors rounded-b-lg">
-                                    🔧 Maintenance
-                                </a>
+                                <div>
+                                    <h3 class="text-sm font-semibold text-gray-900">DOTS</h3>
+                                    <p class="text-xs text-gray-600">Deposito</p>
+                                </div>
                             </div>
+                            <svg id="dots-icon" class="w-4 h-4 text-gray-400 transform transition-transform duration-200" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/>
+                            </svg>
+                        </button>
+                        <div id="dots-menu" class="hidden absolute top-full left-0 right-0 mt-1 bg-white border border-gray-200 rounded-lg shadow-lg z-10 min-w-max">
+                            <a href="#" class="block px-3 py-1.5 text-xs text-gray-700 hover:bg-purple-50 rounded-t-lg">💵 Deposits List</a>
+                            <a href="#" class="block px-3 py-1.5 text-xs text-gray-700 hover:bg-purple-50 rounded-b-lg">📈 Interest Tracking</a>
                         </div>
+                    </div>
 
-                        
-                        <div class="relative bg-white rounded-lg shadow-md hover:shadow-xl transition-shadow duration-300">
-                            <button onclick="toggleMenu('dots')" class="w-full p-4 text-left flex items-center justify-between hover:bg-gray-50 rounded-t-lg">
-                                <div class="flex items-center space-x-3">
-                                    <div class="bg-purple-100 p-2 rounded-lg">
-                                        <svg class="w-6 h-6 text-purple-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
-                                        </svg>
-                                    </div>
-                                    <div>
-                                        <h3 class="font-semibold text-gray-900">DOTS</h3>
-                                        <p class="text-xs text-gray-500">Deposito Tracking</p>
-                                    </div>
+                    
+                    <div class="relative">
+                        <button onclick="toggleMenu('coms')" class="w-full p-2 text-left flex items-center justify-between bg-red-50 hover:bg-red-100 rounded-lg transition-colors">
+                            <div class="flex items-center space-x-2">
+                                <div class="bg-red-200 p-1.5 rounded">
+                                    <svg class="w-4 h-4 text-red-700" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4"/>
+                                    </svg>
                                 </div>
-                                <svg id="dots-icon" class="w-5 h-5 text-gray-400 transform transition-transform duration-200" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/>
-                                </svg>
-                            </button>
-                            <div id="dots-menu" class="hidden absolute top-full left-0 right-0 mt-1 bg-white border border-gray-200 rounded-lg shadow-lg z-10">
-                                <a href="#" class="block px-6 py-2.5 text-sm text-gray-700 hover:bg-purple-50 hover:text-purple-600 transition-colors rounded-t-lg">
-                                    💵 Deposits List
-                                </a>
-                                <a href="#" class="block px-6 py-2.5 text-sm text-gray-700 hover:bg-purple-50 hover:text-purple-600 transition-colors rounded-b-lg">
-                                    📈 Interest Tracking
-                                </a>
-                            </div>
-                        </div>
-
-                        
-                        <div class="relative bg-white rounded-lg shadow-md hover:shadow-xl transition-shadow duration-300">
-                            <button onclick="toggleMenu('coms')" class="w-full p-4 text-left flex items-center justify-between hover:bg-gray-50 rounded-t-lg">
-                                <div class="flex items-center space-x-3">
-                                    <div class="bg-red-100 p-2 rounded-lg">
-                                        <svg class="w-6 h-6 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4"/>
-                                        </svg>
-                                    </div>
-                                    <div>
-                                        <h3 class="font-semibold text-gray-900">COMS</h3>
-                                        <p class="text-xs text-gray-500">Construction Management</p>
-                                    </div>
+                                <div>
+                                    <h3 class="text-sm font-semibold text-gray-900">COMS</h3>
+                                    <p class="text-xs text-gray-600">Construction</p>
                                 </div>
-                                <svg id="coms-icon" class="w-5 h-5 text-gray-400 transform transition-transform duration-200" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/>
-                                </svg>
-                            </button>
-                            <div id="coms-menu" class="hidden absolute top-full left-0 right-0 mt-1 bg-white border border-gray-200 rounded-lg shadow-lg z-10">
-                                <a href="<?php echo e(route('projects')); ?>" class="block px-6 py-2.5 text-sm text-gray-700 hover:bg-red-50 hover:text-red-600 transition-colors rounded-t-lg">
-                                    🗂️ Projects
-                                </a>
-                                <a href="#" class="block px-6 py-2.5 text-sm text-gray-700 hover:bg-red-50 hover:text-red-600 transition-colors rounded-b-lg">
-                                    👷 Contractors
-                                </a>
                             </div>
+                            <svg id="coms-icon" class="w-4 h-4 text-gray-400 transform transition-transform duration-200" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/>
+                            </svg>
+                        </button>
+                        <div id="coms-menu" class="hidden absolute top-full left-0 right-0 mt-1 bg-white border border-gray-200 rounded-lg shadow-lg z-10 min-w-max">
+                            <a href="<?php echo e(route('projects')); ?>" class="block px-3 py-1.5 text-xs text-gray-700 hover:bg-red-50 rounded-t-lg">🗂️ Projects</a>
+                            <a href="#" class="block px-3 py-1.5 text-xs text-gray-700 hover:bg-red-50 rounded-b-lg">👷 Contractors</a>
                         </div>
                     </div>
                 </div>
@@ -223,7 +237,6 @@
             
             <div id="businessUnitModal" class="hidden fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full z-50">
                 <div class="relative top-20 mx-auto p-5 border w-11/12 md:w-3/4 lg:w-1/2 shadow-lg rounded-md bg-white">
-                    
                     <div class="flex justify-between items-center mb-4">
                         <h3 class="text-lg font-semibold text-gray-900" id="modalTitle">Select Business Unit</h3>
                         <button onclick="closeBusinessUnitModal()" class="text-gray-400 hover:text-gray-600">
@@ -233,9 +246,7 @@
                         </button>
                     </div>
                     
-                    
                     <p class="text-sm text-gray-500 mb-4">Choose a business unit to view filtered data, or view all data</p>
-                    
                     
                     <div class="mb-4 relative">
                         <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
@@ -251,14 +262,12 @@
                             class="w-full pl-10 pr-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent">
                     </div>
                     
-                    
                     <div class="space-y-2 max-h-96 overflow-y-auto" id="businessUnitList">
                         <?php
                             $businessUnits = \App\Models\BusinessUnit::with('parent')->orderBy('name')->get();
                         ?>
                         
-                        
-                        <button onclick="navigateToModule('all')" class="business-unit-item w-full text-left px-4 py-3 bg-blue-50 hover:bg-blue-100 rounded-lg transition-colors border border-blue-200" data-search="view all data">
+                        <button onclick="navigateToModule('all')" class="business-unit-item w-full text-left px-2 py-1 bg-blue-50 hover:bg-blue-100 rounded-lg transition-colors border border-blue-200" data-search="view all data">
                             <div class="flex items-center">
                                 <svg class="w-5 h-5 text-blue-600 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 10h16M4 14h16M4 18h16"/>
@@ -267,30 +276,20 @@
                             </div>
                         </button>
                         
-                        
                         <?php $__currentLoopData = $businessUnits; $__env->addLoop($__currentLoopData); foreach($__currentLoopData as $unit): $__env->incrementLoopIndices(); $loop = $__env->getLastLoop(); ?>
-                        <button onclick="navigateToModule(<?php echo e($unit->id); ?>)" class="business-unit-item w-full text-left px-4 py-3 bg-gray-50 hover:bg-gray-100 rounded-lg transition-colors border border-gray-200" data-search="<?php echo e(strtolower($unit->name . ' ' . $unit->code)); ?>">
+                        <button onclick="navigateToModule(<?php echo e($unit->id); ?>)" class="business-unit-item w-full text-left px-2 py-1 bg-gray-50 hover:bg-gray-100 rounded-lg transition-colors border border-gray-200" data-search="<?php echo e(strtolower($unit->name . ' ' . $unit->code)); ?>">
                             <div class="flex items-center justify-between">
                                 <div class="flex items-center flex-1 min-w-0">
                                     <svg class="w-5 h-5 text-gray-600 mr-3 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4"/>
                                     </svg>
                                     <div class="flex-1 min-w-0">
-                                        <span class="font-medium text-gray-900 block"><?php echo e($unit->name); ?></span>
                                         <div class="flex items-center gap-2 mt-1">
                                             <span class="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-blue-100 text-blue-800">
                                                 <?php echo e($unit->code); ?>
 
                                             </span>
-                                            <?php if($unit->parent): ?>
-                                                <span class="text-xs text-gray-500 truncate">
-                                                    <svg class="w-3 h-3 inline mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 11l5-5m0 0l5 5m-5-5v12"/>
-                                                    </svg>
-                                                    <?php echo e($unit->parent->name); ?>
-
-                                                </span>
-                                            <?php endif; ?>
+                                            <span class="font-medium text-gray-900 block"><?php echo e($unit->name); ?></span>
                                         </div>
                                     </div>
                                 </div>
@@ -299,7 +298,6 @@
                         <?php endforeach; $__env->popLoop(); $loop = $__env->getLastLoop(); ?>
                     </div>
 
-                    
                     <div id="noResults" class="hidden text-center py-8">
                         <svg class="mx-auto h-12 w-12 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/>
@@ -312,63 +310,31 @@
 
             
             <?php if (app(\Illuminate\Contracts\Auth\Access\Gate::class)->any(['land-data.approval', 'soil-data.approval', 'soil-data-costs.approval'])): ?>
-                <div class="mt-8 bg-white overflow-hidden shadow-xl sm:rounded-lg">
-                    <div class="p-6 lg:p-8 bg-white">
-                        <div class="flex items-center justify-between mb-6">
-                            <button 
-                                onclick="toggleSection('pendingApprovals')" 
-                                class="flex items-center space-x-2 text-left w-full focus:outline-none group">
-                                <h2 class="text-xl font-semibold text-gray-900">
-                                    Pending Approvals
-                                </h2>
-                                <svg id="pendingApprovals-icon" class="w-5 h-5 text-gray-500 transform transition-transform duration-200" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/>
-                                </svg>
-                            </button>
+                <div class="bg-white shadow-sm sm:rounded-lg mb-4">
+                    <div class="p-4">
+                        <button 
+                            onclick="toggleSection('pendingApprovals')" 
+                            class="flex items-center justify-between w-full text-left group mb-3">
                             <div class="flex items-center space-x-2">
-                                <?php
-                                    $totalLandPending = 0;
-                                    $totalSoilPending = 0;
-                                    
-                                    if(auth()->user()->can('land-data.approval')) {
-                                        $totalLandPending = App\Models\LandApproval::pending()->count();
-                                    }
-                                    
-                                    if(auth()->user()->can('soil-data.approval')) {
-                                        $totalSoilPending += App\Models\SoilApproval::pending()->whereIn('change_type', ['details', 'delete', 'create'])->count();
-                                    }
-                                    if(auth()->user()->can('soil-data-costs.approval')) {
-                                        $totalSoilPending += App\Models\SoilApproval::pending()->where('change_type', 'costs')->count();
-                                    }
-                                ?>
-                                
-                                <?php if($totalLandPending > 0): ?>
-                                    <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-orange-100 text-orange-800"><?php echo e($totalLandPending); ?> Land</span>
-                                <?php endif; ?>
-                                <?php if($totalSoilPending > 0): ?>
-                                    <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-purple-100 text-purple-800"><?php echo e($totalSoilPending); ?> Soil</span>
+                                <h2 class="text-base font-bold text-gray-900">Pending Approvals</h2>
+                                <?php if($totalPending > 0): ?>
+                                    <span class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-yellow-100 text-yellow-800">
+                                        <?php echo e($totalPending); ?>
+
+                                    </span>
                                 <?php endif; ?>
                             </div>
-                        </div>
+                            <svg id="pendingApprovals-icon" class="w-4 h-4 text-gray-500 transform transition-transform duration-200" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/>
+                            </svg>
+                        </button>
 
                         <div id="pendingApprovals-content" class="hidden">
-                            <?php if($totalLandPending + $totalSoilPending > 0): ?>
-                                <div class="mb-4 p-4 bg-yellow-50 border-l-4 border-yellow-400">
-                                    <div class="flex">
-                                        <div class="flex-shrink-0">
-                                            <svg class="h-5 w-5 text-yellow-400" fill="currentColor" viewBox="0 0 20 20">
-                                                <path fill-rule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z" clip-rule="evenodd"/>
-                                            </svg>
-                                        </div>
-                                        <div class="ml-3">
-                                            <p class="text-sm text-yellow-700">
-                                                You have approval permissions. Changes require your review before being applied.
-                                            </p>
-                                        </div>
-                                    </div>
+                            <?php if($totalPending > 0): ?>
+                                <div class="mb-3 p-2 bg-yellow-50 border-l-4 border-yellow-400 text-xs text-yellow-700">
+                                    You have approval permissions. Changes require your review before being applied.
                                 </div>
                             <?php endif; ?>
-
                             <?php
 $__split = function ($name, $params = []) {
     return [$name, $params];
@@ -391,25 +357,19 @@ if (isset($__slots)) unset($__slots);
             <?php endif; ?>
 
             
-            <div class="mt-8 bg-white overflow-hidden shadow-xl sm:rounded-lg">
-                <div class="p-6 lg:p-8 bg-white">
-                    <div class="flex items-center justify-between mb-6">
-                        <button 
-                            onclick="toggleSection('recentActivity')" 
-                            class="flex items-center space-x-2 text-left w-full focus:outline-none group">
-                            <h2 class="text-xl font-semibold text-gray-900">
-                                Recent Approval Activity
-                            </h2>
-                            <svg id="recentActivity-icon" class="w-5 h-5 text-gray-500 transform transition-transform duration-200" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/>
-                            </svg>
-                        </button>
-                    </div>
+            <div class="bg-white shadow-sm sm:rounded-lg">
+                <div class="p-4">
+                    <button 
+                        onclick="toggleSection('recentActivity')" 
+                        class="flex items-center justify-between w-full text-left group mb-3">
+                        <h2 class="text-base font-bold text-gray-900">Recent Approval Activity</h2>
+                        <svg id="recentActivity-icon" class="w-4 h-4 text-gray-500 transform transition-transform duration-200" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/>
+                        </svg>
+                    </button>
 
-                    
                     <div id="recentActivity-content" class="hidden">
                         <?php
-                            // Get recent soil approval activities
                             $recentSoilApprovals = App\Models\SoilApproval::with(['soil.land', 'soil.businessUnit', 'requestedBy', 'approvedBy'])
                                 ->whereIn('status', ['approved', 'rejected'])
                                 ->where('updated_at', '>=', now()->subDays(30))
@@ -417,7 +377,6 @@ if (isset($__slots)) unset($__slots);
                                 ->limit(5)
                                 ->get();
                                 
-                            // Get recent land approval activities
                             $recentLandApprovals = App\Models\LandApproval::with(['land', 'requestedBy', 'approvedBy'])
                                 ->whereIn('status', ['approved', 'rejected'])
                                 ->where('updated_at', '>=', now()->subDays(30))
@@ -425,12 +384,10 @@ if (isset($__slots)) unset($__slots);
                                 ->limit(5)
                                 ->get();
                                 
-                            // Merge and sort by updated_at
                             $recentApprovals = $recentSoilApprovals->concat($recentLandApprovals)
                                 ->sortByDesc('updated_at')
                                 ->take(10);
                                 
-                            // Get user's pending approvals
                             $userPendingSoilApprovals = App\Models\SoilApproval::with(['soil.land', 'soil.businessUnit'])
                                 ->where('requested_by', auth()->id())
                                 ->where('status', 'pending')
@@ -450,189 +407,183 @@ if (isset($__slots)) unset($__slots);
                         ?>
 
                         <?php if($userPendingApprovals->count() > 0): ?>
-                            <div class="mb-6 p-4 bg-blue-50 border-l-4 border-blue-400">
-                                <div class="flex">
-                                    <div class="flex-shrink-0">
-                                        <svg class="h-5 w-5 text-blue-400" fill="currentColor" viewBox="0 0 20 20">
-                                            <path fill-rule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clip-rule="evenodd"/>
-                                        </svg>
-                                    </div>
-                                    <div class="ml-3">
-                                        <h3 class="text-sm font-medium text-blue-800">
-                                            Your Pending Approvals (<?php echo e($userPendingApprovals->count()); ?>)
-                                        </h3>
-                                        <div class="mt-2 text-sm text-blue-700">
-                                            <ul class="list-disc list-inside space-y-1">
-                                                <?php $__currentLoopData = $userPendingApprovals; $__env->addLoop($__currentLoopData); foreach($__currentLoopData as $approval): $__env->incrementLoopIndices(); $loop = $__env->getLastLoop(); ?>
-                                                    <li>
+                            <div class="mb-3 p-2 bg-blue-50 border-l-4 border-blue-400">
+                                <h3 class="text-xs font-medium text-blue-800 mb-2">
+                                    Your Pending Approvals (<?php echo e($userPendingApprovals->count()); ?>)
+                                </h3>
+                                <div class="overflow-x-auto">
+                                    <table class="min-w-full text-xs">
+                                        <thead class="bg-blue-100">
+                                            <tr>
+                                                <th class="px-2 py-1 text-left font-medium text-blue-800">Type</th>
+                                                <th class="px-2 py-1 text-left font-medium text-blue-800">Action</th>
+                                                <th class="px-2 py-1 text-left font-medium text-blue-800">Details</th>
+                                                <th class="px-2 py-1 text-left font-medium text-blue-800">Submitted</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody class="divide-y divide-blue-200 bg-white">
+                                            <?php $__currentLoopData = $userPendingApprovals; $__env->addLoop($__currentLoopData); foreach($__currentLoopData as $approval): $__env->incrementLoopIndices(); $loop = $__env->getLastLoop(); ?>
+                                                <tr>
+                                                    <td class="px-2 py-1 whitespace-nowrap">
                                                         <?php if($approval instanceof App\Models\LandApproval): ?>
-                                                            <span class="inline-flex items-center px-1.5 py-0.5 rounded text-xs font-medium bg-orange-100 text-orange-800 mr-1">
-                                                                LAND
-                                                            </span>
+                                                            <span class="inline-flex items-center px-1.5 py-0.5 rounded text-xs font-semibold bg-orange-100 text-orange-800">LAND</span>
                                                         <?php else: ?>
-                                                            <span class="inline-flex items-center px-1.5 py-0.5 rounded text-xs font-medium bg-purple-100 text-purple-800 mr-1">
-                                                                SOIL
-                                                            </span>
+                                                            <span class="inline-flex items-center px-1.5 py-0.5 rounded text-xs font-semibold bg-purple-100 text-purple-800">SOIL</span>
                                                         <?php endif; ?>
-                                                        
+                                                    </td>
+                                                    <td class="px-2 py-1 whitespace-nowrap">
                                                         <?php if($approval->change_type === 'create'): ?>
-                                                            <span class="inline-flex items-center px-1.5 py-0.5 rounded text-xs font-medium bg-green-100 text-green-800 mr-1">
-                                                                CREATE
-                                                            </span>
+                                                            <span class="inline-flex items-center px-1.5 py-0.5 rounded text-xs font-semibold bg-green-100 text-green-800">CREATE</span>
                                                         <?php elseif($approval->change_type === 'delete'): ?>
-                                                            <span class="inline-flex items-center px-1.5 py-0.5 rounded text-xs font-medium bg-red-100 text-red-800 mr-1">
-                                                                DELETE
-                                                            </span>
+                                                            <span class="inline-flex items-center px-1.5 py-0.5 rounded text-xs font-semibold bg-red-100 text-red-800">DELETE</span>
+                                                        <?php elseif($approval->change_type === 'costs'): ?>
+                                                            <span class="inline-flex items-center px-1.5 py-0.5 rounded text-xs font-semibold bg-blue-100 text-blue-800">COSTS</span>
+                                                        <?php else: ?>
+                                                            <span class="inline-flex items-center px-1.5 py-0.5 rounded text-xs font-semibold bg-yellow-100 text-yellow-800">UPDATE</span>
                                                         <?php endif; ?>
-                                                        
-                                                        <span class="font-medium text-gray-900">
-                                                            <?php if($approval instanceof App\Models\LandApproval): ?>
-                                                                <?php echo e($approval->land->lokasi_lahan ?? 'Land Record'); ?>
+                                                    </td>
+                                                    <td class="px-2 py-1 max-w-xs truncate">
+                                                        <?php if($approval instanceof App\Models\LandApproval): ?>
+                                                            <?php echo e($approval->land->lokasi_lahan ?? 'Land Record'); ?>
 
-                                                            <?php else: ?>
-                                                                <?php echo e($approval->soil->nama_penjual ?? 'Soil Record'); ?>
+                                                        <?php else: ?>
+                                                            <?php echo e($approval->soil->nama_penjual ?? 'Soil Record'); ?>
 
-                                                            <?php endif; ?>
-                                                        </span>
-                                                        (<?php echo e($approval->created_at->diffForHumans()); ?>)
-                                                    </li>
-                                                <?php endforeach; $__env->popLoop(); $loop = $__env->getLastLoop(); ?>
-                                            </ul>
-                                        </div>
-                                    </div>
+                                                        <?php endif; ?>
+                                                    </td>
+                                                    <td class="px-2 py-1 whitespace-nowrap text-gray-500">
+                                                        <?php echo e($approval->created_at->diffForHumans()); ?>
+
+                                                    </td>
+                                                </tr>
+                                            <?php endforeach; $__env->popLoop(); $loop = $__env->getLastLoop(); ?>
+                                        </tbody>
+                                    </table>
                                 </div>
                             </div>
                         <?php endif; ?>
 
                         <?php if($recentApprovals->count() > 0): ?>
-                            <div class="flow-root">
-                                <ul role="list" class="-mb-8">
-                                    <?php $__currentLoopData = $recentApprovals; $__env->addLoop($__currentLoopData); foreach($__currentLoopData as $index => $approval): $__env->incrementLoopIndices(); $loop = $__env->getLastLoop(); ?>
-                                        <li>
-                                            <div class="relative pb-8">
-                                                <?php if($index < $recentApprovals->count() - 1): ?>
-                                                    <span class="absolute top-4 left-4 -ml-px h-full w-0.5 bg-gray-200" aria-hidden="true"></span>
-                                                <?php endif; ?>
-                                                <div class="relative flex space-x-3">
-                                                    <div>
-                                                        <?php if($approval->status === 'approved'): ?>
-                                                            <span class="h-8 w-8 rounded-full bg-green-500 flex items-center justify-center ring-8 ring-white">
-                                                                <svg class="h-5 w-5 text-white" fill="currentColor" viewBox="0 0 20 20">
-                                                                    <path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd"/>
-                                                                </svg>
-                                                            </span>
+                            <div class="overflow-x-auto">
+                                <table class="min-w-full divide-y divide-gray-200 text-xs">
+                                    <thead class="bg-gray-50">
+                                        <tr>
+                                            <th class="px-3 py-2 text-left font-medium text-gray-500 uppercase">Status</th>
+                                            <th class="px-3 py-2 text-left font-medium text-gray-500 uppercase">Type</th>
+                                            <th class="px-3 py-2 text-left font-medium text-gray-500 uppercase">Action</th>
+                                            <th class="px-3 py-2 text-left font-medium text-gray-500 uppercase">Details</th>
+                                            <th class="px-3 py-2 text-left font-medium text-gray-500 uppercase">Requested By</th>
+                                            <th class="px-3 py-2 text-left font-medium text-gray-500 uppercase">Processed By</th>
+                                            <th class="px-3 py-2 text-left font-medium text-gray-500 uppercase">Reason</th>
+                                            <th class="px-3 py-2 text-left font-medium text-gray-500 uppercase">Time</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody class="bg-white divide-y divide-gray-200">
+                                        <?php $__currentLoopData = $recentApprovals; $__env->addLoop($__currentLoopData); foreach($__currentLoopData as $approval): $__env->incrementLoopIndices(); $loop = $__env->getLastLoop(); ?>
+                                            <tr class="hover:bg-gray-50">
+                                                <td class="px-3 py-2 whitespace-nowrap">
+                                                    <?php if($approval->status === 'approved'): ?>
+                                                        <span class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">
+                                                            <svg class="w-3 h-3 mr-1" fill="currentColor" viewBox="0 0 20 20">
+                                                                <path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd"/>
+                                                            </svg>
+                                                            Approved
+                                                        </span>
+                                                    <?php else: ?>
+                                                        <span class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-red-100 text-red-800">
+                                                            <svg class="w-3 h-3 mr-1" fill="currentColor" viewBox="0 0 20 20">
+                                                                <path fill-rule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z" clip-rule="evenodd"/>
+                                                            </svg>
+                                                            Rejected
+                                                        </span>
+                                                    <?php endif; ?>
+                                                </td>
+                                                <td class="px-3 py-2 whitespace-nowrap">
+                                                    <?php if($approval instanceof App\Models\LandApproval): ?>
+                                                        <span class="inline-flex items-center px-1.5 py-0.5 rounded text-xs font-semibold bg-orange-100 text-orange-800">LAND</span>
+                                                    <?php else: ?>
+                                                        <span class="inline-flex items-center px-1.5 py-0.5 rounded text-xs font-semibold bg-purple-100 text-purple-800">SOIL</span>
+                                                    <?php endif; ?>
+                                                </td>
+                                                <td class="px-3 py-2 whitespace-nowrap">
+                                                    <?php if($approval->change_type === 'delete'): ?>
+                                                        <span class="inline-flex items-center px-1.5 py-0.5 rounded text-xs font-semibold bg-red-100 text-red-800">DELETE</span>
+                                                    <?php elseif($approval->change_type === 'create'): ?>
+                                                        <span class="inline-flex items-center px-1.5 py-0.5 rounded text-xs font-semibold bg-green-100 text-green-800">CREATE</span>
+                                                    <?php elseif($approval->change_type === 'costs'): ?>
+                                                        <span class="inline-flex items-center px-1.5 py-0.5 rounded text-xs font-semibold bg-blue-100 text-blue-800">COSTS</span>
+                                                    <?php else: ?>
+                                                        <span class="inline-flex items-center px-1.5 py-0.5 rounded text-xs font-semibold bg-yellow-100 text-yellow-800">UPDATE</span>
+                                                    <?php endif; ?>
+                                                </td>
+                                                <td class="px-3 py-2 max-w-xs">
+                                                    <div class="truncate" title="<?php if($approval instanceof App\Models\LandApproval): ?><?php echo e($approval->land->lokasi_lahan ?? 'Deleted Land Record'); ?><?php else: ?><?php echo e($approval->soil->nama_penjual ?? 'Deleted Soil Record'); ?><?php endif; ?>">
+                                                        <?php if($approval instanceof App\Models\LandApproval): ?>
+                                                            <?php echo e($approval->land->lokasi_lahan ?? 'Deleted Land Record'); ?>
+
                                                         <?php else: ?>
-                                                            <span class="h-8 w-8 rounded-full bg-red-500 flex items-center justify-center ring-8 ring-white">
-                                                                <svg class="h-5 w-5 text-white" fill="currentColor" viewBox="0 0 20 20">
-                                                                    <path fill-rule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z" clip-rule="evenodd"/>
-                                                                </svg>
-                                                            </span>
+                                                            <?php echo e($approval->soil->nama_penjual ?? 'Deleted Soil Record'); ?>
+
                                                         <?php endif; ?>
                                                     </div>
-                                                    <div class="min-w-0 flex-1 pt-1.5 flex justify-between space-x-4">
-                                                        <div>
-                                                            <p class="text-sm text-gray-500">
-                                                                <?php if($approval instanceof App\Models\LandApproval): ?>
-                                                                    <span class="inline-flex items-center px-1.5 py-0.5 rounded text-xs font-medium bg-orange-100 text-orange-800 mr-1">
-                                                                        LAND
-                                                                    </span>
-                                                                <?php else: ?>
-                                                                    <span class="inline-flex items-center px-1.5 py-0.5 rounded text-xs font-medium bg-purple-100 text-purple-800 mr-1">
-                                                                        SOIL
-                                                                    </span>
-                                                                <?php endif; ?>
-                                                                
-                                                                <?php if($approval->change_type === 'delete'): ?>
-                                                                    <span class="inline-flex items-center px-1.5 py-0.5 rounded text-xs font-medium bg-red-100 text-red-800 mr-1">
-                                                                        DELETE
-                                                                    </span>
-                                                                <?php elseif($approval->change_type === 'create'): ?>
-                                                                    <span class="inline-flex items-center px-1.5 py-0.5 rounded text-xs font-medium bg-green-100 text-green-800 mr-1">
-                                                                        CREATE
-                                                                    </span>
-                                                                <?php endif; ?>
-                                                                
-                                                                <span class="font-medium text-gray-900">
-                                                                    <?php if($approval instanceof App\Models\LandApproval): ?>
-                                                                        <?php echo e($approval->land->lokasi_lahan ?? 'Deleted Land Record'); ?>
+                                                </td>
+                                                <td class="px-3 py-2 whitespace-nowrap text-gray-500">
+                                                    <?php echo e($approval->requestedBy->name ?? 'Unknown'); ?>
 
-                                                                    <?php else: ?>
-                                                                        <?php echo e($approval->soil->nama_penjual ?? 'Deleted Soil Record'); ?>
+                                                </td>
+                                                <td class="px-3 py-2 whitespace-nowrap">
+                                                    <span class="<?php echo e($approval->status === 'approved' ? 'text-green-600' : 'text-red-600'); ?>">
+                                                        <?php echo e($approval->approvedBy->name ?? 'Unknown'); ?>
 
-                                                                    <?php endif; ?>
-                                                                </span>
-                                                                
-                                                                <span class="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium <?php echo e($approval->status === 'approved' ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'); ?>">
-                                                                    <?php echo e(ucfirst($approval->status)); ?>
+                                                    </span>
+                                                </td>
+                                                <td class="px-3 py-2 max-w-xs">
+                                                    <?php if($approval->reason): ?>
+                                                        <div class="truncate" title="<?php echo e($approval->reason); ?>">
+                                                            <?php echo e(Str::limit($approval->reason, 30)); ?>
 
-                                                                </span>
-                                                            </p>
-                                                            <p class="text-xs text-gray-400 mt-1">
-                                                                Requested by: <?php echo e($approval->requestedBy->name ?? 'Unknown'); ?>
-
-                                                            </p>
-                                                            <?php if($approval->status === 'approved'): ?>
-                                                                <p class="text-xs text-green-600 mt-1">
-                                                                    Approved by: <?php echo e($approval->approvedBy->name ?? 'Unknown'); ?>
-
-                                                                    <?php if($approval->reason): ?>
-                                                                        - <?php echo e(Str::limit($approval->reason, 50)); ?>
-
-                                                                    <?php endif; ?>
-                                                                </p>
-                                                            <?php elseif($approval->status === 'rejected'): ?>
-                                                                <p class="text-xs text-red-600 mt-1">
-                                                                    Rejected by: <?php echo e($approval->approvedBy->name ?? 'Unknown'); ?>
-
-                                                                    <?php if($approval->reason): ?>
-                                                                        - <?php echo e(Str::limit($approval->reason, 50)); ?>
-
-                                                                    <?php endif; ?>
-                                                                </p>
-                                                            <?php endif; ?>
                                                         </div>
-                                                        <div class="text-right text-sm whitespace-nowrap text-gray-500">
-                                                            <time datetime="<?php echo e($approval->updated_at->toISOString()); ?>">
-                                                                <?php echo e($approval->updated_at->diffForHumans()); ?>
+                                                    <?php else: ?>
+                                                        <span class="text-gray-400 italic">-</span>
+                                                    <?php endif; ?>
+                                                </td>
+                                                <td class="px-3 py-2 whitespace-nowrap text-gray-500">
+                                                    <div title="<?php echo e($approval->updated_at->format('Y-m-d H:i:s')); ?>">
+                                                        <?php echo e($approval->updated_at->diffForHumans()); ?>
 
-                                                            </time>
-                                                        </div>
                                                     </div>
-                                                </div>
-                                            </div>
-                                        </li>
-                                    <?php endforeach; $__env->popLoop(); $loop = $__env->getLastLoop(); ?>
-                                </ul>
+                                                </td>
+                                            </tr>
+                                        <?php endforeach; $__env->popLoop(); $loop = $__env->getLastLoop(); ?>
+                                    </tbody>
+                                </table>
                             </div>
                             
-                            <div class="mt-6 text-center space-x-2">
+                            <!-- <div class="mt-3 flex justify-center gap-2">
                                 <?php if (app(\Illuminate\Contracts\Auth\Access\Gate::class)->check('land-data.approval')): ?>
-                                    <a href="<?php echo e(route('land-approvals')); ?>" class="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md text-white bg-orange-600 hover:bg-orange-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-orange-500">
+                                    <a href="<?php echo e(route('land-approvals')); ?>" class="inline-flex items-center px-3 py-1.5 text-xs font-medium rounded-md text-white bg-orange-600 hover:bg-orange-700">
                                         View All Land Approvals
-                                        <svg class="ml-2 -mr-1 w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
+                                        <svg class="ml-1 w-3 h-3" fill="currentColor" viewBox="0 0 20 20">
                                             <path fill-rule="evenodd" d="M10.293 3.293a1 1 0 011.414 0l6 6a1 1 0 010 1.414l-6 6a1 1 0 01-1.414-1.414L14.586 11H3a1 1 0 110-2h11.586l-4.293-4.293a1 1 0 010-1.414z" clip-rule="evenodd"/>
                                         </svg>
                                     </a>
                                 <?php endif; ?>
                                 <?php if (app(\Illuminate\Contracts\Auth\Access\Gate::class)->any(['soil-data.approval', 'soil-data-costs.approval'])): ?>
-                                    <a href="<?php echo e(route('soil-approvals')); ?>" class="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500">
+                                    <a href="<?php echo e(route('soil-approvals')); ?>" class="inline-flex items-center px-3 py-1.5 text-xs font-medium rounded-md text-white bg-blue-600 hover:bg-blue-700">
                                         View All Soil Approvals
-                                        <svg class="ml-2 -mr-1 w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
+                                        <svg class="ml-1 w-3 h-3" fill="currentColor" viewBox="0 0 20 20">
                                             <path fill-rule="evenodd" d="M10.293 3.293a1 1 0 011.414 0l6 6a1 1 0 010 1.414l-6 6a1 1 0 01-1.414-1.414L14.586 11H3a1 1 0 110-2h11.586l-4.293-4.293a1 1 0 010-1.414z" clip-rule="evenodd"/>
                                         </svg>
                                     </a>
                                 <?php endif; ?>
-                            </div>
-                            
+                            </div> -->
                         <?php else: ?>
                             <div class="text-center py-8">
-                                <svg class="mx-auto h-12 w-12 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden="true">
+                                <svg class="mx-auto h-10 w-10 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/>
                                 </svg>
                                 <h3 class="mt-2 text-sm font-medium text-gray-900">No recent approval activity</h3>
-                                <p class="mt-1 text-sm text-gray-500">
-                                    No approval requests have been processed recently.
-                                </p>
+                                <p class="mt-1 text-xs text-gray-500">No approval requests have been processed recently.</p>
                             </div>
                         <?php endif; ?>
                     </div>
@@ -645,9 +596,7 @@ if (isset($__slots)) unset($__slots);
     <script>
         let currentModule = '';
 
-        // Toggle main menu dropdowns
         function toggleMenu(menuId) {
-            // Close all other menus first
             const allMenus = ['adem', 'risol', 'emas', 'dots', 'coms'];
             allMenus.forEach(id => {
                 if (id !== menuId) {
@@ -660,7 +609,6 @@ if (isset($__slots)) unset($__slots);
                 }
             });
 
-            // Toggle the clicked menu
             const menu = document.getElementById(menuId + '-menu');
             const icon = document.getElementById(menuId + '-icon');
             
@@ -673,7 +621,6 @@ if (isset($__slots)) unset($__slots);
             }
         }
 
-        // Close dropdown when clicking outside
         document.addEventListener('click', function(e) {
             if (!e.target.closest('button[onclick^="toggleMenu"]') && !e.target.closest('[id$="-menu"]')) {
                 const allMenus = ['adem', 'risol', 'emas', 'dots', 'coms'];
@@ -688,7 +635,6 @@ if (isset($__slots)) unset($__slots);
             }
         });
 
-        // Show business unit selection modal
         function showBusinessUnitModal(module) {
             currentModule = module;
             const modal = document.getElementById('businessUnitModal');
@@ -703,12 +649,10 @@ if (isset($__slots)) unset($__slots);
             modal.classList.remove('hidden');
         }
 
-        // Close business unit modal
         function closeBusinessUnitModal() {
             document.getElementById('businessUnitModal').classList.add('hidden');
         }
 
-        // Navigate to selected module with business unit
         function navigateToModule(businessUnitId) {
             let url = '';
             
@@ -731,7 +675,6 @@ if (isset($__slots)) unset($__slots);
             }
         }
 
-        // Toggle collapsible sections
         function toggleSection(sectionId) {
             const content = document.getElementById(sectionId + '-content');
             const icon = document.getElementById(sectionId + '-icon');
@@ -745,14 +688,12 @@ if (isset($__slots)) unset($__slots);
             }
         }
 
-        // Close modal when clicking outside
         document.getElementById('businessUnitModal').addEventListener('click', function(e) {
             if (e.target === this) {
                 closeBusinessUnitModal();
             }
         });
         
-        // Keyboard support
         document.addEventListener('keydown', function(e) {
             if (e.key === 'Escape') {
                 closeBusinessUnitModal();
@@ -777,7 +718,6 @@ if (isset($__slots)) unset($__slots);
                 }
             });
 
-            // Show/hide no results message
             if (noResults) {
                 if (visibleCount === 0) {
                     noResults.classList.remove('hidden');
