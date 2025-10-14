@@ -6,6 +6,7 @@ use App\Models\Soil;
 use App\Models\Land;
 use App\Models\BusinessUnit;
 use App\Models\DescriptionBiayaTambahanSoil;
+use App\Models\BiayaTambahanInterestSoil;
 use App\Models\SoilApproval; // Add this import
 use Livewire\Component;
 use Livewire\WithPagination;
@@ -81,6 +82,12 @@ class Soils extends Component
     public $soilPrice = '';
     public $soilPriceDisplay = '';
 
+    public $biayaInterest = [];
+    public $showInterestCostsForm = false;
+
+    public $status = 'active';
+    public $filterStatus = '';
+
     protected $rules = [
         'land_id' => 'required|exists:lands,id',
         'business_unit_id' => 'required|exists:business_units,id',
@@ -97,6 +104,7 @@ class Soils extends Component
         'soilDetails.*.nop_pbb' => 'nullable|string|max:255',
         'soilDetails.*.nama_notaris_ppat' => 'nullable|string|max:255',
         'soilDetails.*.keterangan' => 'required|string',
+        'status' => 'nullable|string|in:active,sold,reserved,pending,inactive',
     ];
 
     // Export validation rules
@@ -301,13 +309,13 @@ class Soils extends Component
             'letak_tanah' => '',
             'luas' => '',
             'luas_display' => '',
-            // REMOVED: 'harga' => '', and 'harga_display' => '',
             'bukti_kepemilikan' => '',
             'bukti_kepemilikan_details' => '',
             'atas_nama' => '',
             'nop_pbb' => '',
             'nama_notaris_ppat' => '',
-            'keterangan' => ''
+            'keterangan' => '',
+            'status' => 'active', // ADD THIS LINE
         ];
     }
 
@@ -333,8 +341,8 @@ class Soils extends Component
         $soils = Soil::with(['land', 'businessUnit', 'createdBy', 'updatedBy'])
             ->when($this->search, function($query) {
                 $query->where('nama_penjual', 'like', '%' . $this->search . '%')
-                      ->orWhere('letak_tanah', 'like', '%' . $this->search . '%')
-                      ->orWhere('nomor_ppjb', 'like', '%' . $this->search . '%');
+                    ->orWhere('letak_tanah', 'like', '%' . $this->search . '%')
+                    ->orWhere('nomor_ppjb', 'like', '%' . $this->search . '%');
             })
             ->when($this->filterBusinessUnit, function($query) {
                 $query->where('business_unit_id', $this->filterBusinessUnit);
@@ -344,6 +352,9 @@ class Soils extends Component
             })
             ->when($this->filterLand, function($query) {
                 $query->where('land_id', $this->filterLand);
+            })
+            ->when($this->filterStatus, function($query) { // ADD THIS
+                $query->where('status', $this->filterStatus);
             })
             ->orderBy('created_at', 'desc')
             ->paginate(10);
@@ -389,6 +400,7 @@ class Soils extends Component
         $this->editSource = $source;
         
         if ($mode === 'details') {
+            // ... existing details code ...
             $this->land_id = $this->soil->land_id;
             $this->business_unit_id = $this->soil->business_unit_id;
 
@@ -408,13 +420,13 @@ class Soils extends Component
                     'letak_tanah' => $this->soil->letak_tanah,
                     'luas' => $this->soil->luas,
                     'luas_display' => $this->formatNumber($this->soil->luas),
-                    // REMOVED: harga and harga_display
                     'bukti_kepemilikan' => $this->soil->bukti_kepemilikan,
                     'bukti_kepemilikan_details' => $this->soil->bukti_kepemilikan_details,
                     'atas_nama' => $this->soil->atas_nama,
                     'nop_pbb' => $this->soil->nop_pbb,
                     'nama_notaris_ppat' => $this->soil->nama_notaris_ppat,
                     'keterangan' => $this->soil->keterangan,
+                    'status' => $this->soil->status,
                 ]
             ];
 
@@ -424,12 +436,12 @@ class Soils extends Component
             $this->showSellerAddressDropdown = [false];
             
             $this->showForm = true;
+            
         } elseif ($mode === 'costs') {
-            // Load soil price separately
+            // ... existing costs code ...
             $this->soilPrice = $this->soil->harga;
             $this->soilPriceDisplay = $this->formatNumber($this->soil->harga);
             
-            // Load additional costs
             $this->biayaTambahan = [];
             $this->descriptionSearch = [];
             
@@ -447,6 +459,24 @@ class Soils extends Component
             }
             
             $this->showAdditionalCostsForm = true;
+            
+        } elseif ($mode === 'interest') {
+            // NEW: Handle interest costs mode
+            $this->biayaInterest = [];
+            
+            foreach ($this->soil->biayaTambahanInterestSoils as $index => $interest) {
+                $this->biayaInterest[] = [
+                    'id' => $interest->id,
+                    'start_date' => $interest->start_date->format('Y-m-d'),
+                    'end_date' => $interest->end_date->format('Y-m-d'),
+                    'remarks' => $interest->remarks,
+                    'harga_perolehan' => $interest->harga_perolehan,
+                    'harga_perolehan_display' => $this->formatNumber($interest->harga_perolehan),
+                    'bunga' => $interest->bunga,
+                ];
+            }
+            
+            $this->showInterestCostsForm = true;
         }
         
         $this->isEdit = true;
@@ -484,6 +514,7 @@ class Soils extends Component
                     'nop_pbb' => $detail['nop_pbb'],
                     'nama_notaris_ppat' => $detail['nama_notaris_ppat'],
                     'keterangan' => $detail['keterangan'],
+                    'status' => $detail['status'] ?? 'active',
                 ]);
                 
                 session()->flash('message', 'Soil record details updated successfully.');
@@ -495,7 +526,7 @@ class Soils extends Component
                     'land_id', 'business_unit_id', 'nama_penjual', 'alamat_penjual', 
                     'nomor_ppjb', 'tanggal_ppjb', 'letak_tanah', 'luas',
                     'bukti_kepemilikan', 'bukti_kepemilikan_details', 'atas_nama', 
-                    'nop_pbb', 'nama_notaris_ppat', 'keterangan'
+                    'nop_pbb', 'nama_notaris_ppat', 'keterangan', 'status'
                 ]);
                 
                 $newData = [
@@ -513,7 +544,13 @@ class Soils extends Component
                     'nop_pbb' => $detail['nop_pbb'],
                     'nama_notaris_ppat' => $detail['nama_notaris_ppat'],
                     'keterangan' => $detail['keterangan'],
+                    'status' => $detail['status'] ?? 'active',
                 ];
+
+                // Normalize date format in oldData BEFORE comparison
+                if (isset($oldData['tanggal_ppjb']) && $oldData['tanggal_ppjb'] instanceof \Carbon\Carbon) {
+                    $oldData['tanggal_ppjb'] = $oldData['tanggal_ppjb']->format('Y-m-d');
+                }
 
                 // CHECK IF DATA ACTUALLY CHANGED
                 if ($this->hasDataChanged($oldData, $newData)) {
@@ -575,6 +612,7 @@ class Soils extends Component
                         'nop_pbb' => trim($detail['nop_pbb'] ?? ''),
                         'nama_notaris_ppat' => trim($detail['nama_notaris_ppat'] ?? ''),
                         'keterangan' => trim($detail['keterangan'] ?? ''),
+                        'status' => trim($detail['status'] ?? 'active'), 
                     ];
                     
                     Soil::create($createData);
@@ -876,7 +914,7 @@ class Soils extends Component
                 'land_id', 'business_unit_id', 'nama_penjual', 'alamat_penjual', 
                 'nomor_ppjb', 'tanggal_ppjb', 'letak_tanah', 'luas', 'harga', 
                 'bukti_kepemilikan', 'bukti_kepemilikan_details', 'atas_nama', 
-                'nop_pbb', 'nama_notaris_ppat', 'keterangan'
+                'nop_pbb', 'nama_notaris_ppat', 'keterangan', 'status'
             ]);
 
             // Include related costs in the deletion approval
@@ -928,7 +966,7 @@ class Soils extends Component
                     'land_id', 'business_unit_id', 'nama_penjual', 'alamat_penjual', 
                     'nomor_ppjb', 'tanggal_ppjb', 'letak_tanah', 'luas', 'harga', 
                     'bukti_kepemilikan', 'bukti_kepemilikan_details', 'atas_nama', 
-                    'nop_pbb', 'nama_notaris_ppat', 'keterangan'
+                    'nop_pbb', 'nama_notaris_ppat', 'keterangan', 'status'
                 ]);
 
                 // Include related costs in the deletion approval
@@ -966,13 +1004,14 @@ class Soils extends Component
         $this->showForm = false;
         $this->showDetailForm = false;
         $this->showAdditionalCostsForm = false;
+        $this->showInterestCostsForm = false;
         $this->resetForm();
     }
 
     public function resetForm()
     {
         $this->reset([
-            'soil', 'soilId', 'land_id', 'editMode', 'editSource', 'biayaTambahan',
+            'soil', 'soilId', 'land_id', 'editMode', 'editSource', 'biayaTambahan', 'biayaInterest',
             'descriptionSearch', 'showDescriptionDropdown',
             'sellerNameSearch', 'sellerAddressSearch', 'showSellerNameDropdown', 'showSellerAddressDropdown',
             'landSearch', 'showLandDropdown', 'businessUnitSearch', 'showBusinessUnitDropdown'
@@ -998,6 +1037,7 @@ class Soils extends Component
     {
         $this->filterBusinessUnit = '';
         $this->filterLand = '';
+        $this->filterStatus = ''; // ADD THIS LINE
         $this->search = '';
         
         $this->filterBusinessUnitSearch = '';
@@ -1633,6 +1673,12 @@ class Soils extends Component
         foreach ($newData as $key => $newValue) {
             $oldValue = $oldData[$key] ?? null;
             
+            // Special handling for dates - normalize format
+            if ($key === 'tanggal_ppjb' || str_ends_with($key, '_date')) {
+                $oldValue = $this->normalizeDateValue($oldValue);
+                $newValue = $this->normalizeDateValue($newValue);
+            }
+            
             // Normalize values for comparison
             $oldNormalized = $this->normalizeValue($oldValue);
             $newNormalized = $this->normalizeValue($newValue);
@@ -1643,6 +1689,39 @@ class Soils extends Component
         }
         
         return false;
+    }
+
+    private function normalizeDateValue($value)
+    {
+        if (empty($value)) {
+            return '';
+        }
+        
+        // If it's a Carbon instance
+        if ($value instanceof \Carbon\Carbon) {
+            return $value->format('Y-m-d');
+        }
+        
+        // If it's a DateTime string with timezone info
+        if (is_string($value) && str_contains($value, 'T')) {
+            try {
+                return \Carbon\Carbon::parse($value)->format('Y-m-d');
+            } catch (\Exception $e) {
+                return $value;
+            }
+        }
+        
+        // If it's already in Y-m-d format
+        if (is_string($value) && preg_match('/^\d{4}-\d{2}-\d{2}$/', $value)) {
+            return $value;
+        }
+        
+        // Try to parse any other format
+        try {
+            return \Carbon\Carbon::parse($value)->format('Y-m-d');
+        } catch (\Exception $e) {
+            return $value;
+        }
     }
 
     /**
@@ -1706,5 +1785,257 @@ class Soils extends Component
         return $value;
     }
 
-    
+    public function addBiayaInterest()
+    {
+        $index = count($this->biayaInterest);
+        
+        // Calculate default start_date from last entry's end_date
+        $lastInterest = end($this->biayaInterest);
+        $defaultStartDate = $lastInterest ? $lastInterest['end_date'] : date('Y-m-d');
+        
+        $this->biayaInterest[] = [
+            'start_date' => $defaultStartDate,
+            'end_date' => '',
+            'remarks' => '',
+            'harga_perolehan' => 0,
+            'harga_perolehan_display' => '',
+            'bunga' => 7.5, // Default interest rate
+        ];
+    }
+
+    public function removeBiayaInterest($index)
+    {
+        unset($this->biayaInterest[$index]);
+        $this->biayaInterest = array_values($this->biayaInterest);
+    }
+
+    public function saveInterestCosts()
+    {
+        $this->validate([
+            'biayaInterest.*.start_date' => 'required|date',
+            'biayaInterest.*.end_date' => 'required|date|after_or_equal:biayaInterest.*.start_date',
+            'biayaInterest.*.remarks' => 'required|string|max:500',
+            'biayaInterest.*.harga_perolehan' => 'required|numeric|min:0',
+            'biayaInterest.*.bunga' => 'required|numeric|min:0|max:100',
+        ]);
+
+        $soil = Soil::findOrFail($this->soilId);
+        
+        if (auth()->user()->can('soil-data-costs.approval')) {
+            // User has cost approval permission - update directly
+            $this->updateBiayaInterest($soil, $this->biayaInterest);
+            session()->flash('message', 'Interest costs updated successfully.');
+        } else {
+            // User needs approval - create approval request
+            $oldInterestData = $soil->biayaTambahanInterestSoils()->get()->map(function($interest) {
+                return [
+                    'id' => $interest->id,
+                    'start_date' => $interest->start_date->format('Y-m-d'),
+                    'end_date' => $interest->end_date->format('Y-m-d'),
+                    'remarks' => $interest->remarks,
+                    'harga_perolehan' => $interest->harga_perolehan,
+                    'bunga' => $interest->bunga,
+                ];
+            })->toArray();
+
+            $newInterestData = collect($this->biayaInterest)->map(function($interest) {
+                return [
+                    'id' => $interest['id'] ?? null,
+                    'start_date' => $interest['start_date'],
+                    'end_date' => $interest['end_date'],
+                    'remarks' => $interest['remarks'],
+                    'harga_perolehan' => $this->parseFormattedNumber($interest['harga_perolehan']),
+                    'bunga' => $interest['bunga'],
+                ];
+            })->toArray();
+
+            // Check if data changed
+            if ($this->hasInterestChanged($oldInterestData, $newInterestData)) {
+                SoilApproval::create([
+                    'soil_id' => $this->soilId,
+                    'requested_by' => auth()->id(),
+                    'old_data' => $oldInterestData,
+                    'new_data' => $newInterestData,
+                    'change_type' => 'interest',
+                    'status' => 'pending'
+                ]);
+                
+                session()->flash('warning', 'Your interest cost changes have been submitted for approval and are pending review.');
+            } else {
+                session()->flash('info', 'No changes detected. The interest data is identical to the existing record.');
+            }
+        }
+        
+        // Return based on where the edit was initiated from
+        if ($this->editSource === 'detail') {
+            $this->showInterestCostsForm = false;
+            $this->showDetailForm = true;
+            $this->isEdit = false;
+        } else {
+            $this->showInterestCostsForm = false;
+            $this->resetForm();
+        }
+    }
+
+    private function updateBiayaInterest($soil, $biayaInterest)
+    {
+        DB::transaction(function () use ($soil, $biayaInterest) {
+            $soil->historyLogging = true;
+            
+            if (empty($biayaInterest) || !is_array($biayaInterest)) {
+                $existingInterests = $soil->biayaTambahanInterestSoils()->get();
+                foreach ($existingInterests as $interest) {
+                    $oldData = [
+                        'start_date' => $interest->start_date->format('Y-m-d'),
+                        'end_date' => $interest->end_date->format('Y-m-d'),
+                        'remarks' => $interest->remarks,
+                        'harga_perolehan' => $interest->harga_perolehan,
+                        'bunga' => $interest->bunga,
+                    ];
+                    
+                    $soil->logInterestHistory('deleted', [], $oldData);
+                }
+                
+                $soil->biayaTambahanInterestSoils()->delete();
+                $soil->historyLogging = false;
+                return;
+            }
+
+            $existingIds = collect($biayaInterest)
+                ->filter(function($item) { return isset($item['id']); })
+                ->pluck('id')
+                ->toArray();
+
+            $interestsToDelete = $soil->biayaTambahanInterestSoils()
+                ->whereNotIn('id', $existingIds)
+                ->get();
+                
+            foreach ($interestsToDelete as $interest) {
+                $oldData = [
+                    'start_date' => $interest->start_date->format('Y-m-d'),
+                    'end_date' => $interest->end_date->format('Y-m-d'),
+                    'remarks' => $interest->remarks,
+                    'harga_perolehan' => $interest->harga_perolehan,
+                    'bunga' => $interest->bunga,
+                ];
+                
+                $soil->logInterestHistory('deleted', [], $oldData);
+            }
+            
+            $soil->biayaTambahanInterestSoils()->whereNotIn('id', $existingIds)->delete();
+
+            foreach ($biayaInterest as $interest) {
+                if (!empty($interest['start_date']) && !empty($interest['end_date'])) {
+                    $hargaPerolehan = $this->parseFormattedNumber($interest['harga_perolehan']);
+                    
+                    $interestData = [
+                        'start_date' => $interest['start_date'],
+                        'end_date' => $interest['end_date'],
+                        'remarks' => $interest['remarks'],
+                        'harga_perolehan' => $hargaPerolehan,
+                        'bunga' => $interest['bunga'],
+                    ];
+
+                    if (isset($interest['id'])) {
+                        $existingInterest = BiayaTambahanInterestSoil::find($interest['id']);
+                        
+                        if ($existingInterest) {
+                            $oldData = [
+                                'start_date' => $existingInterest->start_date->format('Y-m-d'),
+                                'end_date' => $existingInterest->end_date->format('Y-m-d'),
+                                'remarks' => $existingInterest->remarks,
+                                'harga_perolehan' => $existingInterest->harga_perolehan,
+                                'bunga' => $existingInterest->bunga,
+                            ];
+                            
+                            $hasChanges = (
+                                $existingInterest->start_date->format('Y-m-d') != $interest['start_date'] ||
+                                $existingInterest->end_date->format('Y-m-d') != $interest['end_date'] ||
+                                $existingInterest->remarks != $interest['remarks'] ||
+                                $existingInterest->harga_perolehan != $hargaPerolehan ||
+                                $existingInterest->bunga != $interest['bunga']
+                            );
+                            
+                            if ($hasChanges) {
+                                $existingInterest->update($interestData);
+                                $soil->logInterestHistory('updated', $interestData, $oldData);
+                            }
+                        }
+                    } else {
+                        BiayaTambahanInterestSoil::create(array_merge([
+                            'soil_id' => $soil->id,
+                        ], $interestData));
+                        
+                        $soil->logInterestHistory('added', $interestData);
+                    }
+                }
+            }
+            
+            $soil->historyLogging = false;
+        });
+    }
+
+    private function hasInterestChanged($oldData, $newData)
+    {
+        if (count($oldData) !== count($newData)) {
+            return true;
+        }
+        
+        $oldById = collect($oldData)->keyBy('id');
+        $newById = collect($newData)->keyBy('id')->filter(fn($item) => !empty($item['id']));
+        
+        $hasNewItems = collect($newData)->filter(fn($item) => empty($item['id']))->isNotEmpty();
+        if ($hasNewItems) {
+            return true;
+        }
+        
+        $oldIds = $oldById->keys();
+        $newIds = $newById->keys();
+        if ($oldIds->diff($newIds)->isNotEmpty()) {
+            return true;
+        }
+        
+        foreach ($newIds as $id) {
+            $old = $oldById->get($id);
+            $new = $newById->get($id);
+            
+            if ($old && $new) {
+                if ($old['start_date'] != $new['start_date'] ||
+                    $old['end_date'] != $new['end_date'] ||
+                    $old['remarks'] != $new['remarks'] ||
+                    $old['harga_perolehan'] != $new['harga_perolehan'] ||
+                    $old['bunga'] != $new['bunga']) {
+                    return true;
+                }
+            }
+        }
+        
+        return false;
+    }
+
+    public function updatedBiayaInterestHargaPerolehan($value, $propertyName)
+    {
+        $parts = explode('.', $propertyName);
+        $index = $parts[0];
+        
+        $numericValue = $this->parseFormattedNumber($value);
+        
+        if ($numericValue) {
+            $this->biayaInterest[$index]['harga_perolehan'] = $numericValue;
+            $this->biayaInterest[$index]['harga_perolehan_display'] = $this->formatNumber($numericValue);
+        } else {
+            $this->biayaInterest[$index]['harga_perolehan'] = 0;
+            $this->biayaInterest[$index]['harga_perolehan_display'] = '';
+        }
+    }
+
+    public function updatingFilterStatus()
+    {
+        $this->resetPage();
+    }
+
+    public function getStatusOptions()
+    {
+        return Soil::getStatusOptions();
+    }
 }

@@ -389,6 +389,20 @@
                                                     <span class="text-red-500 text-xs">{{ $message }}</span> 
                                                 @enderror
                                             </div>
+                                            <!-- Status -->
+                                            <div>
+                                                <label class="block text-xs font-medium text-gray-700 mb-1">Status *</label>
+                                                <select wire:model="soilDetails.{{ $index }}.status" 
+                                                        class="w-full px-2 py-1.5 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-xs @error('soilDetails.'.$index.'.status') border-red-500 @enderror">
+                                                    <option value="">Select Status</option>
+                                                    @foreach($this->getStatusOptions() as $key => $value)
+                                                        <option value="{{ $key }}">{{ $value }}</option>
+                                                    @endforeach
+                                                </select>
+                                                @error('soilDetails.'.$index.'.status') 
+                                                    <span class="text-red-500 text-xs">{{ $message }}</span> 
+                                                @enderror
+                                            </div>
                                         </div>
 
                                         <!-- Notes (full width) -->

@@ -4,6 +4,8 @@
         @include('livewire.soils.form')
     @elseif($showAdditionalCostsForm)
         @include('livewire.soils.costs-form')
+    @elseif($showInterestCostsForm)
+        @include('livewire.soils.costs-interest-form')
     @elseif($showDetailForm)
         @include('livewire.soils.show')
     @else
@@ -203,7 +205,16 @@
                             </div>
                         </div>
 
-                        <div></div>
+                        <!-- Status Filter -->
+                        <div>
+                            <select wire:model.live="filterStatus"
+                                    class="w-full px-3 py-1.5 text-sm border-gray-300 rounded-lg focus:ring-blue-500 focus:border-blue-500">
+                                <option value="">All Status</option>
+                                @foreach($this->getStatusOptions() as $key => $value)
+                                    <option value="{{ $key }}">{{ $value }}</option>
+                                @endforeach
+                            </select>
+                        </div>
 
                         <!-- Reset Filters -->
                         <div class="flex items-center">
@@ -239,6 +250,7 @@
                             <th class="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase">Ownership</th>
                             <th class="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase">PPJB/AJB</th>
                             <th class="px-3 py-2 text-right text-xs font-medium text-gray-500 uppercase">Area</th>
+                            <th class="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase">Status</th>
                             <th class="px-3 py-2 text-right text-xs font-medium text-gray-500 uppercase">Investment</th>
                             <th class="px-2 py-2 text-center text-xs font-medium text-gray-500 uppercase">Actions</th>
                         </tr>
@@ -273,8 +285,17 @@
                                     <div class="text-sm font-medium text-gray-900">{{ number_format($soil->luas, 0, ',', '.') }} m²</div>
                                     <div class="text-xs text-gray-500">{{ $soil->formatted_harga_per_meter }}/m²</div>
                                 </td>
+                                <td class="px-3 py-2 whitespace-nowrap">
+                                    <span class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium {{ $soil->status_badge_color }}">
+                                        {{ $soil->formatted_status }}
+                                    </span>
+                                </td>
                                 <td class="px-3 py-2 text-right">
-                                    <div class="text-sm font-medium text-green-700">{{ $soil->formatted_total_biaya_keseluruhan }}</div>
+                                    <div class="text-sm font-medium text-green-700">
+                                        Rp {{ number_format($soil->harga + $soil->total_biaya_tambahan + $soil->total_biaya_interest, 0, ',', '.') }}
+                                    </div>
+                                    
+                                    {{-- Additional Costs --}}
                                     @if($soil->biayaTambahanSoils->count() > 0)
                                         <div class="text-xs text-orange-600">
                                             +{{ $soil->formatted_total_biaya_tambahan }}
@@ -292,8 +313,23 @@
                                                 <span class="inline-flex px-1 text-xs rounded bg-orange-100 text-orange-800">{{ $nonStandardCosts }}NS</span>
                                             @endif
                                         </div>
-                                    @else
-                                        <div class="text-xs text-gray-400">-</div>
+                                    @endif
+                                    
+                                    {{-- Interest Costs --}}
+                                    @if($soil->biayaTambahanInterestSoils->count() > 0)
+                                        <div class="text-xs text-purple-600 mt-0.5">
+                                            +{{ $soil->formatted_total_biaya_interest }}
+                                        </div>
+                                        <div class="flex items-center justify-end gap-1">
+                                            <span class="inline-flex px-1 text-xs rounded bg-purple-100 text-purple-800">
+                                                {{ $soil->biayaTambahanInterestSoils->count() }}I
+                                            </span>
+                                        </div>
+                                    @endif
+                                    
+                                    {{-- No costs indicator --}}
+                                    @if($soil->biayaTambahanSoils->count() === 0 && $soil->biayaTambahanInterestSoils->count() === 0)
+                                        <div class="text-xs text-gray-400">No additional costs</div>
                                     @endif
                                 </td>
                                 <td class="px-2 py-2">
@@ -339,6 +375,10 @@
                                                     <button wire:click="showEditForm({{ $soil->id }}, 'costs')" 
                                                             class="block px-3 py-2 text-xs text-gray-700 hover:bg-gray-100 w-full text-left">
                                                         Manage Costs
+                                                    </button>
+                                                    <button wire:click="showEditForm({{ $soil->id }}, 'interest')" 
+                                                            class="block px-3 py-2 text-xs text-gray-700 hover:bg-gray-100 w-full text-left">
+                                                        Manage Interest Costs
                                                     </button>
                                                     @endcan
                                                 </div>

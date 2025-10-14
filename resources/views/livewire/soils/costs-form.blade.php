@@ -4,7 +4,7 @@
         <div class="p-6 bg-white border-b border-gray-200">
             <!-- Header -->
             @can('soils.edit')
-            <div class="bg-blue-50 p-4 rounded-lg border-2 border-blue-200">
+            <div class="bg-blue-50 p-4 rounded-lg border-2 border-blue-200 mb-6">
                 <h3 class="text-lg font-medium text-blue-900 mb-4">Soil Price</h3>
                 
                 <div class="bg-white p-4 rounded border">

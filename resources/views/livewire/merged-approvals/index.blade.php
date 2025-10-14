@@ -118,6 +118,10 @@
                                     <span class="inline-flex items-center px-2 py-1 rounded text-xs font-semibold bg-blue-100 text-blue-800">
                                         COSTS
                                     </span>
+                                @elseif($approval->change_type === 'interest')
+                                    <span class="inline-flex items-center px-2 py-1 rounded text-xs font-semibold bg-indigo-100 text-indigo-800">
+                                        INTEREST
+                                    </span>
                                 @else
                                     <span class="inline-flex items-center px-2 py-1 rounded text-xs font-semibold bg-yellow-100 text-yellow-800">
                                         UPDATE
@@ -214,6 +218,47 @@
                                                                 @endforeach
                                                             @else
                                                                 <br><small>{{ $change['cost_type'] ?? '' }} - {{ $change['amount'] ?? '' }} ({{ $change['date_cost'] ?? '' }})</small>
+                                                            @endif
+                                                        </div>
+                                                    @endforeach
+                                                </div>
+                                            </div>
+                                        @elseif($approval->change_type === 'interest' && $approval->approval_type === 'soil')
+                                            @php $changes = $this->getInterestChangeDetails($approval); @endphp
+                                            @php $summary = $this->getInterestChangeSummary($approval); @endphp
+                                            
+                                            <div class="mt-2 p-4 bg-white rounded border border-gray-200">
+                                                <h5 class="font-medium text-gray-900">Interest Cost Changes Summary:</h5>
+                                                <p class="text-sm text-gray-600 mt-2">
+                                                    {{ $summary['added'] }} added, {{ $summary['modified'] }} modified, {{ $summary['deleted'] }} deleted
+                                                </p>
+                                                
+                                                <div class="mt-3 space-y-2">
+                                                    @foreach($changes as $change)
+                                                        <div class="p-2 border-l-4 
+                                                            @if($change['type'] === 'added') border-green-400 bg-green-50
+                                                            @elseif($change['type'] === 'modified') border-yellow-400 bg-yellow-50
+                                                            @else border-red-400 bg-red-50 @endif">
+                                                            
+                                                            <strong>{{ ucfirst($change['type']) }}:</strong>
+                                                            
+                                                            @if($change['type'] === 'added')
+                                                                Period: {{ $change['start_date'] }} to {{ $change['end_date'] }} ({{ $change['days'] }} days)
+                                                                <br><small>Harga Perolehan: {{ $change['harga_perolehan'] }} | Interest: {{ $change['bunga'] }}%</small>
+                                                                @if($change['remarks'])
+                                                                    <br><small>Remarks: {{ $change['remarks'] }}</small>
+                                                                @endif
+                                                            @elseif($change['type'] === 'deleted')
+                                                                Period: {{ $change['start_date'] }} to {{ $change['end_date'] }} ({{ $change['days'] }} days)
+                                                                <br><small>Harga Perolehan: {{ $change['harga_perolehan'] }} | Interest: {{ $change['bunga'] }}%</small>
+                                                                @if($change['remarks'])
+                                                                    <br><small>Remarks: {{ $change['remarks'] }}</small>
+                                                                @endif
+                                                            @elseif($change['type'] === 'modified')
+                                                                Period: {{ $change['period'] }}
+                                                                @foreach($change['changes'] as $field => $values)
+                                                                    <br><small>{{ ucfirst($field) }}: {{ $values['old'] }} → {{ $values['new'] }}</small>
+                                                                @endforeach
                                                             @endif
                                                         </div>
                                                     @endforeach

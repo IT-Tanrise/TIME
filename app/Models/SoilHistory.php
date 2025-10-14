@@ -102,6 +102,13 @@ class SoilHistory extends Model
             
             // Rejected cost update (standalone)
             'rejected_cost_update' => 'Additional Costs Update (Rejected)',
+
+            // Interest cost actions
+            'interest_cost_added' => 'Interest Cost Added' . ($isApproved ? ' (Approved)' : ($isRejected ? ' (Rejected)' : '')),
+            'interest_cost_updated' => 'Interest Cost Updated' . ($isApproved ? ' (Approved)' : ($isRejected ? ' (Rejected)' : '')),
+            'interest_cost_deleted' => 'Interest Cost Deleted' . ($isApproved ? ' (Approved)' : ($isRejected ? ' (Rejected)' : '')),
+            'approved_interest_update' => 'Interest Costs Updated (Approved)',
+            'rejected_interest_update' => 'Interest Costs Update (Rejected)',
             
             default => ucfirst(str_replace('_', ' ', $this->action))
         };
@@ -119,6 +126,11 @@ class SoilHistory extends Model
         // Handle additional cost actions specially
         if (str_contains($this->action, 'additional_cost') || $this->action === 'rejected_cost_update') {
             return $this->getAdditionalCostChangesSummary();
+        }
+
+        // Handle interest cost actions specially
+        if (str_contains($this->action, 'interest_cost') || $this->action === 'rejected_interest_update' || $this->action === 'approved_interest_update') {
+            return $this->getInterestCostChangesSummary();
         }
 
         // Handle rejected actions
@@ -194,6 +206,36 @@ class SoilHistory extends Model
         }
 
         return 'Additional cost modified';
+    }
+
+    private function getInterestCostChangesSummary()
+    {
+        if ($this->action === 'interest_cost_added') {
+            $startDate = isset($this->new_values['start_date']) ? \Carbon\Carbon::parse($this->new_values['start_date'])->format('d/m/Y') : 'N/A';
+            $endDate = isset($this->new_values['end_date']) ? \Carbon\Carbon::parse($this->new_values['end_date'])->format('d/m/Y') : 'N/A';
+            return "Added interest period: {$startDate} to {$endDate}";
+        }
+
+        if ($this->action === 'interest_cost_deleted') {
+            $startDate = isset($this->old_values['start_date']) ? \Carbon\Carbon::parse($this->old_values['start_date'])->format('d/m/Y') : 'N/A';
+            $endDate = isset($this->old_values['end_date']) ? \Carbon\Carbon::parse($this->old_values['end_date'])->format('d/m/Y') : 'N/A';
+            return "Deleted interest period: {$startDate} to {$endDate}";
+        }
+
+        if ($this->action === 'interest_cost_updated') {
+            $startDate = isset($this->new_values['start_date']) ? \Carbon\Carbon::parse($this->new_values['start_date'])->format('d/m/Y') : 'N/A';
+            $endDate = isset($this->new_values['end_date']) ? \Carbon\Carbon::parse($this->new_values['end_date'])->format('d/m/Y') : 'N/A';
+            return "Updated interest period: {$startDate} to {$endDate}";
+        }
+
+        if (in_array($this->action, ['rejected_interest_update', 'approved_interest_update'])) {
+            $interests = $this->new_values['interests'] ?? [];
+            $count = is_array($interests) ? count($interests) : 0;
+            $status = $this->action === 'rejected_interest_update' ? 'Rejected' : 'Approved';
+            return "{$status} changes to {$count} interest period(s)";
+        }
+
+        return 'Interest cost modified';
     }
 
     // NEW: Handle rejected changes summary

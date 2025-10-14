@@ -121,6 +121,11 @@ class SoilHistories extends Component
                         'additional_cost_updated' => 'Additional Cost Updated',
                         'additional_cost_deleted' => 'Additional Cost Deleted',
                         'rejected_cost_update' => 'Additional Costs Update (Rejected)',
+                        'interest_cost_added' => 'Interest Cost Added',
+                        'interest_cost_updated' => 'Interest Cost Updated',
+                        'interest_cost_deleted' => 'Interest Cost Deleted',
+                        'approved_interest_update' => 'Interest Costs Updated (Approved)',
+                        'rejected_interest_update' => 'Interest Costs Update (Rejected)',
                         default => ucfirst(str_replace('_', ' ', $action))
                     }
                 ];
@@ -212,9 +217,24 @@ class SoilHistories extends Component
             return $this->getAdditionalCostDetails($history);
         }
 
+        // Handle interest cost actions
+        if (str_contains($history->action, 'interest_cost')) {
+            return $this->getInterestCostDetails($history);
+        }
+
         // Handle rejected cost update
         if ($history->action === 'rejected_cost_update') {
             return $this->getRejectedCostDetails($history);
+        }
+
+        // Handle rejected interest update
+        if ($history->action === 'rejected_interest_update') {
+            return $this->getRejectedInterestDetails($history);
+        }
+
+        // Handle approved interest update
+        if ($history->action === 'approved_interest_update') {
+            return $this->getApprovedInterestDetails($history);
         }
 
         // Handle rejected updates
@@ -464,6 +484,160 @@ class SoilHistories extends Component
         return !empty($details) ? $details : null;
     }
 
+    private function getInterestCostDetails($history)
+    {
+        $details = [];
+        
+        if ($history->action === 'interest_cost_added' && $history->new_values) {
+            $nv = $history->new_values;
+            
+            $startDate = isset($nv['start_date']) ? \Carbon\Carbon::parse($nv['start_date'])->format('d/m/Y') : 'N/A';
+            $endDate = isset($nv['end_date']) ? \Carbon\Carbon::parse($nv['end_date'])->format('d/m/Y') : 'N/A';
+            $days = 0;
+            if (isset($nv['start_date']) && isset($nv['end_date'])) {
+                $days = \Carbon\Carbon::parse($nv['start_date'])->diffInDays(\Carbon\Carbon::parse($nv['end_date']));
+            }
+            
+            $details[] = [
+                'field' => 'Period',
+                'old' => '',
+                'new' => $startDate . ' to ' . $endDate . ' (' . $days . ' days)',
+                'type' => 'added'
+            ];
+            $details[] = [
+                'field' => 'Harga Perolehan',
+                'old' => '',
+                'new' => $this->formatValue('harga', $nv['harga_perolehan'] ?? 0),
+                'type' => 'added'
+            ];
+            $details[] = [
+                'field' => 'Interest Rate',
+                'old' => '',
+                'new' => number_format($nv['bunga'] ?? 0, 2) . '%',
+                'type' => 'added'
+            ];
+            if (isset($nv['remarks']) && $nv['remarks']) {
+                $details[] = [
+                    'field' => 'Remarks',
+                    'old' => '',
+                    'new' => $nv['remarks'],
+                    'type' => 'added'
+                ];
+            }
+        } 
+        elseif ($history->action === 'interest_cost_deleted' && $history->old_values) {
+            $ov = $history->old_values;
+            
+            $startDate = isset($ov['start_date']) ? \Carbon\Carbon::parse($ov['start_date'])->format('d/m/Y') : 'N/A';
+            $endDate = isset($ov['end_date']) ? \Carbon\Carbon::parse($ov['end_date'])->format('d/m/Y') : 'N/A';
+            $days = 0;
+            if (isset($ov['start_date']) && isset($ov['end_date'])) {
+                $days = \Carbon\Carbon::parse($ov['start_date'])->diffInDays(\Carbon\Carbon::parse($ov['end_date']));
+            }
+            
+            $details[] = [
+                'field' => 'Period',
+                'old' => $startDate . ' to ' . $endDate . ' (' . $days . ' days)',
+                'new' => 'Deleted',
+                'type' => 'deleted'
+            ];
+            $details[] = [
+                'field' => 'Harga Perolehan',
+                'old' => $this->formatValue('harga', $ov['harga_perolehan'] ?? 0),
+                'new' => 'Deleted',
+                'type' => 'deleted'
+            ];
+            $details[] = [
+                'field' => 'Interest Rate',
+                'old' => number_format($ov['bunga'] ?? 0, 2) . '%',
+                'new' => 'Deleted',
+                'type' => 'deleted'
+            ];
+            if (isset($ov['remarks']) && $ov['remarks']) {
+                $details[] = [
+                    'field' => 'Remarks',
+                    'old' => $ov['remarks'],
+                    'new' => 'Deleted',
+                    'type' => 'deleted'
+                ];
+            }
+        } 
+        elseif ($history->action === 'interest_cost_updated' && $history->old_values && $history->new_values) {
+            $ov = $history->old_values;
+            $nv = $history->new_values;
+            
+            // Period
+            if ((isset($ov['start_date']) && isset($ov['end_date'])) || (isset($nv['start_date']) && isset($nv['end_date']))) {
+                $oldStart = isset($ov['start_date']) ? \Carbon\Carbon::parse($ov['start_date'])->format('d/m/Y') : '-';
+                $oldEnd = isset($ov['end_date']) ? \Carbon\Carbon::parse($ov['end_date'])->format('d/m/Y') : '-';
+                $newStart = isset($nv['start_date']) ? \Carbon\Carbon::parse($nv['start_date'])->format('d/m/Y') : '-';
+                $newEnd = isset($nv['end_date']) ? \Carbon\Carbon::parse($nv['end_date'])->format('d/m/Y') : '-';
+                
+                $oldDays = 0;
+                $newDays = 0;
+                if (isset($ov['start_date']) && isset($ov['end_date'])) {
+                    $oldDays = \Carbon\Carbon::parse($ov['start_date'])->diffInDays(\Carbon\Carbon::parse($ov['end_date']));
+                }
+                if (isset($nv['start_date']) && isset($nv['end_date'])) {
+                    $newDays = \Carbon\Carbon::parse($nv['start_date'])->diffInDays(\Carbon\Carbon::parse($nv['end_date']));
+                }
+                
+                if ($oldStart !== $newStart || $oldEnd !== $newEnd) {
+                    $details[] = [
+                        'field' => 'Period',
+                        'old' => $oldStart . ' to ' . $oldEnd . ' (' . $oldDays . ' days)',
+                        'new' => $newStart . ' to ' . $newEnd . ' (' . $newDays . ' days)',
+                        'type' => 'updated'
+                    ];
+                }
+            }
+            
+            // Harga Perolehan
+            if (isset($ov['harga_perolehan']) || isset($nv['harga_perolehan'])) {
+                $oldAmount = $ov['harga_perolehan'] ?? 0;
+                $newAmount = $nv['harga_perolehan'] ?? 0;
+                if ($oldAmount != $newAmount) {
+                    $details[] = [
+                        'field' => 'Harga Perolehan',
+                        'old' => $this->formatValue('harga', $oldAmount),
+                        'new' => $this->formatValue('harga', $newAmount),
+                        'type' => 'updated'
+                    ];
+                }
+            }
+            
+            // Interest Rate
+            if (isset($ov['bunga']) || isset($nv['bunga'])) {
+                $oldRate = $ov['bunga'] ?? 0;
+                $newRate = $nv['bunga'] ?? 0;
+                if ($oldRate != $newRate) {
+                    $details[] = [
+                        'field' => 'Interest Rate',
+                        'old' => number_format($oldRate, 2) . '%',
+                        'new' => number_format($newRate, 2) . '%',
+                        'type' => 'updated'
+                    ];
+                }
+            }
+            
+            // Remarks
+            if ((isset($ov['remarks']) && $ov['remarks']) || (isset($nv['remarks']) && $nv['remarks'])) {
+                $oldRemarks = $ov['remarks'] ?? '-';
+                $newRemarks = $nv['remarks'] ?? '-';
+                if ($oldRemarks !== $newRemarks) {
+                    $details[] = [
+                        'field' => 'Remarks',
+                        'old' => $oldRemarks,
+                        'new' => $newRemarks,
+                        'type' => 'updated'
+                    ];
+                }
+            }
+        }
+        
+        return !empty($details) ? $details : null;
+    }
+
     // NEW: Get rejected cost update details
     private function getRejectedCostDetails($history)
     {
@@ -562,6 +736,271 @@ class SoilHistories extends Component
                     $details[] = [
                         'type' => 'rejected_modify',
                         'description' => $newCost['description'] ?? $oldCost['description'] ?? 'Unknown',
+                        'changes' => $changeDetails,
+                    ];
+                }
+            }
+        }
+
+        return $details;
+    }
+
+    // NEW: Get rejected interest update details
+    private function getRejectedInterestDetails($history)
+    {
+        if (!$history->old_values || !$history->new_values) {
+            return null;
+        }
+
+        $details = [];
+        $oldInterests = $history->old_values['interests'] ?? [];
+        $newInterests = $history->new_values['interests'] ?? [];
+
+        // Create lookup arrays
+        $oldInterestsById = collect($oldInterests)->keyBy('id');
+        $newInterestsById = collect($newInterests)->keyBy('id')->filter(fn($item) => !empty($item['id']));
+
+        // Track all IDs
+        $oldIds = $oldInterestsById->keys();
+        $newIds = $newInterestsById->keys();
+
+        // Check for interests that would be added (rejected)
+        $newInterestsWithoutId = collect($newInterests)->filter(function ($interest) {
+            return empty($interest['id']) || is_null($interest['id']);
+        });
+
+        foreach ($newInterestsWithoutId as $newInterest) {
+            $startDate = isset($newInterest['start_date']) ? \Carbon\Carbon::parse($newInterest['start_date'])->format('d/m/Y') : 'N/A';
+            $endDate = isset($newInterest['end_date']) ? \Carbon\Carbon::parse($newInterest['end_date'])->format('d/m/Y') : 'N/A';
+            $days = 0;
+            if (isset($newInterest['start_date']) && isset($newInterest['end_date'])) {
+                $days = \Carbon\Carbon::parse($newInterest['start_date'])->diffInDays(\Carbon\Carbon::parse($newInterest['end_date']));
+            }
+            
+            $details[] = [
+                'type' => 'rejected_add',
+                'start_date' => $startDate,
+                'end_date' => $endDate,
+                'days' => $days,
+                'harga_perolehan' => $this->formatValue('harga', $newInterest['harga_perolehan'] ?? 0),
+                'bunga' => number_format($newInterest['bunga'] ?? 0, 2),
+                'remarks' => $newInterest['remarks'] ?? '-',
+            ];
+        }
+
+        // Check for interests that would be deleted (rejected)
+        $deletedIds = $oldIds->diff($newIds);
+        foreach ($deletedIds as $deletedId) {
+            $interest = $oldInterestsById->get($deletedId);
+            $startDate = isset($interest['start_date']) ? \Carbon\Carbon::parse($interest['start_date'])->format('d/m/Y') : 'N/A';
+            $endDate = isset($interest['end_date']) ? \Carbon\Carbon::parse($interest['end_date'])->format('d/m/Y') : 'N/A';
+            $days = 0;
+            if (isset($interest['start_date']) && isset($interest['end_date'])) {
+                $days = \Carbon\Carbon::parse($interest['start_date'])->diffInDays(\Carbon\Carbon::parse($interest['end_date']));
+            }
+            
+            $details[] = [
+                'type' => 'rejected_delete',
+                'start_date' => $startDate,
+                'end_date' => $endDate,
+                'days' => $days,
+                'harga_perolehan' => $this->formatValue('harga', $interest['harga_perolehan'] ?? 0),
+                'bunga' => number_format($interest['bunga'] ?? 0, 2),
+                'remarks' => $interest['remarks'] ?? '-',
+            ];
+        }
+
+        // Check for interests that would be modified (rejected)
+        foreach ($newIds as $interestId) {
+            $oldInterest = $oldInterestsById->get($interestId);
+            $newInterest = $newInterestsById->get($interestId);
+
+            if ($oldInterest && $newInterest) {
+                $hasChanges = (
+                    ($oldInterest['start_date'] ?? null) != ($newInterest['start_date'] ?? null) ||
+                    ($oldInterest['end_date'] ?? null) != ($newInterest['end_date'] ?? null) ||
+                    ($oldInterest['harga_perolehan'] ?? 0) != ($newInterest['harga_perolehan'] ?? 0) ||
+                    ($oldInterest['bunga'] ?? 0) != ($newInterest['bunga'] ?? 0) ||
+                    ($oldInterest['remarks'] ?? '') != ($newInterest['remarks'] ?? '')
+                );
+
+                if ($hasChanges) {
+                    $changeDetails = [];
+
+                    if (($oldInterest['start_date'] ?? '') != ($newInterest['start_date'] ?? '')) {
+                        $changeDetails[] = [
+                            'field' => 'Start Date',
+                            'old' => isset($oldInterest['start_date']) ? \Carbon\Carbon::parse($oldInterest['start_date'])->format('d/m/Y') : '-',
+                            'new' => isset($newInterest['start_date']) ? \Carbon\Carbon::parse($newInterest['start_date'])->format('d/m/Y') : '-'
+                        ];
+                    }
+
+                    if (($oldInterest['end_date'] ?? '') != ($newInterest['end_date'] ?? '')) {
+                        $changeDetails[] = [
+                            'field' => 'End Date',
+                            'old' => isset($oldInterest['end_date']) ? \Carbon\Carbon::parse($oldInterest['end_date'])->format('d/m/Y') : '-',
+                            'new' => isset($newInterest['end_date']) ? \Carbon\Carbon::parse($newInterest['end_date'])->format('d/m/Y') : '-'
+                        ];
+                    }
+
+                    if (($oldInterest['harga_perolehan'] ?? 0) != ($newInterest['harga_perolehan'] ?? 0)) {
+                        $changeDetails[] = [
+                            'field' => 'Harga Perolehan',
+                            'old' => $this->formatValue('harga', $oldInterest['harga_perolehan'] ?? 0),
+                            'new' => $this->formatValue('harga', $newInterest['harga_perolehan'] ?? 0)
+                        ];
+                    }
+
+                    if (($oldInterest['bunga'] ?? 0) != ($newInterest['bunga'] ?? 0)) {
+                        $changeDetails[] = [
+                            'field' => 'Interest Rate',
+                            'old' => number_format($oldInterest['bunga'] ?? 0, 2) . '%',
+                            'new' => number_format($newInterest['bunga'] ?? 0, 2) . '%'
+                        ];
+                    }
+
+                    if (($oldInterest['remarks'] ?? '') != ($newInterest['remarks'] ?? '')) {
+                        $changeDetails[] = [
+                            'field' => 'Remarks',
+                            'old' => $oldInterest['remarks'] ?? '-',
+                            'new' => $newInterest['remarks'] ?? '-'
+                        ];
+                    }
+
+                    $details[] = [
+                        'type' => 'rejected_modify',
+                        'changes' => $changeDetails,
+                    ];
+                }
+            }
+        }
+
+        return $details;
+    }
+
+    private function getApprovedInterestDetails($history)
+    {
+        if (!$history->old_values || !$history->new_values) {
+            return null;
+        }
+
+        $details = [];
+        $oldInterests = $history->old_values['interests'] ?? [];
+        $newInterests = $history->new_values['interests'] ?? [];
+
+        // Create lookup arrays
+        $oldInterestsById = collect($oldInterests)->keyBy('id');
+        $newInterestsById = collect($newInterests)->keyBy('id')->filter(fn($item) => !empty($item['id']));
+
+        // Track all IDs
+        $oldIds = $oldInterestsById->keys();
+        $newIds = $newInterestsById->keys();
+
+        // Check for interests that were added (approved)
+        $newInterestsWithoutId = collect($newInterests)->filter(function ($interest) {
+            return empty($interest['id']) || is_null($interest['id']);
+        });
+
+        foreach ($newInterestsWithoutId as $newInterest) {
+            $startDate = isset($newInterest['start_date']) ? \Carbon\Carbon::parse($newInterest['start_date'])->format('d/m/Y') : 'N/A';
+            $endDate = isset($newInterest['end_date']) ? \Carbon\Carbon::parse($newInterest['end_date'])->format('d/m/Y') : 'N/A';
+            $days = 0;
+            if (isset($newInterest['start_date']) && isset($newInterest['end_date'])) {
+                $days = \Carbon\Carbon::parse($newInterest['start_date'])->diffInDays(\Carbon\Carbon::parse($newInterest['end_date']));
+            }
+            
+            $details[] = [
+                'type' => 'added',
+                'start_date' => $startDate,
+                'end_date' => $endDate,
+                'days' => $days,
+                'harga_perolehan' => $this->formatValue('harga', $newInterest['harga_perolehan'] ?? 0),
+                'bunga' => number_format($newInterest['bunga'] ?? 0, 2),
+                'remarks' => $newInterest['remarks'] ?? '-',
+            ];
+        }
+
+        // Check for interests that were deleted (approved)
+        $deletedIds = $oldIds->diff($newIds);
+        foreach ($deletedIds as $deletedId) {
+            $interest = $oldInterestsById->get($deletedId);
+            $startDate = isset($interest['start_date']) ? \Carbon\Carbon::parse($interest['start_date'])->format('d/m/Y') : 'N/A';
+            $endDate = isset($interest['end_date']) ? \Carbon\Carbon::parse($interest['end_date'])->format('d/m/Y') : 'N/A';
+            $days = 0;
+            if (isset($interest['start_date']) && isset($interest['end_date'])) {
+                $days = \Carbon\Carbon::parse($interest['start_date'])->diffInDays(\Carbon\Carbon::parse($interest['end_date']));
+            }
+            
+            $details[] = [
+                'type' => 'deleted',
+                'start_date' => $startDate,
+                'end_date' => $endDate,
+                'days' => $days,
+                'harga_perolehan' => $this->formatValue('harga', $interest['harga_perolehan'] ?? 0),
+                'bunga' => number_format($interest['bunga'] ?? 0, 2),
+                'remarks' => $interest['remarks'] ?? '-',
+            ];
+        }
+
+        // Check for interests that were modified (approved)
+        foreach ($newIds as $interestId) {
+            $oldInterest = $oldInterestsById->get($interestId);
+            $newInterest = $newInterestsById->get($interestId);
+
+            if ($oldInterest && $newInterest) {
+                $hasChanges = (
+                    ($oldInterest['start_date'] ?? null) != ($newInterest['start_date'] ?? null) ||
+                    ($oldInterest['end_date'] ?? null) != ($newInterest['end_date'] ?? null) ||
+                    ($oldInterest['harga_perolehan'] ?? 0) != ($newInterest['harga_perolehan'] ?? 0) ||
+                    ($oldInterest['bunga'] ?? 0) != ($newInterest['bunga'] ?? 0) ||
+                    ($oldInterest['remarks'] ?? '') != ($newInterest['remarks'] ?? '')
+                );
+
+                if ($hasChanges) {
+                    $changeDetails = [];
+
+                    if (($oldInterest['start_date'] ?? '') != ($newInterest['start_date'] ?? '')) {
+                        $changeDetails[] = [
+                            'field' => 'Start Date',
+                            'old' => isset($oldInterest['start_date']) ? \Carbon\Carbon::parse($oldInterest['start_date'])->format('d/m/Y') : '-',
+                            'new' => isset($newInterest['start_date']) ? \Carbon\Carbon::parse($newInterest['start_date'])->format('d/m/Y') : '-'
+                        ];
+                    }
+
+                    if (($oldInterest['end_date'] ?? '') != ($newInterest['end_date'] ?? '')) {
+                        $changeDetails[] = [
+                            'field' => 'End Date',
+                            'old' => isset($oldInterest['end_date']) ? \Carbon\Carbon::parse($oldInterest['end_date'])->format('d/m/Y') : '-',
+                            'new' => isset($newInterest['end_date']) ? \Carbon\Carbon::parse($newInterest['end_date'])->format('d/m/Y') : '-'
+                        ];
+                    }
+
+                    if (($oldInterest['harga_perolehan'] ?? 0) != ($newInterest['harga_perolehan'] ?? 0)) {
+                        $changeDetails[] = [
+                            'field' => 'Harga Perolehan',
+                            'old' => $this->formatValue('harga', $oldInterest['harga_perolehan'] ?? 0),
+                            'new' => $this->formatValue('harga', $newInterest['harga_perolehan'] ?? 0)
+                        ];
+                    }
+
+                    if (($oldInterest['bunga'] ?? 0) != ($newInterest['bunga'] ?? 0)) {
+                        $changeDetails[] = [
+                            'field' => 'Interest Rate',
+                            'old' => number_format($oldInterest['bunga'] ?? 0, 2) . '%',
+                            'new' => number_format($newInterest['bunga'] ?? 0, 2) . '%'
+                        ];
+                    }
+
+                    if (($oldInterest['remarks'] ?? '') != ($newInterest['remarks'] ?? '')) {
+                        $changeDetails[] = [
+                            'field' => 'Remarks',
+                            'old' => $oldInterest['remarks'] ?? '-',
+                            'new' => $newInterest['remarks'] ?? '-'
+                        ];
+                    }
+
+                    $details[] = [
+                        'type' => 'updated',
                         'changes' => $changeDetails,
                     ];
                 }

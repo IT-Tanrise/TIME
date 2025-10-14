@@ -136,7 +136,8 @@ class SoilApproval extends Model
             'details' => 'Soil Details',
             'costs' => 'Additional Costs',
             'delete' => 'Delete Record',
-            'create' => 'Create Record', // Add this line
+            'create' => 'Create Record',
+            'interest' => 'Interest Costs',
             default => ucfirst($this->change_type)
         };
     }
@@ -151,6 +152,8 @@ class SoilApproval extends Model
             return $this->getDeleteChangeSummary();
         } elseif ($this->change_type === 'create') {
             return $this->getCreateChangeSummary();
+        } elseif ($this->change_type === 'interest') {
+            return $this->getInterestChangeSummary();
         }
         
         return 'Unknown change type';
@@ -220,6 +223,21 @@ class SoilApproval extends Model
                number_format($newTotal - $oldTotal, 0, ',', '.');
     }
 
+    private function getInterestChangeSummary()
+    {
+        $oldData = $this->old_data ?? [];
+        $newData = $this->new_data ?? [];
+        
+        $oldCount = count($oldData);
+        $newCount = count($newData);
+        
+        $oldTotal = collect($oldData)->sum('harga_perolehan');
+        $newTotal = collect($newData)->sum('harga_perolehan');
+        
+        return 'Interest changes: ' . $newCount . ' periods, total harga perolehan difference: Rp ' . 
+            number_format($newTotal - $oldTotal, 0, ',', '.');
+    }
+
     private function getDeleteChangeSummary()
     {
         $reason = $this->getDeletionReason();
@@ -252,6 +270,8 @@ class SoilApproval extends Model
                 $this->applyDeletion();
             } elseif ($this->change_type === 'create') {
                 $this->applyCreation();
+            } elseif ($this->change_type === 'interest') {
+                $this->applyInterestChanges();
             }
         });
     }
@@ -298,6 +318,8 @@ class SoilApproval extends Model
             } elseif ($this->change_type === 'create') {
                 // For creation rejection, we don't have a soil record yet
                 $this->logRejectedCreation($reason);
+            } elseif ($this->change_type === 'interest') {
+                $this->logRejectedInterestChanges($soil, $reason);
             }
         });
     }
@@ -379,6 +401,46 @@ class SoilApproval extends Model
             
         } catch (\Exception $e) {
             \Log::error('Failed to create rejected cost history: ' . $e->getMessage(), [
+                'soil_id' => $soil->id,
+                'approval_id' => $this->id,
+                'error' => $e->getMessage()
+            ]);
+        } finally {
+            $soil->historyLogging = false;
+        }
+    }
+
+    private function logRejectedInterestChanges($soil, $reason)
+    {
+        $soil->historyLogging = true;
+        
+        try {
+            // Add rejection metadata
+            $rejectionMetadata = [
+                'rejected_by' => Auth::id(),
+                'approval_id' => $this->id,
+                'is_rejected_change' => true,
+                'rejection_reason' => $reason
+            ];
+            
+            $newValuesWithMetadata = array_merge(
+                ['interests' => $this->new_data], 
+                ['_rejection_metadata' => $rejectionMetadata]
+            );
+
+            SoilHistory::create([
+                'soil_id' => $soil->id,
+                'user_id' => Auth::id(),
+                'action' => 'rejected_interest_update',
+                'changes' => [],
+                'old_values' => ['interests' => $this->old_data],
+                'new_values' => $newValuesWithMetadata,
+                'ip_address' => request()->ip(),
+                'user_agent' => request()->userAgent(),
+            ]);
+            
+        } catch (\Exception $e) {
+            \Log::error('Failed to create rejected interest history: ' . $e->getMessage(), [
                 'soil_id' => $soil->id,
                 'approval_id' => $this->id,
                 'error' => $e->getMessage()
@@ -590,6 +652,126 @@ class SoilApproval extends Model
                         
                         // Log as updated with approval metadata
                         $soil->logAdditionalCostHistory('updated', $newCostDataFormatted, $oldCostData, $this->approved_by, $this->id);
+                    }
+                }
+            }
+        });
+        
+        // Reset flag
+        $soil->historyLogging = false;
+    }
+
+    private function applyInterestChanges()
+    {
+        $soil = $this->soil;
+        if (!$soil) return;
+        
+        // Set history logging flag to prevent automatic history creation
+        $soil->historyLogging = true;
+        
+        DB::transaction(function () use ($soil) {
+            $oldInterests = $soil->biayaTambahanInterestSoils()->get();
+            $newInterestsData = $this->new_data;
+            
+            // Create lookup arrays
+            $oldInterestsById = $oldInterests->keyBy('id');
+            $newInterestsById = collect($newInterestsData)->keyBy('id')->filter(fn($item) => !empty($item['id']));
+            
+            // Track all IDs
+            $oldIds = $oldInterestsById->keys();
+            $newIds = $newInterestsById->keys();
+            
+            // 1. IDENTIFY DELETED INTERESTS (in old but not in new)
+            $deletedIds = $oldIds->diff($newIds);
+            foreach ($deletedIds as $deletedId) {
+                $interest = $oldInterestsById->get($deletedId);
+                $oldInterestData = [
+                    'start_date' => $interest->start_date->format('Y-m-d'),
+                    'end_date' => $interest->end_date->format('Y-m-d'),
+                    'remarks' => $interest->remarks,
+                    'harga_perolehan' => $interest->harga_perolehan,
+                    'bunga' => $interest->bunga,
+                ];
+                
+                // Log as deleted with approval metadata
+                $soil->logInterestHistory('deleted', [], $oldInterestData, $this->approved_by, $this->id);
+            }
+            
+            // Delete interests not in new data
+            $soil->biayaTambahanInterestSoils()->whereNotIn('id', $newIds)->delete();
+            
+            // 2. IDENTIFY ADDED INTERESTS (no ID or new ID)
+            $addedInterests = collect($newInterestsData)->filter(function($item) use ($oldIds) {
+                return empty($item['id']) || !$oldIds->contains($item['id']);
+            });
+            
+            foreach ($addedInterests as $interestData) {
+                if (!empty($interestData['start_date']) && !empty($interestData['end_date'])) {
+                    BiayaTambahanInterestSoil::create([
+                        'soil_id' => $soil->id,
+                        'start_date' => $interestData['start_date'],
+                        'end_date' => $interestData['end_date'],
+                        'remarks' => $interestData['remarks'],
+                        'harga_perolehan' => $interestData['harga_perolehan'],
+                        'bunga' => $interestData['bunga'],
+                    ]);
+                    
+                    $newInterestData = [
+                        'start_date' => $interestData['start_date'],
+                        'end_date' => $interestData['end_date'],
+                        'remarks' => $interestData['remarks'],
+                        'harga_perolehan' => $interestData['harga_perolehan'],
+                        'bunga' => $interestData['bunga'],
+                    ];
+                    
+                    // Log as added with approval metadata
+                    $soil->logInterestHistory('added', $newInterestData, [], $this->approved_by, $this->id);
+                }
+            }
+            
+            // 3. IDENTIFY UPDATED INTERESTS (in both old and new, but changed)
+            foreach ($newIds as $interestId) {
+                $oldInterest = $oldInterestsById->get($interestId);
+                $newInterestData = $newInterestsById->get($interestId);
+                
+                if ($oldInterest && $newInterestData) {
+                    // Check if anything actually changed
+                    $hasChanges = (
+                        $oldInterest->start_date->format('Y-m-d') != $newInterestData['start_date'] ||
+                        $oldInterest->end_date->format('Y-m-d') != $newInterestData['end_date'] ||
+                        $oldInterest->harga_perolehan != $newInterestData['harga_perolehan'] ||
+                        $oldInterest->bunga != $newInterestData['bunga'] ||
+                        $oldInterest->remarks != $newInterestData['remarks']
+                    );
+                    
+                    if ($hasChanges) {
+                        // Update the interest
+                        \App\Models\BiayaTambahanInterestSoil::where('id', $interestId)->update([
+                            'start_date' => $newInterestData['start_date'],
+                            'end_date' => $newInterestData['end_date'],
+                            'remarks' => $newInterestData['remarks'],
+                            'harga_perolehan' => $newInterestData['harga_perolehan'],
+                            'bunga' => $newInterestData['bunga'],
+                        ]);
+                        
+                        $oldInterestData = [
+                            'start_date' => $oldInterest->start_date->format('Y-m-d'),
+                            'end_date' => $oldInterest->end_date->format('Y-m-d'),
+                            'remarks' => $oldInterest->remarks,
+                            'harga_perolehan' => $oldInterest->harga_perolehan,
+                            'bunga' => $oldInterest->bunga,
+                        ];
+                        
+                        $newInterestDataFormatted = [
+                            'start_date' => $newInterestData['start_date'],
+                            'end_date' => $newInterestData['end_date'],
+                            'remarks' => $newInterestData['remarks'],
+                            'harga_perolehan' => $newInterestData['harga_perolehan'],
+                            'bunga' => $newInterestData['bunga'],
+                        ];
+                        
+                        // Log as updated with approval metadata
+                        $soil->logInterestHistory('updated', $newInterestDataFormatted, $oldInterestData, $this->approved_by, $this->id);
                     }
                 }
             }

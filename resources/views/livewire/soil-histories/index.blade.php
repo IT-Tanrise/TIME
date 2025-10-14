@@ -209,6 +209,7 @@
                                                 <h3 class="text-sm font-medium text-gray-900 truncate">{{ $history->action_display }}</h3>
                                                 
                                                 <!-- Status Badge -->
+                                                @if($history->isApprovedChange() || $history->isRejectedChange())
                                                 <span class="inline-flex px-2 py-0.5 text-xs font-semibold rounded-full flex-shrink-0 {{ $classes['badge_bg'] }} {{ $classes['badge_text'] }}">
                                                     @if($history->isApprovedChange())
                                                         <svg class="w-3 h-3 mr-1" fill="currentColor" viewBox="0 0 20 20">
@@ -220,10 +221,9 @@
                                                             <path fill-rule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z" clip-rule="evenodd"/>
                                                         </svg>
                                                         Rejected
-                                                    @else
-                                                        {{ ucfirst($history->action) }}
                                                     @endif
                                                 </span>
+                                                @endif
                                                 
                                                 <div class="text-xs text-gray-500 flex-shrink-0">
                                                     {{ $history->formatted_created_at }}
@@ -356,7 +356,124 @@
                                                             @endforeach
                                                         </div>
                                                     </div>
-                                                    
+                                                @elseif(str_contains($history->action, 'interest_cost'))
+                                                    {{-- Interest Cost Actions --}}
+                                                    <div class="bg-white border {{ $history->isApprovedChange() ? 'border-green-200' : ($history->isRejectedChange() ? 'border-red-200' : 'border-purple-200') }} rounded-lg p-3">
+                                                        <div class="text-sm font-medium {{ $history->isApprovedChange() ? 'text-green-800' : ($history->isRejectedChange() ? 'text-red-800' : 'text-purple-800') }} mb-2">
+                                                            {{ $history->action_display }}
+                                                        </div>
+                                                        
+                                                        <div class="space-y-2">
+                                                            @foreach($changeDetails as $change)
+                                                                <div class="border border-gray-200 rounded p-2">
+                                                                    <div class="font-medium text-gray-900 text-xs mb-2">{{ $change['field'] }}</div>
+                                                                    <div class="grid grid-cols-2 gap-2 text-xs">
+                                                                        @if(isset($change['type']) && $change['type'] === 'added')
+                                                                            <div class="col-span-2 bg-green-50 p-2 rounded border border-green-200">
+                                                                                <div class="text-green-600 font-medium mb-1">New Value:</div>
+                                                                                <div class="text-gray-700 break-words">{{ $change['new'] ?: 'Empty' }}</div>
+                                                                            </div>
+                                                                        @elseif(isset($change['type']) && $change['type'] === 'deleted')
+                                                                            <div class="col-span-2 bg-red-50 p-2 rounded border border-red-200">
+                                                                                <div class="text-red-600 font-medium mb-1">Deleted Value:</div>
+                                                                                <div class="text-gray-700 break-words">{{ $change['old'] ?: 'Empty' }}</div>
+                                                                            </div>
+                                                                        @else
+                                                                            <div class="bg-red-50 p-2 rounded border border-red-200">
+                                                                                <div class="text-red-600 font-medium mb-1">Before:</div>
+                                                                                <div class="text-gray-700 break-words">{{ $change['old'] ?: 'Empty' }}</div>
+                                                                            </div>
+                                                                            <div class="bg-green-50 p-2 rounded border border-green-200">
+                                                                                <div class="text-green-600 font-medium mb-1">After:</div>
+                                                                                <div class="text-gray-700 break-words">{{ $change['new'] ?: 'Empty' }}</div>
+                                                                            </div>
+                                                                        @endif
+                                                                    </div>
+                                                                </div>
+                                                            @endforeach
+                                                        </div>
+                                                    </div>
+                                                @elseif(in_array($history->action, ['approved_interest_update', 'rejected_interest_update']))
+                                                    {{-- Approved/Rejected Interest Update --}}
+                                                    <div class="bg-white border {{ $history->isApprovedChange() ? 'border-green-200' : 'border-red-200' }} rounded-lg p-3">
+                                                        <div class="text-sm font-medium {{ $history->isApprovedChange() ? 'text-green-800' : 'text-red-800' }} mb-2">
+                                                            {{ $history->isApprovedChange() ? 'Approved Interest Cost Changes' : 'Rejected Interest Cost Changes' }}
+                                                        </div>
+                                                        <div class="text-sm {{ $history->isApprovedChange() ? 'text-green-700' : 'text-red-700' }} mb-3">
+                                                            {{ $history->changes_summary }}
+                                                        </div>
+                                                        
+                                                        <div class="space-y-3">
+                                                            @foreach($changeDetails as $change)
+                                                                @if($change['type'] === 'rejected_add' || $change['type'] === 'added')
+                                                                    <div class="border {{ $history->isRejectedChange() ? 'border-red-200 bg-red-50' : 'border-green-200 bg-green-50' }} rounded p-2">
+                                                                        <div class="flex items-center mb-2">
+                                                                            <svg class="w-4 h-4 {{ $history->isRejectedChange() ? 'text-red-600' : 'text-green-600' }} mr-2" fill="currentColor" viewBox="0 0 20 20">
+                                                                                @if($history->isRejectedChange())
+                                                                                    <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clip-rule="evenodd"/>
+                                                                                @else
+                                                                                    <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd"/>
+                                                                                @endif
+                                                                            </svg>
+                                                                            <span class="text-xs font-medium {{ $history->isRejectedChange() ? 'text-red-800' : 'text-green-800' }}">
+                                                                                {{ $history->isRejectedChange() ? 'Rejected Addition' : 'Added Interest Period' }}
+                                                                            </span>
+                                                                        </div>
+                                                                        <div class="text-xs text-gray-700 space-y-1">
+                                                                            <div><span class="font-medium">Period:</span> {{ $change['start_date'] ?? 'N/A' }} to {{ $change['end_date'] ?? 'N/A' }}</div>
+                                                                            <div><span class="font-medium">Days:</span> {{ $change['days'] ?? 'N/A' }}</div>
+                                                                            <div><span class="font-medium">Harga Perolehan:</span> {{ $change['harga_perolehan'] ?? 'N/A' }}</div>
+                                                                            <div><span class="font-medium">Interest Rate:</span> {{ $change['bunga'] ?? 'N/A' }}%</div>
+                                                                            <div><span class="font-medium">Remarks:</span> {{ $change['remarks'] ?? 'N/A' }}</div>
+                                                                        </div>
+                                                                    </div>
+                                                                @elseif($change['type'] === 'rejected_delete' || $change['type'] === 'deleted')
+                                                                    <div class="border {{ $history->isRejectedChange() ? 'border-red-200 bg-red-50' : 'border-red-200 bg-red-50' }} rounded p-2">
+                                                                        <div class="flex items-center mb-2">
+                                                                            <svg class="w-4 h-4 text-red-600 mr-2" fill="currentColor" viewBox="0 0 20 20">
+                                                                                <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clip-rule="evenodd"/>
+                                                                            </svg>
+                                                                            <span class="text-xs font-medium text-red-800">
+                                                                                {{ $history->isRejectedChange() ? 'Rejected Deletion' : 'Deleted Interest Period' }}
+                                                                            </span>
+                                                                        </div>
+                                                                        <div class="text-xs text-gray-700 space-y-1">
+                                                                            <div><span class="font-medium">Period:</span> {{ $change['start_date'] ?? 'N/A' }} to {{ $change['end_date'] ?? 'N/A' }}</div>
+                                                                            <div><span class="font-medium">Days:</span> {{ $change['days'] ?? 'N/A' }}</div>
+                                                                            <div><span class="font-medium">Harga Perolehan:</span> {{ $change['harga_perolehan'] ?? 'N/A' }}</div>
+                                                                            <div><span class="font-medium">Interest Rate:</span> {{ $change['bunga'] ?? 'N/A' }}%</div>
+                                                                            <div><span class="font-medium">Remarks:</span> {{ $change['remarks'] ?? 'N/A' }}</div>
+                                                                        </div>
+                                                                    </div>
+                                                                @elseif($change['type'] === 'rejected_modify' || $change['type'] === 'updated')
+                                                                    <div class="border border-gray-200 rounded p-2 bg-gray-50">
+                                                                        <div class="flex items-center mb-2">
+                                                                            <svg class="w-4 h-4 {{ $history->isRejectedChange() ? 'text-red-600' : 'text-blue-600' }} mr-2" fill="currentColor" viewBox="0 0 20 20">
+                                                                                <path d="M13.586 3.586a2 2 0 112.828 2.828l-.793.793-2.828-2.828.793-.793zM11.379 5.793L3 14.172V17h2.828l8.38-8.379-2.83-2.828z"/>
+                                                                            </svg>
+                                                                            <span class="text-xs font-medium {{ $history->isRejectedChange() ? 'text-red-800' : 'text-blue-800' }}">
+                                                                                {{ $history->isRejectedChange() ? 'Rejected Modification' : 'Modified Interest Period' }}
+                                                                            </span>
+                                                                        </div>
+                                                                        <div class="space-y-2">
+                                                                            @foreach($change['changes'] as $fieldChange)
+                                                                                <div class="grid grid-cols-2 gap-2 text-xs">
+                                                                                    <div class="bg-white p-2 rounded border border-gray-200">
+                                                                                        <div class="text-gray-600 font-medium mb-1">{{ $fieldChange['field'] }} {{ $history->isRejectedChange() ? '(Current)' : '(Before)' }}:</div>
+                                                                                        <div class="text-gray-700">{{ $fieldChange['old'] }}</div>
+                                                                                    </div>
+                                                                                    <div class="bg-white p-2 rounded border border-gray-200">
+                                                                                        <div class="{{ $history->isRejectedChange() ? 'text-red-600' : 'text-green-600' }} font-medium mb-1">{{ $fieldChange['field'] }} {{ $history->isRejectedChange() ? '(Rejected)' : '(After)' }}:</div>
+                                                                                        <div class="text-gray-700">{{ $fieldChange['new'] }}</div>
+                                                                                    </div>
+                                                                                </div>
+                                                                            @endforeach
+                                                                        </div>
+                                                                    </div>
+                                                                @endif
+                                                            @endforeach
+                                                        </div>
+                                                    </div>                                                    
                                                 @elseif($history->action === 'rejected_cost_update')
                                                     {{-- Rejected Cost Update --}}
                                                     <div class="bg-white border border-red-200 rounded-lg p-3">

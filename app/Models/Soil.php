@@ -30,6 +30,7 @@ class Soil extends Model
         'nop_pbb',
         'nama_notaris_ppat',
         'keterangan',
+        'status',
         'created_by',
         'updated_by'
     ];
@@ -441,5 +442,157 @@ class Soil extends Model
         } finally {
             $this->historyLogging = false;
         }
+    }
+	
+    public function logInterestHistory($action, $interestData = [], $oldInterestData = [], $approvedBy = null, $approvalId = null)
+    {
+        $historyAction = 'interest_cost_' . $action;
+        
+        $newValues = [];
+        $oldValues = [];
+        
+        if ($action === 'added' && $interestData) {
+            $newValues = [
+                'start_date' => $interestData['start_date'] ?? null,
+                'end_date' => $interestData['end_date'] ?? null,
+                'remarks' => $interestData['remarks'] ?? '',
+                'harga_perolehan' => $interestData['harga_perolehan'] ?? 0,
+                'bunga' => $interestData['bunga'] ?? 0,
+            ];
+        } elseif ($action === 'updated' && $interestData && $oldInterestData) {
+            $newValues = [
+                'start_date' => $interestData['start_date'] ?? null,
+                'end_date' => $interestData['end_date'] ?? null,
+                'remarks' => $interestData['remarks'] ?? '',
+                'harga_perolehan' => $interestData['harga_perolehan'] ?? 0,
+                'bunga' => $interestData['bunga'] ?? 0,
+            ];
+            $oldValues = [
+                'start_date' => $oldInterestData['start_date'] ?? null,
+                'end_date' => $oldInterestData['end_date'] ?? null,
+                'remarks' => $oldInterestData['remarks'] ?? '',
+                'harga_perolehan' => $oldInterestData['harga_perolehan'] ?? 0,
+                'bunga' => $oldInterestData['bunga'] ?? 0,
+            ];
+        } elseif ($action === 'deleted' && $oldInterestData) {
+            $oldValues = [
+                'start_date' => $oldInterestData['start_date'] ?? null,
+                'end_date' => $oldInterestData['end_date'] ?? null,
+                'remarks' => $oldInterestData['remarks'] ?? '',
+                'harga_perolehan' => $oldInterestData['harga_perolehan'] ?? 0,
+                'bunga' => $oldInterestData['bunga'] ?? 0,
+            ];
+        } elseif ($action === 'approved') {
+            $newValues = $interestData;
+        }
+
+        // Determine the user ID for history
+        $historyUserId = $approvedBy ?? Auth::id();
+
+        // Add approval metadata if this is an approved action
+        if ($approvedBy && $approvalId) {
+            $historyMetadata = [
+                'approved_by' => $approvedBy,
+                'approval_id' => $approvalId,
+                'is_approved_change' => true
+            ];
+            
+            // Merge metadata with new_values
+            if ($newValues) {
+                $newValues = array_merge($newValues, ['_approval_metadata' => $historyMetadata]);
+            } else {
+                $newValues = ['_approval_metadata' => $historyMetadata];
+            }
+        }
+
+        try {
+            SoilHistory::create([
+                'soil_id' => $this->id,
+                'user_id' => $historyUserId,
+                'action' => $historyAction,
+                'changes' => [],
+                'old_values' => $oldValues,
+                'new_values' => $newValues,
+                'ip_address' => request()->ip(),
+                'user_agent' => request()->userAgent(),
+            ]);
+        } catch (\Exception $e) {
+            // Log the error but don't prevent the main operation
+            \Log::error('Failed to create interest cost history: ' . $e->getMessage(), [
+                'soil_id' => $this->id,
+                'action' => $historyAction,
+                'error' => $e->getMessage()
+            ]);
+        }
+    }
+
+	// Add this relationship to your Soil.php model (in the Relationships section)
+	public function biayaTambahanInterestSoils()
+	{
+		return $this->hasMany(BiayaTambahanInterestSoil::class)->orderBy('start_date', 'asc');
+	}
+
+	// Add this accessor to get total interest costs
+	public function getTotalBiayaInterestAttribute()
+	{
+		return $this->biayaTambahanInterestSoils->sum('bunga_calculation');
+	}
+
+	// Add this accessor to get formatted total interest costs
+	public function getFormattedTotalBiayaInterestAttribute()
+	{
+		return 'Rp ' . number_format($this->total_biaya_interest, 0, ',', '.');
+	}
+
+	// Add this accessor to get the final nilai tanah with interest
+	public function getNilaiTanahAkhirAttribute()
+	{
+		$lastRecord = $this->biayaTambahanInterestSoils()->latest('start_date')->first();
+		return $lastRecord ? $lastRecord->nilai_tanah : 0;
+	}
+
+	// Add this accessor to get formatted nilai tanah akhir
+	public function getFormattedNilaiTanahAkhirAttribute()
+	{
+		return 'Rp ' . number_format($this->nilai_tanah_akhir, 0, ',', '.');
+	}
+
+    // Status constants
+    const STATUS_ACTIVE = 'active';
+    const STATUS_SOLD = 'sold';
+    const STATUS_RESERVED = 'reserved';
+    const STATUS_PENDING = 'pending';
+    const STATUS_INACTIVE = 'inactive';
+
+    // Get available status options
+    public static function getStatusOptions()
+    {
+        return [
+            self::STATUS_ACTIVE => 'Active',
+            self::STATUS_SOLD => 'Sold',
+            self::STATUS_RESERVED => 'Reserved',
+            self::STATUS_PENDING => 'Pending',
+            self::STATUS_INACTIVE => 'Inactive',
+        ];
+    }
+
+    // Get status badge color
+    public function getStatusBadgeColorAttribute()
+    {
+        return match($this->status) {
+            self::STATUS_ACTIVE => 'bg-green-100 text-green-800',
+            self::STATUS_SOLD => 'bg-gray-100 text-gray-800',
+            self::STATUS_RESERVED => 'bg-yellow-100 text-yellow-800',
+            self::STATUS_PENDING => 'bg-blue-100 text-blue-800',
+            self::STATUS_INACTIVE => 'bg-red-100 text-red-800',
+            default => 'bg-gray-100 text-gray-800',
+        };
+    }
+
+    // Get formatted status
+    public function getFormattedStatusAttribute()
+    {
+        $options = self::getStatusOptions();
+        return $options[$this->status] ?? ucfirst($this->status);
     }
 }
