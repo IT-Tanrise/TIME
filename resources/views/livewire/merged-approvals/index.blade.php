@@ -137,12 +137,22 @@
                                             {{ $approval->land->lokasi_lahan ?? 'N/A' }}
                                         </div>
                                     @else
-                                        <span class="text-gray-500 italic">New land entry</span>
+                                        <div class="truncate" title="{{ $approval->new_data['lokasi_lahan'] ?? 'N/A' }}">
+                                            {{ $approval->new_data['lokasi_lahan'] ?? 'New land entry' }}
+                                        </div>
                                     @endif
                                 @else
-                                    <div class="truncate" title="{{ $approval->soil->nama_penjual ?? 'N/A' }} - {{ $approval->soil->letak_tanah ?? 'N/A' }}">
-                                        {{ $approval->soil->nama_penjual ?? 'N/A' }} - {{ $approval->soil->letak_tanah ?? 'N/A' }}
-                                    </div>
+                                    @if($approval->change_type === 'create')
+                                        {{-- For create requests, get data from new_data --}}
+                                        <div class="truncate" title="{{ $approval->new_data['nama_penjual'] ?? 'N/A' }} - {{ $approval->new_data['letak_tanah'] ?? 'N/A' }}">
+                                            {{ $approval->new_data['nama_penjual'] ?? 'N/A' }} - {{ $approval->new_data['letak_tanah'] ?? 'N/A' }}
+                                        </div>
+                                    @else
+                                        {{-- For other requests, get data from soil relationship --}}
+                                        <div class="truncate" title="{{ $approval->soil->nama_penjual ?? 'N/A' }} - {{ $approval->soil->letak_tanah ?? 'N/A' }}">
+                                            {{ $approval->soil->nama_penjual ?? 'N/A' }} - {{ $approval->soil->letak_tanah ?? 'N/A' }}
+                                        </div>
+                                    @endif
                                 @endif
                             </td>
 
@@ -350,4 +360,13 @@
             </div>
         </div>
     @endif
+    <script>
+        document.addEventListener('livewire:init', () => {
+            Livewire.on('reload-page', () => {
+                setTimeout(() => {
+                    window.location.reload();
+                }, 500);
+            });
+        });
+    </script>
 </div>

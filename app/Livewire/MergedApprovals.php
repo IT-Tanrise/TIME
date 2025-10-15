@@ -153,6 +153,8 @@ class MergedApprovals extends Component
 
         if ($successCount > 0) {
             session()->flash('message', "{$successCount} approval(s) processed successfully.");
+
+            $this->dispatch('reload-page');
         }
         
         if (!empty($errors)) {
@@ -239,6 +241,8 @@ class MergedApprovals extends Component
 
         if ($successCount > 0) {
             session()->flash('message', "{$successCount} approval(s) rejected successfully.");
+
+            $this->dispatch('reload-page');
         }
         
         if (!empty($errors)) {
