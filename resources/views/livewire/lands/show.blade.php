@@ -250,6 +250,7 @@
                                     <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Seller</th>
                                     <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Location</th>
                                     <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Area</th>
+                                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Status</th>
                                     <th class="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase">Soil Price</th>
                                     <th class="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase">Additional Costs</th>
                                     <th class="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase">Total Cost</th>
@@ -288,6 +289,11 @@
                                         </td>
                                         <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
                                             {{ $soil->formatted_luas }}
+                                        </td>
+                                        <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                                            <span class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium {{ $soil->status_badge_color }}">
+                                                {{ $soil->formatted_status }}
+                                            </span>
                                         </td>
                                         <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900 text-right">
                                             {{ $soil->formatted_harga }}
