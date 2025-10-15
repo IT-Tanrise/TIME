@@ -97,9 +97,9 @@ class Soils extends Component
         'soilDetails.*.tanggal_ppjb' => 'required|date',
         'soilDetails.*.letak_tanah' => 'required|string|max:255',
         'soilDetails.*.luas' => 'required|numeric|min:0.01',
-        // REMOVED: 'soilDetails.*.harga' => 'required|numeric|min:0.01',
         'soilDetails.*.bukti_kepemilikan' => 'required|string|max:255',
         'soilDetails.*.bukti_kepemilikan_details' => 'nullable|string|max:255',
+        'soilDetails.*.shgb_expired_date' => 'nullable|date', // Simple date validation
         'soilDetails.*.atas_nama' => 'required|string|max:255',
         'soilDetails.*.nop_pbb' => 'nullable|string|max:255',
         'soilDetails.*.nama_notaris_ppat' => 'nullable|string|max:255',
@@ -311,11 +311,12 @@ class Soils extends Component
             'luas_display' => '',
             'bukti_kepemilikan' => '',
             'bukti_kepemilikan_details' => '',
+            'shgb_expired_date' => '', // ADD THIS LINE
             'atas_nama' => '',
             'nop_pbb' => '',
             'nama_notaris_ppat' => '',
             'keterangan' => '',
-            'status' => 'active', // ADD THIS LINE
+            'status' => 'active',
         ];
     }
 
@@ -400,7 +401,6 @@ class Soils extends Component
         $this->editSource = $source;
         
         if ($mode === 'details') {
-            // ... existing details code ...
             $this->land_id = $this->soil->land_id;
             $this->business_unit_id = $this->soil->business_unit_id;
 
@@ -422,6 +422,7 @@ class Soils extends Component
                     'luas_display' => $this->formatNumber($this->soil->luas),
                     'bukti_kepemilikan' => $this->soil->bukti_kepemilikan,
                     'bukti_kepemilikan_details' => $this->soil->bukti_kepemilikan_details,
+                    'shgb_expired_date' => $this->soil->shgb_expired_date ? $this->soil->shgb_expired_date->format('Y-m-d') : '', // ADD THIS LINE
                     'atas_nama' => $this->soil->atas_nama,
                     'nop_pbb' => $this->soil->nop_pbb,
                     'nama_notaris_ppat' => $this->soil->nama_notaris_ppat,
@@ -438,7 +439,6 @@ class Soils extends Component
             $this->showForm = true;
             
         } elseif ($mode === 'costs') {
-            // ... existing costs code ...
             $this->soilPrice = $this->soil->harga;
             $this->soilPriceDisplay = $this->formatNumber($this->soil->harga);
             
@@ -498,18 +498,23 @@ class Soils extends Component
                 $soil = Soil::findOrFail($this->soilId);
                 $detail = $this->soilDetails[0];
                 
+                // Prepare SHGB date - handle empty string
+                // Normalize dates - store only date part without time
+                $tanggalPpjb = !empty($detail['tanggal_ppjb']) ? \Carbon\Carbon::parse($detail['tanggal_ppjb'])->format('Y-m-d') : null;
+                $shgbDate = !empty($detail['shgb_expired_date']) ? \Carbon\Carbon::parse($detail['shgb_expired_date'])->format('Y-m-d') : null;
+                
                 $soil->update([
                     'land_id' => $this->land_id,
                     'business_unit_id' => $this->business_unit_id,
                     'nama_penjual' => $detail['nama_penjual'],
                     'alamat_penjual' => $detail['alamat_penjual'],
                     'nomor_ppjb' => $detail['nomor_ppjb'],
-                    'tanggal_ppjb' => $detail['tanggal_ppjb'],
+                    'tanggal_ppjb' => $tanggalPpjb,
                     'letak_tanah' => $detail['letak_tanah'],
                     'luas' => $this->parseFormattedNumber($detail['luas']),
-                    // REMOVED: harga update
                     'bukti_kepemilikan' => $detail['bukti_kepemilikan'],
                     'bukti_kepemilikan_details' => $detail['bukti_kepemilikan_details'],
+                    'shgb_expired_date' => $shgbDate,
                     'atas_nama' => $detail['atas_nama'],
                     'nop_pbb' => $detail['nop_pbb'],
                     'nama_notaris_ppat' => $detail['nama_notaris_ppat'],
@@ -525,9 +530,12 @@ class Soils extends Component
                 $oldData = $soil->only([
                     'land_id', 'business_unit_id', 'nama_penjual', 'alamat_penjual', 
                     'nomor_ppjb', 'tanggal_ppjb', 'letak_tanah', 'luas',
-                    'bukti_kepemilikan', 'bukti_kepemilikan_details', 'atas_nama', 
-                    'nop_pbb', 'nama_notaris_ppat', 'keterangan', 'status'
+                    'bukti_kepemilikan', 'bukti_kepemilikan_details', 'shgb_expired_date',
+                    'atas_nama', 'nop_pbb', 'nama_notaris_ppat', 'keterangan', 'status'
                 ]);
+                
+                // Prepare SHGB date - handle empty string
+                $shgbDate = !empty($detail['shgb_expired_date']) ? $detail['shgb_expired_date'] : null;
                 
                 $newData = [
                     'land_id' => $this->land_id,
@@ -540,6 +548,7 @@ class Soils extends Component
                     'luas' => $this->parseFormattedNumber($detail['luas']),
                     'bukti_kepemilikan' => $detail['bukti_kepemilikan'],
                     'bukti_kepemilikan_details' => $detail['bukti_kepemilikan_details'],
+                    'shgb_expired_date' => $shgbDate, // FIXED: Use prepared variable
                     'atas_nama' => $detail['atas_nama'],
                     'nop_pbb' => $detail['nop_pbb'],
                     'nama_notaris_ppat' => $detail['nama_notaris_ppat'],
@@ -550,6 +559,9 @@ class Soils extends Component
                 // Normalize date format in oldData BEFORE comparison
                 if (isset($oldData['tanggal_ppjb']) && $oldData['tanggal_ppjb'] instanceof \Carbon\Carbon) {
                     $oldData['tanggal_ppjb'] = $oldData['tanggal_ppjb']->format('Y-m-d');
+                }
+                if (isset($oldData['shgb_expired_date']) && $oldData['shgb_expired_date'] instanceof \Carbon\Carbon) {
+                    $oldData['shgb_expired_date'] = $oldData['shgb_expired_date']->format('Y-m-d');
                 }
 
                 // CHECK IF DATA ACTUALLY CHANGED
@@ -596,6 +608,9 @@ class Soils extends Component
                 $createdCount = 0;
                 
                 foreach ($validDetails as $detail) {
+                    // Prepare SHGB date - handle empty string
+                    $shgbDate = !empty($detail['shgb_expired_date']) ? $detail['shgb_expired_date'] : null;
+                    
                     $createData = [
                         'land_id' => $this->land_id,
                         'business_unit_id' => $this->business_unit_id,
@@ -608,6 +623,7 @@ class Soils extends Component
                         'harga' => 0, // Default value, will be set in costs management
                         'bukti_kepemilikan' => trim($detail['bukti_kepemilikan'] ?? ''),
                         'bukti_kepemilikan_details' => trim($detail['bukti_kepemilikan_details'] ?? ''),
+                        'shgb_expired_date' => $shgbDate, // FIXED: Use prepared variable
                         'atas_nama' => trim($detail['atas_nama'] ?? ''),
                         'nop_pbb' => trim($detail['nop_pbb'] ?? ''),
                         'nama_notaris_ppat' => trim($detail['nama_notaris_ppat'] ?? ''),
@@ -625,6 +641,9 @@ class Soils extends Component
                 $requestCount = 0;
                 
                 foreach ($validDetails as $detail) {
+                    // Prepare SHGB date - handle empty string
+                    $shgbDate = !empty($detail['shgb_expired_date']) ? $detail['shgb_expired_date'] : null;
+                    
                     $createData = [
                         'land_id' => $this->land_id,
                         'business_unit_id' => $this->business_unit_id,
@@ -637,6 +656,7 @@ class Soils extends Component
                         'harga' => 0, // Default value
                         'bukti_kepemilikan' => trim($detail['bukti_kepemilikan'] ?? ''),
                         'bukti_kepemilikan_details' => trim($detail['bukti_kepemilikan_details'] ?? ''),
+                        'shgb_expired_date' => $shgbDate, // FIXED: Use prepared variable
                         'atas_nama' => trim($detail['atas_nama'] ?? ''),
                         'nop_pbb' => trim($detail['nop_pbb'] ?? ''),
                         'nama_notaris_ppat' => trim($detail['nama_notaris_ppat'] ?? ''),

@@ -26,6 +26,7 @@ class Soil extends Model
         'harga',
         'bukti_kepemilikan',
         'bukti_kepemilikan_details',
+        'shgb_expired_date', // MAKE SURE THIS IS HERE
         'atas_nama',
         'nop_pbb',
         'nama_notaris_ppat',
@@ -36,7 +37,8 @@ class Soil extends Model
     ];
 
     protected $casts = [
-        'tanggal_ppjb' => 'date',
+        'tanggal_ppjb' => 'date:Y-m-d',
+        'shgb_expired_date' => 'date:Y-m-d',
         'luas' => 'integer',
         'harga' => 'integer',
         'created_at' => 'datetime',
@@ -241,7 +243,7 @@ class Soil extends Model
             if ($action === 'updated' || $action === 'approved_update') {
                 if ($changes && is_array($changes)) {
                     // For approved updates, we already have the changes
-                    $newValues = $changes;
+                    $newValues = $this->normalizeDatesInArray($changes);
                     $changedFields = array_keys($changes);
                 } else {
                     // For regular updates, check dirty fields
@@ -262,12 +264,16 @@ class Soil extends Model
                         $oldValues[$field] = $this->getOriginal($field);
                         $newValues[$field] = $this->getAttribute($field);
                     }
+                    
+                    // Normalize dates in both old and new values
+                    $oldValues = $this->normalizeDatesInArray($oldValues);
+                    $newValues = $this->normalizeDatesInArray($newValues);
                 }
             } elseif ($action === 'created') {
-                $newValues = $this->getAttributes();
+                $newValues = $this->normalizeDatesInArray($this->getAttributes());
             } elseif ($action === 'deleted' || $action === 'approved_deletion') {
                 // For deletion, store the data that's being deleted
-                $oldValues = $this->getAttributes();
+                $oldValues = $this->normalizeDatesInArray($this->getAttributes());
                 if ($changes && is_array($changes)) {
                     // Include additional deletion info like reason
                     $newValues = $changes;
@@ -314,6 +320,32 @@ class Soil extends Model
         } finally {
             $this->historyLogging = false;
         }
+    }
+
+    private function normalizeDatesInArray($array)
+    {
+        if (!is_array($array)) {
+            return $array;
+        }
+        
+        $dateFields = ['tanggal_ppjb', 'shgb_expired_date', 'date_cost', 'start_date', 'end_date'];
+        
+        foreach ($array as $key => $value) {
+            if (in_array($key, $dateFields) && $value !== null) {
+                // Convert Carbon instances or date strings to Y-m-d format only
+                if ($value instanceof \Carbon\Carbon) {
+                    $array[$key] = $value->format('Y-m-d');
+                } elseif (is_string($value)) {
+                    try {
+                        $array[$key] = \Carbon\Carbon::parse($value)->format('Y-m-d');
+                    } catch (\Exception $e) {
+                        // Keep original value if parsing fails
+                    }
+                }
+            }
+        }
+        
+        return $array;
     }
 
     // ENHANCED: Create history for additional cost changes with approval info
@@ -595,4 +627,23 @@ class Soil extends Model
         $options = self::getStatusOptions();
         return $options[$this->status] ?? ucfirst($this->status);
     }
+
+    public function getFormattedShgbExpiredDateAttribute()
+    {
+        if (!$this->shgb_expired_date) return null;
+        return $this->shgb_expired_date->format('d-m-Y');
+    }
+
+    public function getIsShgbExpiredAttribute()
+    {
+        if (!$this->shgb_expired_date) return false;
+        return $this->shgb_expired_date->isPast();
+    }
+
+    public function getShgbDaysUntilExpirationAttribute()
+    {
+        if (!$this->shgb_expired_date) return null;
+        return (int)now()->diffInDays($this->shgb_expired_date, false);
+    }
+
 }

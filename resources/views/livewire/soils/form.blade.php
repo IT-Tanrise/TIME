@@ -347,6 +347,29 @@
                                                 @enderror
                                             </div>
 
+                                            <!-- SHGB Expired Date - Conditional Display -->
+                                            @if(isset($soilDetails[$index]['bukti_kepemilikan']) && $soilDetails[$index]['bukti_kepemilikan'] === 'SHGB')
+                                            <div>
+                                                <label class="block text-xs font-medium text-gray-700 mb-1">
+                                                    SHGB Expired Date *
+                                                </label>
+                                                <input wire:model="soilDetails.{{ $index }}.shgb_expired_date" 
+                                                    type="date" 
+                                                    class="w-full px-2 py-1.5 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-xs @error('soilDetails.'.$index.'.shgb_expired_date') border-red-500 @enderror">
+                                                @error('soilDetails.'.$index.'.shgb_expired_date') 
+                                                    <span class="text-red-500 text-xs">{{ $message }}</span> 
+                                                @enderror
+                                                
+                                                <!-- Helper text for SHGB -->
+                                                <p class="mt-1 text-xs text-blue-600">
+                                                    <svg class="inline w-3 h-3 mr-1" fill="currentColor" viewBox="0 0 20 20">
+                                                        <path fill-rule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clip-rule="evenodd"/>
+                                                    </svg>
+                                                    SHGB requires expiration date tracking
+                                                </p>
+                                            </div>
+                                            @endif
+
                                             <!-- Ownership Proof Details -->
                                             <div>
                                                 <label class="block text-xs font-medium text-gray-700 mb-1">Ownership Proof Details</label>
