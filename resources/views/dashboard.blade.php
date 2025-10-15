@@ -1,6 +1,6 @@
 <x-app-layout>
     <div class="py-3">
-        <div class="max-w-7xl mx-auto sm:px-6 lg:px-8">
+        <div class="mx-auto sm:px-6 lg:px-8">
             {{-- Compact Header Section --}}
             <div class="bg-gradient-to-r from-blue-50 to-indigo-50 shadow-sm sm:rounded-lg mb-4 p-4">
                 <div class="flex items-center justify-between">
@@ -552,6 +552,8 @@
                     </div>
                 </div>
             </div>
+
+            
         </div>
     </div>
 
