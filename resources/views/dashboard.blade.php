@@ -553,7 +553,232 @@
                 </div>
             </div>
 
-            
+            {{-- Expiry Monitoring Section - Compact --}}
+            <div class="bg-white shadow-sm sm:rounded-lg mt-4">
+                <div class="p-4">
+                    <button 
+                        onclick="toggleSection('expiryMonitoring')" 
+                        class="flex items-center justify-between w-full text-left group mb-3">
+                        <div class="flex items-center space-x-2">
+                            <h2 class="text-base font-bold text-gray-900">Expiry Monitoring</h2>
+                            @php
+                                // Get SHGB expiring soon (within 90 days) or already expired
+                                $shgbExpiring = App\Models\Soil::whereNotNull('shgb_expired_date')
+                                    ->where('shgb_expired_date', '<=', now()->addDays(90))
+                                    ->with(['land', 'businessUnit'])
+                                    ->orderBy('shgb_expired_date', 'asc')
+                                    ->get();
+                                
+                                $shgbExpired = $shgbExpiring->filter(fn($soil) => $soil->shgb_expired_date->isPast());
+                                $shgbExpiringSoon = $shgbExpiring->filter(fn($soil) => !$soil->shgb_expired_date->isPast());
+                                
+                                $totalExpiring = $shgbExpiring->count();
+                            @endphp
+                            
+                            @if($totalExpiring > 0)
+                                <span class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium 
+                                    {{ $shgbExpired->count() > 0 ? 'bg-red-100 text-red-800' : 'bg-yellow-100 text-yellow-800' }}">
+                                    {{ $totalExpiring }}
+                                </span>
+                            @endif
+                        </div>
+                        <svg id="expiryMonitoring-icon" class="w-4 h-4 text-gray-500 transform transition-transform duration-200" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/>
+                        </svg>
+                    </button>
+
+                    <div id="expiryMonitoring-content" class="hidden">
+                        @if($totalExpiring > 0)
+                            {{-- Summary Cards --}}
+                            <div class="grid grid-cols-1 md:grid-cols-3 gap-3 mb-4">
+                                <div class="bg-red-50 border border-red-200 rounded-lg p-3">
+                                    <div class="flex items-center justify-between">
+                                        <div>
+                                            <p class="text-xs font-medium text-red-600">Expired</p>
+                                            <p class="text-2xl font-bold text-red-900">{{ $shgbExpired->count() }}</p>
+                                        </div>
+                                        <svg class="w-8 h-8 text-red-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                                        </svg>
+                                    </div>
+                                </div>
+                                
+                                <div class="bg-yellow-50 border border-yellow-200 rounded-lg p-3">
+                                    <div class="flex items-center justify-between">
+                                        <div>
+                                            <p class="text-xs font-medium text-yellow-600">Expiring Soon (≤90 days)</p>
+                                            <p class="text-2xl font-bold text-yellow-900">{{ $shgbExpiringSoon->count() }}</p>
+                                        </div>
+                                        <svg class="w-8 h-8 text-yellow-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                                        </svg>
+                                    </div>
+                                </div>
+                                
+                                <div class="bg-blue-50 border border-blue-200 rounded-lg p-3">
+                                    <div class="flex items-center justify-between">
+                                        <div>
+                                            <p class="text-xs font-medium text-blue-600">Total Monitored</p>
+                                            <p class="text-2xl font-bold text-blue-900">{{ $totalExpiring }}</p>
+                                        </div>
+                                        <svg class="w-8 h-8 text-blue-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/>
+                                        </svg>
+                                    </div>
+                                </div>
+                            </div>
+
+                            {{-- Expired Items --}}
+                            @if($shgbExpired->count() > 0)
+                                <div class="mb-4">
+                                    <h3 class="text-sm font-semibold text-red-900 mb-2 flex items-center">
+                                        <svg class="w-4 h-4 mr-2" fill="currentColor" viewBox="0 0 20 20">
+                                            <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clip-rule="evenodd"/>
+                                        </svg>
+                                        Expired SHGB Certificates ({{ $shgbExpired->count() }})
+                                    </h3>
+                                    <div class="overflow-x-auto">
+                                        <table class="min-w-full divide-y divide-gray-200 text-xs">
+                                            <thead class="bg-red-50">
+                                                <tr>
+                                                    <th class="px-3 py-2 text-left font-medium text-red-800 uppercase">Soil Location</th>
+                                                    <th class="px-3 py-2 text-left font-medium text-red-800 uppercase">Land</th>
+                                                    <th class="px-3 py-2 text-left font-medium text-red-800 uppercase">Business Unit</th>
+                                                    <th class="px-3 py-2 text-left font-medium text-red-800 uppercase">Expired Date</th>
+                                                    <th class="px-3 py-2 text-left font-medium text-red-800 uppercase">Days Overdue</th>
+                                                    <th class="px-3 py-2 text-center font-medium text-red-800 uppercase">Action</th>
+                                                </tr>
+                                            </thead>
+                                            <tbody class="bg-white divide-y divide-gray-200">
+                                                @foreach($shgbExpired as $soil)
+                                                    <tr class="hover:bg-red-50">
+                                                        <td class="px-3 py-2">
+                                                            <div class="font-medium text-gray-900">{{ $soil->letak_tanah }}</div>
+                                                            <div class="text-gray-500">{{ $soil->nama_penjual }}</div>
+                                                        </td>
+                                                        <td class="px-3 py-2 text-gray-600">
+                                                            {{ $soil->land->lokasi_lahan ?? 'N/A' }}
+                                                        </td>
+                                                        <td class="px-3 py-2">
+                                                            <span class="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-blue-100 text-blue-800">
+                                                                {{ $soil->businessUnit->code ?? 'N/A' }}
+                                                            </span>
+                                                        </td>
+                                                        <td class="px-3 py-2 text-red-600 font-medium">
+                                                            {{ $soil->shgb_expired_date->format('d/m/Y') }}
+                                                        </td>
+                                                        <td class="px-3 py-2">
+                                                            <span class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-semibold bg-red-100 text-red-800">
+                                                                {{ abs($soil->shgb_days_until_expiration) }} days overdue
+                                                            </span>
+                                                        </td>
+                                                        <td class="px-3 py-2 text-center">
+                                                            <a href="{{ route('soils.show', $soil->id) }}" 
+                                                            class="text-blue-600 hover:text-blue-900"
+                                                            title="View Details">
+                                                                <svg class="w-5 h-5 inline" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/>
+                                                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"/>
+                                                                </svg>
+                                                            </a>
+                                                        </td>
+                                                    </tr>
+                                                @endforeach
+                                            </tbody>
+                                        </table>
+                                    </div>
+                                </div>
+                            @endif
+
+                            {{-- Expiring Soon Items --}}
+                            @if($shgbExpiringSoon->count() > 0)
+                                <div>
+                                    <h3 class="text-sm font-semibold text-yellow-900 mb-2 flex items-center">
+                                        <svg class="w-4 h-4 mr-2" fill="currentColor" viewBox="0 0 20 20">
+                                            <path fill-rule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z" clip-rule="evenodd"/>
+                                        </svg>
+                                        Expiring Soon ({{ $shgbExpiringSoon->count() }})
+                                    </h3>
+                                    <div class="overflow-x-auto">
+                                        <table class="min-w-full divide-y divide-gray-200 text-xs">
+                                            <thead class="bg-yellow-50">
+                                                <tr>
+                                                    <th class="px-3 py-2 text-left font-medium text-yellow-800 uppercase">Soil Location</th>
+                                                    <th class="px-3 py-2 text-left font-medium text-yellow-800 uppercase">Land</th>
+                                                    <th class="px-3 py-2 text-left font-medium text-yellow-800 uppercase">Business Unit</th>
+                                                    <th class="px-3 py-2 text-left font-medium text-yellow-800 uppercase">Expiry Date</th>
+                                                    <th class="px-3 py-2 text-left font-medium text-yellow-800 uppercase">Days Remaining</th>
+                                                    <th class="px-3 py-2 text-center font-medium text-yellow-800 uppercase">Action</th>
+                                                </tr>
+                                            </thead>
+                                            <tbody class="bg-white divide-y divide-gray-200">
+                                                @foreach($shgbExpiringSoon as $soil)
+                                                    @php
+                                                        $daysRemaining = $soil->shgb_days_until_expiration;
+                                                        $urgencyClass = $daysRemaining <= 30 ? 'bg-red-100 text-red-800' : 
+                                                                    ($daysRemaining <= 60 ? 'bg-orange-100 text-orange-800' : 
+                                                                    'bg-yellow-100 text-yellow-800');
+                                                    @endphp
+                                                    <tr class="hover:bg-yellow-50">
+                                                        <td class="px-3 py-2">
+                                                            <div class="font-medium text-gray-900">{{ $soil->letak_tanah }}</div>
+                                                            <div class="text-gray-500">{{ $soil->nama_penjual }}</div>
+                                                        </td>
+                                                        <td class="px-3 py-2 text-gray-600">
+                                                            {{ $soil->land->lokasi_lahan ?? 'N/A' }}
+                                                        </td>
+                                                        <td class="px-3 py-2">
+                                                            <span class="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-blue-100 text-blue-800">
+                                                                {{ $soil->businessUnit->code ?? 'N/A' }}
+                                                            </span>
+                                                        </td>
+                                                        <td class="px-3 py-2 font-medium">
+                                                            {{ $soil->shgb_expired_date->format('d/m/Y') }}
+                                                        </td>
+                                                        <td class="px-3 py-2">
+                                                            <span class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-semibold {{ $urgencyClass }}">
+                                                                {{ $daysRemaining }} days
+                                                            </span>
+                                                        </td>
+                                                        <td class="px-3 py-2 text-center">
+                                                            <a href="{{ route('soils.show', $soil->id) }}" 
+                                                            class="text-blue-600 hover:text-blue-900"
+                                                            title="View Details">
+                                                                <svg class="w-5 h-5 inline" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/>
+                                                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"/>
+                                                                </svg>
+                                                            </a>
+                                                        </td>
+                                                    </tr>
+                                                @endforeach
+                                            </tbody>
+                                        </table>
+                                    </div>
+                                </div>
+                            @endif
+
+                            {{-- Note for future additions --}}
+                            <div class="mt-4 p-3 bg-gray-50 border border-gray-200 rounded-lg">
+                                <p class="text-xs text-gray-600 flex items-center">
+                                    <svg class="w-4 h-4 mr-2 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                                    </svg>
+                                    <span class="font-medium">Note:</span> More expiry types can be added here in the future (e.g. permits, licenses).
+                                </p>
+                            </div>
+                        @else
+                            <div class="text-center py-8">
+                                <svg class="mx-auto h-10 w-10 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                                </svg>
+                                <h3 class="mt-2 text-sm font-medium text-gray-900">All Clear!</h3>
+                                <p class="mt-1 text-xs text-gray-500">No SHGB certificates expiring within the next 90 days.</p>
+                            </div>
+                        @endif
+                    </div>
+                </div>
+            </div>
         </div>
     </div>
 
