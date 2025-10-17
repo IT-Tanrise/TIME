@@ -125,6 +125,7 @@
                     @endcanany
 
                     {{-- RISOL --}}
+                    @canany(['rentals.access'])
                     <div class="relative">
                         <button onclick="toggleMenu('risol')" class="w-full p-2 text-left flex items-center justify-between bg-green-50 hover:bg-green-100 rounded-lg transition-colors">
                             <div class="flex items-center space-x-2">
@@ -148,8 +149,10 @@
                             <a href="#" class="block px-3 py-1.5 text-xs text-gray-700 hover:bg-green-50 rounded-b-lg">📅 Rental Schedule</a>
                         </div>
                     </div>
+                    @endcanany
 
                     {{-- EMAS --}}
+                    @canany(['estates.access'])
                     <div class="relative">
                         <button onclick="toggleMenu('emas')" class="w-full p-2 text-left flex items-center justify-between bg-yellow-50 hover:bg-yellow-100 rounded-lg transition-colors">
                             <div class="flex items-center space-x-2">
@@ -172,8 +175,10 @@
                             <a href="#" class="block px-3 py-1.5 text-xs text-gray-700 hover:bg-yellow-50 rounded-b-lg">🔧 Maintenance</a>
                         </div>
                     </div>
+                    @endcanany
 
                     {{-- DOTS --}}
+                    @canany(['depositos.access'])
                     <div class="relative">
                         <button onclick="toggleMenu('dots')" class="w-full p-2 text-left flex items-center justify-between bg-purple-50 hover:bg-purple-100 rounded-lg transition-colors">
                             <div class="flex items-center space-x-2">
@@ -196,8 +201,10 @@
                             <a href="#" class="block px-3 py-1.5 text-xs text-gray-700 hover:bg-purple-50 rounded-b-lg">📈 Interest Tracking</a>
                         </div>
                     </div>
+                    @endcanany
 
                     {{-- COMS --}}
+                    @canany(['vendors.access'])
                     <div class="relative">
                         <button onclick="toggleMenu('coms')" class="w-full p-2 text-left flex items-center justify-between bg-red-50 hover:bg-red-100 rounded-lg transition-colors">
                             <div class="flex items-center space-x-2">
@@ -220,6 +227,7 @@
                             <a href="#" class="block px-3 py-1.5 text-xs text-gray-700 hover:bg-red-50 rounded-b-lg">👷 Contractors</a>
                         </div>
                     </div>
+                    @endcanany
                 </div>
             </div>
 
