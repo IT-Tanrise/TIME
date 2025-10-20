@@ -178,7 +178,7 @@
                     @endcanany
 
                     {{-- DOTS --}}
-                    @canany(['depositos.access'])
+                    @canany(['interests.access','depositos.access'])
                     <div class="relative">
                         <button onclick="toggleMenu('dots')" class="w-full p-2 text-left flex items-center justify-between bg-purple-50 hover:bg-purple-100 rounded-lg transition-colors">
                             <div class="flex items-center space-x-2">
@@ -197,14 +197,18 @@
                             </svg>
                         </button>
                         <div id="dots-menu" class="hidden absolute top-full left-0 right-0 mt-1 bg-white border border-gray-200 rounded-lg shadow-lg z-10 min-w-max">
+                            @can('depositos.access')
                             <a href="#" class="block px-3 py-1.5 text-xs text-gray-700 hover:bg-purple-50 rounded-t-lg">💵 Deposits List</a>
+                            @endcan
+                            @can('interests.access')
                             <a href="#" class="block px-3 py-1.5 text-xs text-gray-700 hover:bg-purple-50 rounded-b-lg">📈 Interest Tracking</a>
+                            @endcan
                         </div>
                     </div>
                     @endcanany
 
                     {{-- COMS --}}
-                    @canany(['vendors.access'])
+                    @canany(['contractors.access','projects.access','vendors.access'])
                     <div class="relative">
                         <button onclick="toggleMenu('coms')" class="w-full p-2 text-left flex items-center justify-between bg-red-50 hover:bg-red-100 rounded-lg transition-colors">
                             <div class="flex items-center space-x-2">
@@ -223,8 +227,15 @@
                             </svg>
                         </button>
                         <div id="coms-menu" class="hidden absolute top-full left-0 right-0 mt-1 bg-white border border-gray-200 rounded-lg shadow-lg z-10 min-w-max">
+                            @can('projects.access')
                             <a href="{{ route('projects') }}" class="block px-3 py-1.5 text-xs text-gray-700 hover:bg-red-50 rounded-t-lg">🗂️ Projects</a>
+                            @endcan
+                            @can('contractors.access')
                             <a href="#" class="block px-3 py-1.5 text-xs text-gray-700 hover:bg-red-50 rounded-b-lg">👷 Contractors</a>
+                            @endcan
+                            @can('vendors.access')
+                            <a href="{{ route('vendors') }}" class="block px-3 py-1.5 text-xs text-gray-700 hover:bg-red-50 rounded-t-lg">🗂️ Vendors</a>
+                            @endcan
                         </div>
                     </div>
                     @endcanany
