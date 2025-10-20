@@ -12,6 +12,7 @@ use App\Livewire\Projects;
 use App\Livewire\RentLands;
 use App\Livewire\SoilHistories;
 use App\Livewire\SoilApprovals;
+use App\Livewire\VendorsIFCA;
 
 use App\Http\Controllers\RoleController;
 use App\Http\Controllers\PermissionController;
@@ -42,6 +43,9 @@ Route::middleware(['permission:lands.access'])->group(function () {
     Route::get('/land-approvals', App\Livewire\LandApprovals::class)->name('land-approvals');
     Route::get('/lands/{landId}/history', \App\Livewire\LandHistories::class)
         ->name('lands.history');
+    Route::get('/land-certificates/{businessUnit?}/{land?}', \App\Livewire\LandCertificates::class)
+    ->name('land-certificates')
+    ->middleware(['permission:lands.access']);
 });
 
 Route::get('/projects', Projects::class)->name('projects');
@@ -71,6 +75,11 @@ Route::prefix('rents')->name('rents.')->group(function () {
     Route::get('/lands', RentLands::class)->name('lands');
     Route::get('/lands/business-unit/{businessUnit}', RentLands::class)->name('lands.by-business-unit')
         ->where('businessUnit', '[0-9]+');
+});
+
+// Vendor Routes
+Route::middleware(['permission:vendors.access'])->group(function () {
+    Route::get('/vendors', VendorsIFCA::class)->name('vendors');
 });
 
 Route::get('/', function () {

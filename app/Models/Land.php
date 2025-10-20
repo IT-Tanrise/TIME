@@ -224,4 +224,14 @@ class Land extends Model
         }
         return null;
     }
+
+    public function certificates(): HasMany
+    {
+        return $this->hasMany(LandCertificate::class);
+    }
+
+    public function activeCertificates(): HasMany
+    {
+        return $this->certificates()->where('status', 'active');
+    }
 }

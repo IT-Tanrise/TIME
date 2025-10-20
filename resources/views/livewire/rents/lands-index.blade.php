@@ -112,8 +112,8 @@
                             <tr>
                                 <td class="px-6 py-4 whitespace-nowrap">
                                     <div class="text-sm font-medium text-gray-900">{{ $rent->land->lokasi_lahan ?? 'N/A' }}</div>
-                                    @if($rent->land && $rent->land->businessUnits->count() > 0)
-                                        <div class="text-sm text-gray-500">{{ $rent->land->businessUnits->pluck('name')->join(', ') }}</div>
+                                    @if($rent->land && $rent->land->businessUnit)
+                                        <div class="text-sm text-gray-500">{{ $rent->land->businessUnit->name }}</div>
                                     @endif
                                 </td>
                                 <td class="px-6 py-4 whitespace-nowrap">

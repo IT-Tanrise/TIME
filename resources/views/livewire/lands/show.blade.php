@@ -6,7 +6,25 @@
 <div class="bg-white shadow rounded-lg">
     <div class="px-6 py-4 border-b border-gray-200">
         <div class="flex justify-between items-center">
-            <h2 class="text-xl font-semibold text-gray-800">Land Details</h2>
+            <div class="flex items-center space-x-2">
+                <button wire:click="backToIndex" 
+                        class="inline-flex items-center px-2 py-1 bg-gray-500 border border-transparent rounded text-xs text-white font-medium hover:bg-gray-600">
+                    <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18"/>
+                    </svg>
+                </button>
+                <h2 class="text-xl font-semibold text-gray-800">Land Details</h2>
+                
+                @php
+                    $pendingCount = App\Models\LandApproval::where('land_id', $land->id)->where('status', 'pending')->count();
+                @endphp
+                @if($pendingCount > 0)
+                    <div class="flex items-center px-1.5 py-0.5 bg-yellow-100 border border-yellow-200 rounded-full">
+                        <div class="w-1.5 h-1.5 bg-yellow-400 rounded-full mr-1 animate-pulse"></div>
+                        <span class="text-xs font-medium text-yellow-800">{{ $pendingCount }}</span>
+                    </div>
+                @endif
+            </div>
             <div class="flex items-center space-x-2">
                 {{-- History Button --}}
                 <a href="{{ route('lands.history', ['landId' => $land->id]) }}" 
@@ -27,14 +45,6 @@
                         Edit
                     </button>
                 @endcan
-                
-                {{-- Close Button --}}
-                <button wire:click="backToIndex" 
-                        class="text-gray-600 hover:text-gray-800">
-                    <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
-                    </svg>
-                </button>
             </div>
         </div>
     </div>
@@ -46,6 +56,17 @@
                 <div>
                     <label class="block text-sm font-medium text-gray-500">Location</label>
                     <p class="mt-1 text-sm text-gray-900">{{ $land->lokasi_lahan }}</p>
+                </div>
+
+                <div>
+                    <label class="block text-sm font-medium text-gray-500">Business Unit</label>
+                    @if($land->businessUnit)
+                        <span class="inline-flex items-center px-2 py-1 rounded-full text-xs bg-blue-100 text-blue-800">
+                            {{ $land->businessUnit->code }} - {{ $land->businessUnit->name }}
+                        </span>
+                    @else
+                        <span class="text-gray-400">-</span>
+                    @endif
                 </div>
 
                 <div>
@@ -149,6 +170,17 @@
                     @endphp
                     <p class="mt-1 text-sm text-gray-900">Rp {{ number_format($totalAdditionalCostsNonStd, 0, ',', '.') }}</p>
                 </div>
+                
+                <div>
+                    <label class="block text-sm font-medium text-gray-500">Total Interest</label>
+                    @php
+                        // Calculate total interest costs for all soils in this land
+                        $totalInterestCosts = $land->soils->sum(function($soil) {
+                            return $soil->biayaTambahanInterestSoils->sum('bunga_calculation');
+                        });
+                    @endphp
+                    <p class="mt-1 text-sm text-gray-900">Rp {{ number_format($totalInterestCosts, 0, ',', '.') }}</p>
+                </div>
 
                 <div>
                     <label class="block text-sm font-medium text-gray-500">NJOP</label>
@@ -238,6 +270,7 @@
                 @php
                     $totalSoilPrice = 0;
                     $totalBiayaTambahan = 0;
+                    $totalInterest = 0;
                     $grandTotal = 0;
                 @endphp
 
@@ -246,94 +279,274 @@
                         <table class="min-w-full divide-y divide-gray-200">
                             <thead class="bg-gray-100">
                                 <tr>
-                                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Business Unit</th>
-                                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Seller</th>
-                                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Location</th>
-                                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Area</th>
-                                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Status</th>
-                                    <th class="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase">Soil Price</th>
-                                    <th class="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase">Additional Costs</th>
-                                    <th class="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase">Total Cost</th>
-                                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Ownership Proof</th>
-                                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">PPJB Number</th>
+                                    <th class="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase w-8"></th>
+                                    <th class="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase">Seller & Location</th>
+                                    <th class="px-3 py-2 text-right text-xs font-medium text-gray-500 uppercase">Area</th>
+                                    <th class="px-3 py-2 text-right text-xs font-medium text-gray-500 uppercase">Price</th>
+                                    <th class="px-3 py-2 text-right text-xs font-medium text-gray-500 uppercase">Costs</th>
+                                    <th class="px-3 py-2 text-right text-xs font-medium text-gray-500 uppercase">Total</th>
+                                    <th class="px-3 py-2 text-center text-xs font-medium text-gray-500 uppercase w-16">Action</th>
                                 </tr>
                             </thead>
                             <tbody class="bg-white divide-y divide-gray-200">
                                 @foreach($land->soils as $soil)
                                     @php
                                         $soilBiayaTambahan = $soil->total_biaya_tambahan;
-                                        $soilTotalCost = $soil->total_biaya_keseluruhan;
+                                        $soilInterest = $soil->total_biaya_interest;
+                                        $soilTotalCost = $soil->harga + $soilBiayaTambahan + $soilInterest;
                                         
                                         $totalSoilPrice += $soil->harga;
                                         $totalBiayaTambahan += $soilBiayaTambahan;
+                                        $totalInterest += $soilInterest;
                                         $grandTotal += $soilTotalCost;
                                     @endphp
-                                    <tr class="hover:bg-gray-50">
-                                        <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                                            @if($soil->businessUnit)
-                                                <span class="inline-flex items-center px-2 py-1 rounded-full text-xs bg-blue-100 text-blue-800">
-                                                    {{ $soil->businessUnit->code }}
+                                    
+                                    <!-- Main Compact Row -->
+                                    <tr class="hover:bg-gray-50 cursor-pointer" onclick="document.getElementById('details-{{ $soil->id }}').classList.toggle('hidden')">
+                                        <!-- Expand/Collapse Icon -->
+                                        <td class="px-3 py-2 text-center">
+                                            <svg class="w-4 h-4 text-gray-400 transition-transform" id="icon-{{ $soil->id }}" 
+                                                onclick="this.classList.toggle('rotate-90')" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/>
+                                            </svg>
+                                        </td>
+                                        
+                                        <!-- Seller & Location Combined -->
+                                        <td class="px-3 py-2 text-xs">
+                                            <div class="font-semibold text-gray-900">{{ $soil->nama_penjual }}</div>
+                                            <div class="text-gray-600">{{ $soil->letak_tanah }}</div>
+                                            <div class="flex items-center gap-2 mt-1">
+                                                <span class="inline-flex items-center px-1.5 py-0.5 rounded text-xs {{ $soil->status_badge_color }}">
+                                                    {{ $soil->formatted_status }}
                                                 </span>
+                                                <span class="text-gray-500">{{ $soil->bukti_kepemilikan }}</span>
+                                            </div>
+                                        </td>
+                                        
+                                        <!-- Area -->
+                                        <td class="px-3 py-2 text-xs text-right text-gray-900 whitespace-nowrap">
+                                            {{ number_format($soil->luas, 0, ',', '.') }} m²
+                                        </td>
+                                        
+                                        <!-- Soil Price -->
+                                        <td class="px-3 py-2 text-xs text-right text-gray-900 whitespace-nowrap font-medium">
+                                            {{ $soil->formatted_harga }}
+                                        </td>
+                                        
+                                        <!-- Combined Costs (Additional + Interest) -->
+                                        <td class="px-3 py-2 text-xs text-right whitespace-nowrap">
+                                            @php $totalCosts = $soilBiayaTambahan + $soilInterest; @endphp
+                                            @if($totalCosts > 0)
+                                                <div class="text-gray-900 font-medium">Rp {{ number_format($totalCosts, 0, ',', '.') }}</div>
+                                                <div class="text-gray-500 text-xs">
+                                                    @if($soilBiayaTambahan > 0)
+                                                        <span title="Additional Costs">+ {{ number_format($soilBiayaTambahan, 0, ',', '.') }}</span>
+                                                    @endif
+                                                    @if($soilInterest > 0)
+                                                        @if($soilBiayaTambahan > 0) | @endif
+                                                        <span title="Interest" class="text-purple-600">⚡ {{ number_format($soilInterest, 0, ',', '.') }}</span>
+                                                    @endif
+                                                </div>
                                             @else
                                                 <span class="text-gray-400">-</span>
                                             @endif
                                         </td>
-                                        <td class="px-6 py-4 text-sm text-gray-900">
-                                            <div class="font-medium">{{ $soil->nama_penjual }}</div>
-                                            @if($soil->atas_nama && $soil->atas_nama !== $soil->nama_penjual)
-                                                <div class="text-xs text-gray-500">On behalf of: {{ $soil->atas_nama }}</div>
-                                            @endif
+                                        
+                                        <!-- Total -->
+                                        <td class="px-3 py-2 text-xs text-right font-bold text-gray-900 whitespace-nowrap">
+                                            Rp {{ number_format($soilTotalCost, 0, ',', '.') }}
                                         </td>
-                                        <td class="px-6 py-4 text-sm text-gray-900">
-                                            {{ $soil->letak_tanah }}
-                                        </td>
-                                        <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                                            {{ $soil->formatted_luas }}
-                                        </td>
-                                        <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                                            <span class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium {{ $soil->status_badge_color }}">
-                                                {{ $soil->formatted_status }}
-                                            </span>
-                                        </td>
-                                        <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900 text-right">
-                                            {{ $soil->formatted_harga }}
-                                        </td>
-                                        <td class="px-6 py-4 whitespace-nowrap text-sm text-right">
-                                            @if($soilBiayaTambahan > 0)
-                                                <span class="text-gray-900">{{ $soil->formatted_total_biaya_tambahan }}</span>
-                                                @if($soil->biayaTambahanSoils->count() > 0)
-                                                    <button 
-                                                        type="button"
-                                                        class="ml-1 text-blue-600 hover:text-blue-800"
-                                                        onclick="document.getElementById('biaya-modal-{{ $soil->id }}').classList.toggle('hidden')"
-                                                        title="View additional costs breakdown">
-                                                        <svg class="w-4 h-4 inline" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
-                                                        </svg>
-                                                    </button>
-                                                @endif
-                                            @else
-                                                <span class="text-gray-400">Rp 0</span>
-                                            @endif
-                                        </td>
-                                        <td class="px-6 py-4 whitespace-nowrap text-sm font-semibold text-gray-900 text-right">
-                                            {{ $soil->formatted_total_biaya_keseluruhan }}
-                                        </td>
-                                        <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                                            <div>{{ $soil->bukti_kepemilikan }}</div>
-                                            @if($soil->bukti_kepemilikan_details)
-                                                <div class="text-xs text-gray-500">{{ $soil->bukti_kepemilikan_details }}</div>
-                                            @endif
-                                        </td>
-                                        <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                                            {{ $soil->nomor_ppjb }}
+                                        
+                                        <!-- Actions -->
+                                        <td class="px-3 py-2 text-center whitespace-nowrap" onclick="event.stopPropagation()">
+                                            <a href="{{ route('soils', ['view' => 'show', 'id' => $soil->id]) }}" 
+                                            class="inline-flex items-center justify-center w-7 h-7 text-blue-600 hover:bg-blue-50 rounded transition-colors"
+                                            title="View details">
+                                                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"/>
+                                                </svg>
+                                            </a>
                                         </td>
                                     </tr>
                                     
-                                    {{-- Hidden Modal for Additional Costs Breakdown --}}
+                                    <!-- Expandable Details Row (Hidden by default) -->
+                                    <tr id="details-{{ $soil->id }}" class="hidden bg-gray-50">
+                                        <td colspan="7" class="px-3 py-3">
+                                            <div class="grid grid-cols-1 md:grid-cols-3 gap-4 text-xs">
+                                                <!-- Column 1: Basic Info -->
+                                                <div class="space-y-2">
+                                                    <div class="flex justify-between">
+                                                        <span class="text-gray-600">Owner:</span>
+                                                        <span class="text-gray-900 font-medium">{{ $soil->atas_nama }}</span>
+                                                    </div>
+                                                    <div class="flex justify-between">
+                                                        <span class="text-gray-600">PPJB No:</span>
+                                                        <span class="text-gray-900">{{ $soil->nomor_ppjb }}</span>
+                                                    </div>
+                                                    <div class="flex justify-between">
+                                                        <span class="text-gray-600">PPJB Date:</span>
+                                                        <span class="text-gray-900">{{ $soil->tanggal_ppjb->format('d/m/Y') }}</span>
+                                                    </div>
+                                                    <div class="flex justify-between">
+                                                        <span class="text-gray-600">Price/m²:</span>
+                                                        <span class="text-gray-900 font-medium">{{ $soil->formatted_harga_per_meter }}</span>
+                                                    </div>
+                                                </div>
+                                                
+                                                <!-- Column 2: Additional Costs -->
+                                                <div>
+                                                    <div class="font-semibold text-gray-700 mb-2 flex justify-between items-center">
+                                                        <span>Additional Costs</span>
+                                                        @if($soil->biayaTambahanSoils->count() > 0)
+                                                            <button type="button"
+                                                                    class="text-blue-600 hover:text-blue-800"
+                                                                    onclick="document.getElementById('biaya-modal-{{ $soil->id }}').classList.toggle('hidden')">
+                                                                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/>
+                                                                </svg>
+                                                            </button>
+                                                        @endif
+                                                    </div>
+                                                    @if($soil->biayaTambahanSoils->count() > 0)
+                                                        <div class="space-y-1">
+                                                            @foreach($soil->biayaTambahanSoils->take(3) as $biaya)
+                                                                <div class="flex justify-between text-xs">
+                                                                    <span class="text-gray-600 truncate mr-2">{{ $biaya->description->description ?? '-' }}</span>
+                                                                    <span class="text-gray-900 whitespace-nowrap">Rp {{ number_format($biaya->harga, 0, ',', '.') }}</span>
+                                                                </div>
+                                                            @endforeach
+                                                            @if($soil->biayaTambahanSoils->count() > 3)
+                                                                <div class="text-blue-600 text-xs">+ {{ $soil->biayaTambahanSoils->count() - 3 }} more...</div>
+                                                            @endif
+                                                            <div class="flex justify-between font-semibold pt-1 border-t border-gray-300">
+                                                                <span class="text-gray-700">Total:</span>
+                                                                <span class="text-gray-900">{{ $soil->formatted_total_biaya_tambahan }}</span>
+                                                            </div>
+                                                        </div>
+                                                    @else
+                                                        <p class="text-gray-500">No additional costs</p>
+                                                    @endif
+                                                </div>
+                                                
+                                                <!-- Column 3: Interest -->
+                                                <div>
+                                                    <div class="font-semibold text-gray-700 mb-2 flex justify-between items-center">
+                                                        <span>Interest Costs</span>
+                                                        @if($soil->biayaTambahanInterestSoils->count() > 0)
+                                                            <button type="button"
+                                                                    class="text-purple-600 hover:text-purple-800"
+                                                                    onclick="document.getElementById('interest-modal-{{ $soil->id }}').classList.toggle('hidden')">
+                                                                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/>
+                                                                </svg>
+                                                            </button>
+                                                        @endif
+                                                    </div>
+                                                    @if($soil->biayaTambahanInterestSoils->count() > 0)
+                                                        <div class="space-y-1">
+                                                            @foreach($soil->biayaTambahanInterestSoils->take(3) as $interest)
+                                                                <div class="text-xs">
+                                                                    <div class="flex justify-between">
+                                                                        <span class="text-gray-600">{{ $interest->start_date->format('d/m/y') }} - {{ $interest->end_date->format('d/m/y') }}</span>
+                                                                        <span class="text-purple-600 font-medium">{{ number_format($interest->bunga, 1) }}%</span>
+                                                                    </div>
+                                                                    <div class="text-gray-900 text-right">Rp {{ number_format($interest->bunga_calculation, 0, ',', '.') }}</div>
+                                                                </div>
+                                                            @endforeach
+                                                            @if($soil->biayaTambahanInterestSoils->count() > 0)
+															<tr id="interest-modal-{{ $soil->id }}" class="hidden">
+																<td colspan="12" class="px-6 py-4 bg-purple-50">
+																	<div class="text-sm">
+																		<div class="flex justify-between items-center mb-2">
+																			<h4 class="font-semibold text-gray-900">Interest Calculation for {{ $soil->nama_penjual }}</h4>
+																			<button 
+																				onclick="document.getElementById('interest-modal-{{ $soil->id }}').classList.add('hidden')"
+																				class="text-gray-500 hover:text-gray-700">
+																				<svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+																					<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+																				</svg>
+																			</button>
+																		</div>
+																		<div class="overflow-x-auto">
+																			<table class="min-w-full divide-y divide-gray-200">
+																				<thead class="bg-purple-100">
+																					<tr>
+																						<th class="px-4 py-2 text-left text-xs font-medium text-gray-700">Period</th>
+																						<th class="px-4 py-2 text-center text-xs font-medium text-gray-700">Days</th>
+																						<th class="px-4 py-2 text-left text-xs font-medium text-gray-700">Remarks</th>
+																						<th class="px-4 py-2 text-right text-xs font-medium text-gray-700">H. Perolehan</th>
+																						<th class="px-4 py-2 text-right text-xs font-medium text-gray-700">Before</th>
+																						<th class="px-4 py-2 text-center text-xs font-medium text-gray-700">Rate %</th>
+																						<th class="px-4 py-2 text-right text-xs font-medium text-gray-700">Interest</th>
+																						<th class="px-4 py-2 text-right text-xs font-medium text-gray-700">Value</th>
+																					</tr>
+																				</thead>
+																				<tbody class="bg-white divide-y divide-gray-200">
+																					@foreach($soil->biayaTambahanInterestSoils as $interest)
+																					<tr>
+																						<td class="px-4 py-2 text-xs text-gray-900">
+																							{{ $interest->start_date->format('d/m/Y') }} - {{ $interest->end_date->format('d/m/Y') }}
+																						</td>
+																						<td class="px-4 py-2 text-center">
+																							<span class="px-2 py-1 text-xs rounded-full bg-blue-100 text-blue-800">
+																								{{ $interest->hari }}
+																							</span>
+																						</td>
+																						<td class="px-4 py-2 text-xs text-gray-900">
+																							{{ $interest->remarks }}
+																						</td>
+																						<td class="px-4 py-2 text-xs text-gray-900 text-right">
+																							{{ $interest->formatted_harga_perolehan }}
+																						</td>
+																						<td class="px-4 py-2 text-xs text-blue-700 text-right">
+																							{{ $interest->formatted_nilai_tanah_sebelum }}
+																						</td>
+																						<td class="px-4 py-2 text-center">
+																							<span class="px-2 py-1 text-xs rounded-full bg-purple-100 text-purple-800">
+																								{{ number_format($interest->bunga, 2) }}%
+																							</span>
+																						</td>
+																						<td class="px-4 py-2 text-xs text-orange-700 text-right font-semibold">
+																							{{ $interest->formatted_bunga_calculation }}
+																						</td>
+																						<td class="px-4 py-2 text-xs text-green-700 text-right font-bold">
+																							{{ $interest->formatted_nilai_tanah }}
+																						</td>
+																					</tr>
+																					@endforeach
+																				</tbody>
+																				<tfoot class="bg-purple-50">
+																					<tr>
+																						<td colspan="6" class="px-4 py-2 text-xs font-semibold text-gray-900 text-right">
+																							Total Interest:
+																						</td>
+																						<td class="px-4 py-2 text-xs font-semibold text-gray-900 text-right">
+																							{{ $soil->formatted_total_biaya_interest }}
+																						</td>
+																						<td class="px-4 py-2 text-xs font-semibold text-gray-900 text-right">
+																							{{ $soil->formatted_nilai_tanah_akhir }}
+																						</td>
+																					</tr>
+																				</tfoot>
+																			</table>
+																		</div>
+																	</div>
+																</td>
+															</tr>
+															@endif
+                                                        </div>
+                                                    @else
+                                                        <p class="text-gray-500">No interest costs</p>
+                                                    @endif
+                                                </div>
+                                            </div>
+                                        </td>
+                                    </tr>
+                                    
+                                    <!-- Keep your modals but they open from the expandable section -->
                                     @if($soil->biayaTambahanSoils->count() > 0)
                                     <tr id="biaya-modal-{{ $soil->id }}" class="hidden">
-                                        <td colspan="9" class="px-6 py-4 bg-blue-50">
+                                        <td colspan="7" class="px-6 py-4 bg-blue-50">
                                             <div class="text-sm">
                                                 <div class="flex justify-between items-center mb-2">
                                                     <h4 class="font-semibold text-gray-900">Additional Costs Breakdown for {{ $soil->nama_penjual }}</h4>
@@ -391,23 +604,32 @@
                                         </td>
                                     </tr>
                                     @endif
+                                    
+                                    @if($soil->biayaTambahanInterestSoils->count() > 0)
+                                    <tr id="interest-modal-{{ $soil->id }}" class="hidden">
+                                        <td colspan="7" class="px-6 py-4 bg-purple-50">
+                                            <!-- Your existing modal content -->
+                                        </td>
+                                    </tr>
+                                    @endif
                                 @endforeach
                             </tbody>
+
                             <tfoot class="bg-gray-100 font-semibold">
                                 <tr>
-                                    <td colspan="4" class="px-3 py-6 text-sm text-gray-900 text-right">
-                                        Grand Total:
+                                    <td colspan="3" class="px-3 py-3 text-xs text-gray-900 text-right">
+                                        Grand Total ({{ $land->soils->count() }} records):
                                     </td>
-                                    <td class="px-3 py-6 text-sm text-gray-900 text-right">
+                                    <td class="px-3 py-3 text-xs text-gray-900 text-right">
                                         Rp {{ number_format($totalSoilPrice, 0, ',', '.') }}
                                     </td>
-                                    <td class="px-3 py-6 text-sm text-gray-900 text-right">
-                                        Rp {{ number_format($totalBiayaTambahan, 0, ',', '.') }}
+                                    <td class="px-3 py-3 text-xs text-gray-900 text-right">
+                                        Rp {{ number_format($totalBiayaTambahan + $totalInterest, 0, ',', '.') }}
                                     </td>
-                                    <td class="px-3 py-6 text-sm text-gray-900 text-right">
+                                    <td class="px-3 py-3 text-xs text-gray-900 text-right">
                                         Rp {{ number_format($grandTotal, 0, ',', '.') }}
                                     </td>
-                                    <td colspan="2"></td>
+                                    <td></td>
                                 </tr>
                             </tfoot>
                         </table>
@@ -417,6 +639,115 @@
                 <p class="text-gray-500 text-sm">No soil records associated with this land.</p>
             @endif
         </div>
+
+        {{-- Land Certificates Section --}}
+        @php
+            $landCertificates = \App\Models\LandCertificate::where('land_id', $landId)
+                                    ->with('soils')
+                                    ->orderBy('created_at', 'desc')
+                                    ->get();
+        @endphp
+
+        @if($landCertificates->count() > 0)
+            <div class="bg-white rounded-lg shadow-sm border border-gray-200">
+                <div class="px-4 py-2 border-b border-gray-200 flex items-center justify-between">
+                    <h3 class="text-sm font-medium text-gray-900">Land Certificates</h3>
+                    <div class="flex items-center gap-2">
+                        <span class="text-xs font-medium text-purple-600">{{ $landCertificates->count() }} certificate(s)</span>
+                        <a href="{{ route('land-certificates', ['land' => $landId]) }}" 
+                        class="text-xs text-blue-600 hover:text-blue-800 font-medium">
+                            View All →
+                        </a>
+                    </div>
+                </div>
+                <div class="overflow-x-auto">
+                    <table class="min-w-full divide-y divide-gray-200">
+                        <thead class="bg-gray-50">
+                            <tr>
+                                <th class="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase">Type</th>
+                                <th class="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase">Number</th>
+                                <th class="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase">Issued By</th>
+                                <th class="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase">Dates</th>
+                                <th class="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase">Soils</th>
+                                <th class="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase">Status</th>
+                                <th class="px-3 py-2 text-center text-xs font-medium text-gray-500 uppercase">Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody class="bg-white divide-y divide-gray-200">
+                            @foreach($landCertificates as $cert)
+                                <tr class="hover:bg-gray-50">
+                                    <td class="px-3 py-2 text-xs text-gray-900 font-medium">
+                                        {{ $cert->certificate_type }}
+                                    </td>
+                                    <td class="px-3 py-2 text-xs text-gray-900 font-medium">
+                                        {{ $cert->certificate_number }}
+                                    </td>
+                                    <td class="px-3 py-2 text-xs text-gray-500">
+                                        {{ $cert->issued_by ?? '-' }}
+                                    </td>
+                                    <td class="px-3 py-2 whitespace-nowrap">
+                                        @if($cert->issued_date)
+                                            <div class="text-xs text-gray-500">Issued: {{ $cert->formatted_issued_date }}</div>
+                                        @endif
+                                        @if($cert->expired_date)
+                                            <div class="text-xs font-medium
+                                                @if($cert->is_expired) text-red-600
+                                                @elseif($cert->days_until_expiration && $cert->days_until_expiration <= 365) text-yellow-600
+                                                @else text-green-600 @endif">
+                                                Exp: {{ $cert->formatted_expired_date }}
+                                            </div>
+                                        @endif
+                                    </td>
+                                    <td class="px-3 py-2 text-xs text-gray-900">
+                                        <div class="font-medium">{{ $cert->soils->count() }} soil(s)</div>
+                                        <div class="text-gray-500">{{ $cert->formatted_total_soil_area }}</div>
+                                    </td>
+                                    <td class="px-3 py-2 whitespace-nowrap">
+                                        <span class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium {{ $cert->status_badge_color }}">
+                                            {{ $cert->formatted_status }}
+                                        </span>
+                                    </td>
+                                    <td class="px-3 py-2">
+                                        <div class="flex items-center justify-center gap-1">
+                                            <a href="{{ route('land-certificates', ['land' => $landId]) }}" 
+                                            class="text-blue-600 hover:text-blue-900 p-1 rounded hover:bg-blue-50 transition"
+                                            title="View Certificate">
+                                                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path>
+                                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"></path>
+                                                </svg>
+                                            </a>
+                                        </div>
+                                    </td>
+                                </tr>
+                            @endforeach
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        @else
+            {{-- No Certificates - Show Add Button --}}
+            <div class="bg-purple-50 border border-purple-200 rounded-lg p-4">
+                <div class="flex items-center justify-between">
+                    <div class="flex items-center">
+                        <svg class="w-5 h-5 text-purple-400 mr-2" fill="currentColor" viewBox="0 0 20 20">
+                            <path fill-rule="evenodd" d="M4 4a2 2 0 012-2h4.586A2 2 0 0112 2.586L15.414 6A2 2 0 0116 7.414V16a2 2 0 01-2 2H6a2 2 0 01-2-2V4zm2 6a1 1 0 011-1h6a1 1 0 110 2H7a1 1 0 01-1-1zm1 3a1 1 0 100 2h6a1 1 0 100-2H7z" clip-rule="evenodd"/>
+                        </svg>
+                        <div>
+                            <p class="text-sm font-medium text-purple-800">No Certificates Yet</p>
+                            <p class="text-xs text-purple-700 mt-1">This land has no certificate records assigned to it yet.</p>
+                        </div>
+                    </div>
+                    <a href="{{ route('land-certificates', ['land' => $landId]) }}" 
+                    class="inline-flex items-center px-3 py-1.5 text-xs font-medium text-white bg-purple-600 border border-transparent rounded hover:bg-purple-700">
+                        <svg class="w-3.5 h-3.5 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6"/>
+                        </svg>
+                        Add Certificate
+                    </a>
+                </div>
+            </div>
+        @endif
 
         {{-- Timestamps --}}
         <div class="border-t border-gray-200 pt-4">
@@ -431,4 +762,3 @@
         </div>
     </div>
 </div>
-                                            

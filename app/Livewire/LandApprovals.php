@@ -157,9 +157,6 @@ class LandApprovals extends Component
         // Handle business_unit_id - show the business unit name
         if ($key === 'business_unit_id' && is_numeric($value)) {
             $businessUnit = \App\Models\BusinessUnit::find($value);
-            \Log::info('businessUnit: ', [
-                'businessUnit' => $businessUnit
-            ]);
             return $businessUnit ? "{$businessUnit->name} ({$businessUnit->code})" : "ID: {$value}";
         }
 

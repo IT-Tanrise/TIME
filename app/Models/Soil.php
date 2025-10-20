@@ -646,4 +646,20 @@ class Soil extends Model
         return (int)now()->diffInDays($this->shgb_expired_date, false);
     }
 
+    public function certificates(): BelongsToMany
+    {
+        return $this->belongsToMany(LandCertificate::class, 'certificate_soil', 'soil_id', 'land_certificate_id')
+                    ->withTimestamps();
+    }
+
+    public function getCertificateAttribute()
+    {
+        return $this->certificates()->first();
+    }
+
+    public function getHasCertificateAttribute()
+    {
+        return $this->certificates()->exists();
+    }
+
 }
