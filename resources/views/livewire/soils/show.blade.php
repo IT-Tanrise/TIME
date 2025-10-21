@@ -71,6 +71,8 @@
                                             Manage Costs
                                         </div>
                                     </button>
+                                    @endcan
+                                    @can('soil-data-interest-costs.edit')
                                     <button wire:click="showEditForm({{ $soil->id }}, 'interest', 'detail')" 
                                             class="block px-3 py-1.5 text-xs text-gray-700 hover:bg-gray-100 w-full text-left">
                                         <div class="flex items-center">
