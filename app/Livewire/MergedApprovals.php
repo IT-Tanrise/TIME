@@ -222,7 +222,7 @@ class MergedApprovals extends Component
                             $canReject = true;
                         } elseif (in_array($approval->change_type, ['costs']) && auth()->user()->can('soil-data-costs.approval')) {
                             $canReject = true;
-                        } elseif (in_array($approval->change_type, ['interest']) && auth()->user()->can('soil-data-costs.approval')) {
+                        } elseif (in_array($approval->change_type, ['interest']) && auth()->user()->can('soil-data-interest-costs.approval')) {
                             $canReject = true;
                         }
                         
