@@ -64,16 +64,27 @@ class MergedApprovals extends Component
             $canApproveCosts = $user->can('soil-data-costs.approval');
             $canApproveInterestCosts = $user->can('soil-data-interest-costs.approval');
 
-            if ($canApproveData && $canApproveCosts && $canApproveInterestCosts) {
-                // Show all
-            } elseif ($canApproveData && !$canApproveCosts) {
-                $query->whereIn('change_type', ['details', 'delete', 'create']);
-            } elseif (!$canApproveData && $canApproveCosts) {
-                $query->where('change_type', 'costs');
-            } elseif (!$canApproveData && !$canApproveCosts && $canApproveInterestCosts) {
-                $query->where('change_type', 'interest');
-            }else {
-                $query->where('id', '<', 0); // Show nothing
+            // FIXED: Better permission logic
+            $allowedChangeTypes = [];
+            
+            if ($canApproveData) {
+                $allowedChangeTypes = array_merge($allowedChangeTypes, ['details', 'delete', 'create']);
+            }
+            
+            if ($canApproveCosts) {
+                $allowedChangeTypes[] = 'costs';
+            }
+            
+            if ($canApproveInterestCosts) {
+                $allowedChangeTypes[] = 'interest';
+            }
+
+            // If user has at least one permission, filter by allowed types
+            if (!empty($allowedChangeTypes)) {
+                $query->whereIn('change_type', $allowedChangeTypes);
+            } else {
+                // No permissions, show nothing
+                $query->where('id', '<', 0);
             }
 
             $soilApprovals = $query->get()->map(function($approval) {
@@ -136,9 +147,9 @@ class MergedApprovals extends Component
                         $canApprove = false;
                         if (in_array($approval->change_type, ['details', 'delete', 'create']) && auth()->user()->can('soil-data.approval')) {
                             $canApprove = true;
-                        } elseif (in_array($approval->change_type, ['costs']) && auth()->user()->can('soil-data-costs.approval')) {
+                        } elseif ($approval->change_type === 'costs' && auth()->user()->can('soil-data-costs.approval')) {
                             $canApprove = true;
-                        } elseif (in_array($approval->change_type, ['interest']) && auth()->user()->can('soil-data-interest-costs.approval')) {
+                        } elseif ($approval->change_type === 'interest' && auth()->user()->can('soil-data-interest-costs.approval')) {
                             $canApprove = true;
                         }
                         
@@ -225,9 +236,9 @@ class MergedApprovals extends Component
                         $canReject = false;
                         if (in_array($approval->change_type, ['details', 'delete', 'create']) && auth()->user()->can('soil-data.approval')) {
                             $canReject = true;
-                        } elseif (in_array($approval->change_type, ['costs']) && auth()->user()->can('soil-data-costs.approval')) {
+                        } elseif ($approval->change_type === 'costs' && auth()->user()->can('soil-data-costs.approval')) {
                             $canReject = true;
-                        } elseif (in_array($approval->change_type, ['interest']) && auth()->user()->can('soil-data-interest-costs.approval')) {
+                        } elseif ($approval->change_type === 'interest' && auth()->user()->can('soil-data-interest-costs.approval')) {
                             $canReject = true;
                         }
                         
@@ -683,9 +694,6 @@ class MergedApprovals extends Component
         // Handle business_unit_id - show the business unit name
         if ($key === 'business_unit_id' && is_numeric($value)) {
             $businessUnit = \App\Models\BusinessUnit::find($value);
-            \Log::info('businessUnit: ', [
-                'businessUnit' => $businessUnit
-            ]);
             return $businessUnit ? "{$businessUnit->name} ({$businessUnit->code})" : "ID: {$value}";
         }
         
