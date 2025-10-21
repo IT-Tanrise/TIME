@@ -28,12 +28,26 @@
                                 $totalLandPending = App\Models\LandApproval::pending()->count();
                             }
                             
+                            $allowedChangeTypes = [];
+
                             if(auth()->user()->can('soil-data.approval')) {
-                                $totalSoilPending += App\Models\SoilApproval::pending()->whereIn('change_type', ['details', 'delete', 'create'])->count();
+                                $allowedChangeTypes = array_merge($allowedChangeTypes, ['details', 'delete', 'create']);
                             }
+
                             if(auth()->user()->can('soil-data-costs.approval')) {
-                                $totalSoilPending += App\Models\SoilApproval::pending()->where('change_type', 'costs')->count();
+                                $allowedChangeTypes[] = 'costs';
                             }
+
+                            if(auth()->user()->can('soil-data-interest-costs.approval')) {
+                                $allowedChangeTypes[] = 'interest';
+                            }
+
+                            if(!empty($allowedChangeTypes)) {
+                                $totalSoilPending = App\Models\SoilApproval::pending()
+                                    ->whereIn('change_type', $allowedChangeTypes)
+                                    ->count();
+                            }
+
                             $totalPending = $totalLandPending + $totalSoilPending;
                         @endphp
                         
