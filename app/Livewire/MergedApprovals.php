@@ -62,6 +62,7 @@ class MergedApprovals extends Component
             $user = auth()->user();
             $canApproveData = $user->can('soil-data.approval');
             $canApproveCosts = $user->can('soil-data-costs.approval');
+            $canApproveInterestCosts = $user->can('soil-data-interest-costs.approval');
 
             if ($canApproveData && $canApproveCosts) {
                 // Show all
@@ -69,7 +70,9 @@ class MergedApprovals extends Component
                 $query->whereIn('change_type', ['details', 'delete', 'create']);
             } elseif (!$canApproveData && $canApproveCosts) {
                 $query->where('change_type', 'costs');
-            } else {
+            } elseif (!$canApproveData && !$canApproveCosts && $canApproveInterestCosts) {
+                $query->where('change_type', 'interests');
+            }else {
                 $query->where('id', '<', 0); // Show nothing
             }
 
@@ -133,7 +136,9 @@ class MergedApprovals extends Component
                         $canApprove = false;
                         if (in_array($approval->change_type, ['details', 'delete', 'create']) && auth()->user()->can('soil-data.approval')) {
                             $canApprove = true;
-                        } elseif (in_array($approval->change_type, ['costs', 'interest']) && auth()->user()->can('soil-data-costs.approval')) {
+                        } elseif (in_array($approval->change_type, ['costs']) && auth()->user()->can('soil-data-costs.approval')) {
+                            $canApprove = true;
+                        } elseif (in_array($approval->change_type, ['interest']) && auth()->user()->can('soil-data-interest-costs.approval')) {
                             $canApprove = true;
                         }
                         
