@@ -372,8 +372,10 @@
                             </div>
                         </div>
                     @endif
+                    @endcan
                     
                     <!-- Interest Costs - Compact -->
+                    @can('soil-data-interest-costs.access')
                     @if($soil->biayaTambahanInterestSoils->count() > 0)
                         <div class="bg-white rounded-lg shadow-sm border border-gray-200">
                             <div class="px-4 py-2 border-b border-gray-200">
