@@ -317,51 +317,34 @@
 
             {{-- Pending Approvals Section - Compact --}}
             @canany(['land-data.approval', 'soil-data.approval', 'soil-data-costs.approval', 'soil-data-interest-costs.approval'])
-                @php
-                    $totalLandPending = 0;
-                    $totalSoilPending = 0;
-                    
-                    if(auth()->user()->can('land-data.approval')) {
-                        $totalLandPending = App\Models\LandApproval::pending()->count();
-                    }
-                    
-                    // FIXED: Better logic for counting soil approvals
-                    $allowedChangeTypes = [];
-                    
-                    if(auth()->user()->can('soil-data.approval')) {
-                        $allowedChangeTypes = array_merge($allowedChangeTypes, ['details', 'delete', 'create']);
-                    }
-                    
-                    if(auth()->user()->can('soil-data-costs.approval')) {
-                        $allowedChangeTypes[] = 'costs';
-                    }
-                    
-                    if(auth()->user()->can('soil-data-interest-costs.approval')) {
-                        $allowedChangeTypes[] = 'interest';
-                    }
-                    
-                    if(!empty($allowedChangeTypes)) {
-                        $totalSoilPending = App\Models\SoilApproval::pending()
-                            ->whereIn('change_type', $allowedChangeTypes)
-                            ->count();
-                    }
-                    
-                    $totalPending = $totalLandPending + $totalSoilPending;
-                @endphp
-    
-                @if($totalPending > 0)
-                    <button 
-                        onclick="toggleSection('pendingApprovals')"
-                        class="flex items-center space-x-2 px-4 py-2 bg-yellow-100 hover:bg-yellow-200 rounded-lg transition-colors">
-                        <svg class="w-5 h-5 text-yellow-600" fill="currentColor" viewBox="0 0 20 20">
-                            <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm1-12a1 1 0 10-2 0v4a1 1 0 00.293.707l2.828 2.829a1 1 0 101.415-1.415L11 9.586V6z" clip-rule="evenodd"/>
-                        </svg>
-                        <div class="text-left">
-                            <div class="text-xs text-yellow-800 font-medium">Pending Approvals</div>
-                            <div class="text-lg font-bold text-yellow-900">{{ $totalPending }}</div>
+                <div class="bg-white shadow-sm sm:rounded-lg mb-4">
+                    <div class="p-4">
+                        <button 
+                            onclick="toggleSection('pendingApprovals')" 
+                            class="flex items-center justify-between w-full text-left group mb-3">
+                            <div class="flex items-center space-x-2">
+                                <h2 class="text-base font-bold text-gray-900">Pending Approvals</h2>
+                                @if($totalPending > 0)
+                                    <span class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-yellow-100 text-yellow-800">
+                                        {{ $totalPending }}
+                                    </span>
+                                @endif
+                            </div>
+                            <svg id="pendingApprovals-icon" class="w-4 h-4 text-gray-500 transform transition-transform duration-200" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/>
+                            </svg>
+                        </button>
+
+                        <div id="pendingApprovals-content" class="hidden">
+                            @if($totalPending > 0)
+                                <div class="mb-3 p-2 bg-yellow-50 border-l-4 border-yellow-400 text-xs text-yellow-700">
+                                    You have approval permissions. Changes require your review before being applied.
+                                </div>
+                            @endif
+                            <livewire:merged-approvals />
                         </div>
-                    </button>
-                @endif
+                    </div>
+                </div>
             @endcanany
 
             {{-- Recent Activity Section - Compact --}}
