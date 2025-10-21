@@ -103,7 +103,7 @@
             </div>
         </div>
 
-        <div class="max-w-7xl mx-auto px-3 sm:px-4 lg:px-6 py-2">
+        <div class="mx-auto px-3 sm:px-4 lg:px-6 py-2">
             <!-- Approval Status - Compact -->
             @if(!auth()->user()->can('soil-data.approval') && !auth()->user()->can('soil-data-costs.approval'))
                 @if($pendingApprovals->count() > 0 || $recentApprovals->count() > 0)
@@ -504,7 +504,7 @@
     @else
         <!-- Error State - Compact -->
         <div class="bg-white shadow-sm border-b border-gray-200">
-            <div class="max-w-7xl mx-auto px-3 sm:px-4 lg:px-6">
+            <div class="mx-auto px-3 sm:px-4 lg:px-6">
                 <div class="flex justify-between items-center py-2.5">
                     <div class="flex items-center space-x-2">
                         <button wire:click="backToIndex" 
@@ -519,7 +519,7 @@
             </div>
         </div>
 
-        <div class="max-w-7xl mx-auto px-3 sm:px-4 lg:px-6 py-8">
+        <div class="mx-auto px-3 sm:px-4 lg:px-6 py-8">
             <div class="text-center">
                 <svg class="mx-auto h-10 w-10 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/>
