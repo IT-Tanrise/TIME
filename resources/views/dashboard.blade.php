@@ -316,7 +316,7 @@
             </div>
 
             {{-- Pending Approvals Section - Compact --}}
-            @canany(['land-data.approval', 'soil-data.approval', 'soil-data-costs.approval'])
+            @canany(['land-data.approval', 'soil-data.approval', 'soil-data-costs.approval', 'soil-data-interest-costs.approval'])
                 <div class="bg-white shadow-sm sm:rounded-lg mb-4">
                     <div class="p-4">
                         <button 

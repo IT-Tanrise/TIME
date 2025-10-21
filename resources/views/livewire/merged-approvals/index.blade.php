@@ -20,7 +20,7 @@
                 @can('land-data.approval')
                     <option value="land">Land Only</option>
                 @endcan
-                @canany(['soil-data.approval', 'soil-data-costs.approval'])
+                @canany(['soil-data.approval', 'soil-data-costs.approval',, 'soil-data-interest-costs.approval'])
                     <option value="soil">Soil Only</option>
                 @endcanany
             </select>
