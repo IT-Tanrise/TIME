@@ -64,14 +64,14 @@ class MergedApprovals extends Component
             $canApproveCosts = $user->can('soil-data-costs.approval');
             $canApproveInterestCosts = $user->can('soil-data-interest-costs.approval');
 
-            if ($canApproveData && $canApproveCosts) {
+            if ($canApproveData && $canApproveCosts && $canApproveInterestCosts) {
                 // Show all
             } elseif ($canApproveData && !$canApproveCosts) {
                 $query->whereIn('change_type', ['details', 'delete', 'create']);
             } elseif (!$canApproveData && $canApproveCosts) {
                 $query->where('change_type', 'costs');
             } elseif (!$canApproveData && !$canApproveCosts && $canApproveInterestCosts) {
-                $query->where('change_type', 'interests');
+                $query->where('change_type', 'interest');
             }else {
                 $query->where('id', '<', 0); // Show nothing
             }
