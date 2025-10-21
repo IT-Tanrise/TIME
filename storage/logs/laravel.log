@@ -7806,3 +7806,51 @@
 #46 C:\\xampp\\tanrise-portal2\\vendor\\laravel\\framework\\src\\Illuminate\\Foundation\\resources\\server.php(23): require_once('C:\\\\xampp\\\\tanris...')
 #47 {main}
 "} 
+[2025-10-21 03:52:08] local.ERROR: Cannot use empty array elements in arrays {"userId":1,"exception":"[object] (Symfony\\Component\\ErrorHandler\\Error\\FatalError(code: 0): Cannot use empty array elements in arrays at C:\\xampp\\tanrise-portal2\\storage\\framework\\views\\5790f770099e3700d196a84e974e5527.php:25)
+[stacktrace]
+#0 {main}
+"} 
+[2025-10-21 03:52:10] local.ERROR: Cannot use empty array elements in arrays {"userId":1,"exception":"[object] (Symfony\\Component\\ErrorHandler\\Error\\FatalError(code: 0): Cannot use empty array elements in arrays at C:\\xampp\\tanrise-portal2\\storage\\framework\\views\\5790f770099e3700d196a84e974e5527.php:25)
+[stacktrace]
+#0 {main}
+"} 
+[2025-10-21 03:52:17] local.ERROR: Cannot use empty array elements in arrays {"userId":1,"exception":"[object] (Symfony\\Component\\ErrorHandler\\Error\\FatalError(code: 0): Cannot use empty array elements in arrays at C:\\xampp\\tanrise-portal2\\storage\\framework\\views\\5790f770099e3700d196a84e974e5527.php:25)
+[stacktrace]
+#0 {main}
+"} 
+[2025-10-21 03:53:33] local.ERROR: Cannot use empty array elements in arrays {"userId":1,"exception":"[object] (Symfony\\Component\\ErrorHandler\\Error\\FatalError(code: 0): Cannot use empty array elements in arrays at C:\\xampp\\tanrise-portal2\\storage\\framework\\views\\5790f770099e3700d196a84e974e5527.php:25)
+[stacktrace]
+#0 {main}
+"} 
+[2025-10-21 03:53:43] local.ERROR: Cannot use empty array elements in arrays {"userId":1,"exception":"[object] (Symfony\\Component\\ErrorHandler\\Error\\FatalError(code: 0): Cannot use empty array elements in arrays at C:\\xampp\\tanrise-portal2\\storage\\framework\\views\\5790f770099e3700d196a84e974e5527.php:25)
+[stacktrace]
+#0 {main}
+"} 
+[2025-10-21 03:54:06] local.ERROR: Cannot use empty array elements in arrays {"userId":1,"exception":"[object] (Symfony\\Component\\ErrorHandler\\Error\\FatalError(code: 0): Cannot use empty array elements in arrays at C:\\xampp\\tanrise-portal2\\storage\\framework\\views\\5790f770099e3700d196a84e974e5527.php:25)
+[stacktrace]
+#0 {main}
+"} 
+[2025-10-21 03:54:15] local.ERROR: Cannot use empty array elements in arrays {"userId":1,"exception":"[object] (Symfony\\Component\\ErrorHandler\\Error\\FatalError(code: 0): Cannot use empty array elements in arrays at C:\\xampp\\tanrise-portal2\\storage\\framework\\views\\5790f770099e3700d196a84e974e5527.php:25)
+[stacktrace]
+#0 {main}
+"} 
+[2025-10-21 03:54:19] local.ERROR: Cannot use empty array elements in arrays {"userId":1,"exception":"[object] (Symfony\\Component\\ErrorHandler\\Error\\FatalError(code: 0): Cannot use empty array elements in arrays at C:\\xampp\\tanrise-portal2\\storage\\framework\\views\\5790f770099e3700d196a84e974e5527.php:25)
+[stacktrace]
+#0 {main}
+"} 
+[2025-10-21 03:54:20] local.ERROR: Cannot use empty array elements in arrays {"userId":1,"exception":"[object] (Symfony\\Component\\ErrorHandler\\Error\\FatalError(code: 0): Cannot use empty array elements in arrays at C:\\xampp\\tanrise-portal2\\storage\\framework\\views\\5790f770099e3700d196a84e974e5527.php:25)
+[stacktrace]
+#0 {main}
+"} 
+[2025-10-21 03:55:11] local.ERROR: Cannot use empty array elements in arrays {"userId":1,"exception":"[object] (Symfony\\Component\\ErrorHandler\\Error\\FatalError(code: 0): Cannot use empty array elements in arrays at C:\\xampp\\tanrise-portal2\\storage\\framework\\views\\5790f770099e3700d196a84e974e5527.php:25)
+[stacktrace]
+#0 {main}
+"} 
+[2025-10-21 03:55:36] local.ERROR: Cannot use empty array elements in arrays {"userId":1,"exception":"[object] (Symfony\\Component\\ErrorHandler\\Error\\FatalError(code: 0): Cannot use empty array elements in arrays at C:\\xampp\\tanrise-portal2\\storage\\framework\\views\\5790f770099e3700d196a84e974e5527.php:25)
+[stacktrace]
+#0 {main}
+"} 
+[2025-10-21 03:55:49] local.ERROR: Cannot use empty array elements in arrays {"userId":1,"exception":"[object] (Symfony\\Component\\ErrorHandler\\Error\\FatalError(code: 0): Cannot use empty array elements in arrays at C:\\xampp\\tanrise-portal2\\storage\\framework\\views\\5790f770099e3700d196a84e974e5527.php:25)
+[stacktrace]
+#0 {main}
+"} 
