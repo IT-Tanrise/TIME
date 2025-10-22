@@ -23,64 +23,67 @@ Route::get('posts', Posts::class)->name('posts')->middleware('auth');
 Route::get('tasks', Tasks::class)->name('tasks')->middleware('auth');
 
 Route::middleware(['auth'])->group(function () {
+    // Approval Routes
     Route::get('/approvals', function() {
         return view('approvals');
     })->name('approvals');
-});
 
-// Partners Routes
-Route::middleware(['permission:ownerships.access'])->group(function () {
-    Route::get('/partners', Partners::class)->name('partners.index');
-    Route::get('/partners/business-unit/{businessUnit}', Partners::class)->name('partners.by-business-unit')
+    // Partners Routes
+    Route::middleware(['permission:ownerships.access'])->group(function () {
+        Route::get('/partners', Partners::class)->name('partners.index');
+        Route::get('/partners/business-unit/{businessUnit}', Partners::class)->name('partners.by-business-unit')
+            ->where('businessUnit', '[0-9]+');
+    });
+
+    // Land Routes
+    Route::middleware(['permission:lands.access'])->group(function () {
+        Route::get('/lands', Lands::class)->name('lands');
+        Route::get('/lands/business-unit/{businessUnit}', Lands::class)->name('lands.by-business-unit')
+            ->where('businessUnit', '[0-9]+');
+        Route::get('/land-approvals', App\Livewire\LandApprovals::class)->name('land-approvals');
+        Route::get('/lands/{landId}/history', \App\Livewire\LandHistories::class)
+            ->name('lands.history');
+        Route::get('/land-certificates/{businessUnit?}/{land?}', \App\Livewire\LandCertificates::class)
+        ->name('land-certificates')
+        ->middleware(['permission:lands.access']);
+    });
+
+    Route::get('/projects', Projects::class)->name('projects');
+
+    // Business Units Routes
+    Route::get('/business-units/{view?}/{id?}', BusinessUnits::class)->name('business-units');
+
+    // Soil Approvals Routes
+    Route::get('/soil-approvals', SoilApprovals::class)->name('soil-approvals');
+
+    // Soil Routes
+    Route::middleware(['permission:soils.access'])->group(function () {
+        Route::get('/soils', Soils::class)->name('soils');
+        Route::get('/soils/{soilId}/show', Soils::class)->name('soils.show');
+        Route::get('/soils/business-unit/{businessUnit}/{soilId?}', Soils::class)->name('soils.by-business-unit')
         ->where('businessUnit', '[0-9]+');
+        // Soil history routes
+        Route::get('/soils/{soilId}/history', SoilHistories::class)->name('soils.history');
+        //csv
+        Route::post('/soils/export', [App\Http\Controllers\SoilExportController::class, 'exportCsv'])
+        ->name('soils.export');
+    });
+
+    // Rent Routes
+    Route::prefix('rents')->name('rents.')->group(function () {
+        // Land Rentals
+        Route::get('/lands', RentLands::class)->name('lands');
+        Route::get('/lands/business-unit/{businessUnit}', RentLands::class)->name('lands.by-business-unit')
+            ->where('businessUnit', '[0-9]+');
+    });
+
+    // Vendor Routes
+    Route::middleware(['permission:vendors.access'])->group(function () {
+        Route::get('/vendors', VendorsIFCA::class)->name('vendors');
+    });
 });
 
-// Land Routes
-Route::middleware(['permission:lands.access'])->group(function () {
-    Route::get('/lands', Lands::class)->name('lands');
-    Route::get('/lands/business-unit/{businessUnit}', Lands::class)->name('lands.by-business-unit')
-        ->where('businessUnit', '[0-9]+');
-    Route::get('/land-approvals', App\Livewire\LandApprovals::class)->name('land-approvals');
-    Route::get('/lands/{landId}/history', \App\Livewire\LandHistories::class)
-        ->name('lands.history');
-    Route::get('/land-certificates/{businessUnit?}/{land?}', \App\Livewire\LandCertificates::class)
-    ->name('land-certificates')
-    ->middleware(['permission:lands.access']);
-});
 
-Route::get('/projects', Projects::class)->name('projects');
-
-// Business Units Routes
-Route::get('/business-units/{view?}/{id?}', BusinessUnits::class)->name('business-units');
-
-// Soil Approvals Routes
-Route::get('/soil-approvals', SoilApprovals::class)->name('soil-approvals');
-
-// Soil Routes
-Route::middleware(['permission:soils.access'])->group(function () {
-    Route::get('/soils', Soils::class)->name('soils');
-    Route::get('/soils/{soilId}/show', Soils::class)->name('soils.show');
-    Route::get('/soils/business-unit/{businessUnit}/{soilId?}', Soils::class)->name('soils.by-business-unit')
-    ->where('businessUnit', '[0-9]+');
-    // Soil history routes
-    Route::get('/soils/{soilId}/history', SoilHistories::class)->name('soils.history');
-    //csv
-    Route::post('/soils/export', [App\Http\Controllers\SoilExportController::class, 'exportCsv'])
-    ->name('soils.export');
-});
-
-// Rent Routes
-Route::prefix('rents')->name('rents.')->group(function () {
-    // Land Rentals
-    Route::get('/lands', RentLands::class)->name('lands');
-    Route::get('/lands/business-unit/{businessUnit}', RentLands::class)->name('lands.by-business-unit')
-        ->where('businessUnit', '[0-9]+');
-});
-
-// Vendor Routes
-Route::middleware(['permission:vendors.access'])->group(function () {
-    Route::get('/vendors', VendorsIFCA::class)->name('vendors');
-});
 
 Route::get('/', function () {
     return view('welcome');
