@@ -15,7 +15,7 @@
             <div class="flex items-center space-x-3">
                 <button wire:click="backToIndex" 
                         class="inline-flex items-center px-3 py-2 bg-gray-500 border border-transparent rounded-md text-sm text-white font-medium hover:bg-gray-600 transition">
-                    <svg class="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18"/>
                     </svg>
                 </button>
@@ -87,13 +87,13 @@
                         <p class="mt-1 text-sm text-gray-900">{{ $vendor->currency_cd ?: 'IDR' }}</p>
                     </div> -->
 
-                    <div>
+                    <!-- <div>
                         <label class="block text-sm font-medium text-gray-500">Status</label>
                         <span class="mt-1 inline-flex items-center px-3 py-1 rounded-full text-sm font-medium 
                             {{ $vendor->active_status === 'A' ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800' }}">
                             {{ $vendor->active_status === 'A' ? 'Active' : 'Inactive' }}
                         </span>
-                    </div>
+                    </div> -->
                 </div>
             </div>
         </div>
@@ -189,7 +189,6 @@
                                     <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Description</th>
                                     <th class="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase">Contract Amount</th>
                                     <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Period</th>
-                                    <th class="px-4 py-3 text-center text-xs font-medium text-gray-500 uppercase">Status</th>
                                 </tr>
                             </thead>
                             <tbody class="bg-white divide-y divide-gray-200">
@@ -229,11 +228,6 @@
                                             </div>
                                         @endif
                                     </td>
-                                    <td class="px-4 py-3 whitespace-nowrap text-center">
-                                        <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium {{ $contract->status_badge_color }}">
-                                            {{ $contract->contract_status }}
-                                        </span>
-                                    </td>
                                 </tr>
                                 @endforeach
                             </tbody>
@@ -263,7 +257,7 @@
         </div>
 
         {{-- Audit Information --}}
-        <div class="border-t border-gray-200 pt-6">
+        <!-- <div class="border-t border-gray-200 pt-6">
             <h3 class="text-sm font-medium text-gray-500 mb-3">Audit Information</h3>
             <div class="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm text-gray-600">
                 <div class="flex items-center">
@@ -281,6 +275,6 @@
                     <span class="ml-2">{{ $vendor->audit_date ? $vendor->audit_date->format('d/m/Y H:i') : '-' }}</span>
                 </div>
             </div>
-        </div>
+        </div> -->
     </div>
 </div>
