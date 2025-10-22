@@ -51,28 +51,19 @@
                         <p class="mt-1 text-sm text-gray-900 font-semibold">{{ $vendor->name }}</p>
                     </div>
 
+                    
+                </div>
+
+                <div class="space-y-4">
                     <div>
                         <label class="block text-sm font-medium text-gray-500">Vendor Type</label>
                         <span class="mt-1 inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-purple-100 text-purple-800">
                             {{ $vendor->type_description }}
                         </span>
                     </div>
-                </div>
-
-                <div class="space-y-4">
                     <div>
                         <label class="block text-sm font-medium text-gray-500">Contact Person</label>
-                        <p class="mt-1 text-sm text-gray-900">{{ $vendor->contact_person ?? '-' }}</p>
-                    </div>
-
-                    <div>
-                        <label class="block text-sm font-medium text-gray-500">Telephone</label>
-                        <p class="mt-1 text-sm text-gray-900">{{ $vendor->telephone_no ?? '-' }}</p>
-                    </div>
-
-                    <div>
-                        <label class="block text-sm font-medium text-gray-500">Fax</label>
-                        <p class="mt-1 text-sm text-gray-900">{{ $vendor->fax_no ?? '-' }}</p>
+                        <p class="mt-1 text-sm text-gray-900">{{ $vendor->contact_person ?? '-' } - {{ $vendor->telephone_no ?? '-' }}}</p>
                     </div>
                 </div>
 
