@@ -63,7 +63,7 @@
                     </div>
                     <div>
                         <label class="block text-sm font-medium text-gray-500">Contact Person</label>
-                        <p class="mt-1 text-sm text-gray-900">{{ $vendor->contact_person ?? '-' } - {{ $vendor->telephone_no ?? '-' }}}</p>
+                        <p class="mt-1 text-sm text-gray-900">{{ $vendor->contact_person ?? '-' }} - {{ $vendor->telephone_no ?? '-' }}</p>
                     </div>
                 </div>
 
