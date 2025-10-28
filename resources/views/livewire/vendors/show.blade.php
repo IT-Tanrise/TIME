@@ -49,9 +49,7 @@
                     <div>
                         <label class="block text-sm font-medium text-gray-500">Vendor Name</label>
                         <p class="mt-1 text-sm text-gray-900 font-semibold">{{ $vendor->name }}</p>
-                    </div>
-
-                    
+                    </div>                    
                 </div>
 
                 <div class="space-y-4">
