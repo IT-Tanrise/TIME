@@ -88,6 +88,9 @@ class Soils extends Component
     public $status = 'active';
     public $filterStatus = '';
 
+    public $sortField = 'created_at';
+    public $sortDirection = 'desc';
+
     protected $rules = [
         'land_id' => 'required|exists:lands,id',
         'business_unit_id' => 'required|exists:business_units,id',
@@ -151,6 +154,16 @@ class Soils extends Component
         $this->exportType = 'current';
         $this->exportDateFrom = '';
         $this->exportDateTo = '';
+    }
+
+    public function sortBy($field)
+    {
+        if ($this->sortField === $field) {
+            $this->sortDirection = $this->sortDirection === 'asc' ? 'desc' : 'asc';
+        } else {
+            $this->sortField = $field;
+            $this->sortDirection = 'asc';
+        }
     }
 
     // Hide export modal
@@ -357,7 +370,7 @@ class Soils extends Component
             ->when($this->filterStatus, function($query) { // ADD THIS
                 $query->where('status', $this->filterStatus);
             })
-            ->orderBy('created_at', 'desc')
+            ->orderBy($this->sortField, $this->sortDirection)
             ->paginate(10);
 
         $businessUnits = BusinessUnit::orderBy('name')->get();
