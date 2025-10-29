@@ -113,7 +113,7 @@
 
             
             <div class="bg-white shadow-sm sm:rounded-lg mb-4 p-4">
-                <h2 class="text-base font-bold text-gray-900 mb-3">Management Systems</h2>
+                <h2 class="text-base font-bold text-gray-900 mb-3">TIME - Tanrise Information Management System</h2>
                 
                 <div class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-2">
                     
