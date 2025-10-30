@@ -117,7 +117,41 @@
                                 + Add New
                         </button>
                         @endcan
-                        
+                        @if($businessUnit)
+                            <a href="{{ route('land-certificates', ['businessUnit' => $businessUnit->id]) }}" 
+                                class="inline-flex items-center px-2 py-1 text-xs font-medium text-purple-600 bg-purple-50 border border-purple-200 rounded hover:bg-purple-100">
+                                <svg class="w-3.5 h-3.5 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/>
+                                </svg>
+                                Certificates
+                                @php
+                                    $certCount = \App\Models\LandCertificate::whereHas('land', function($q) use ($businessUnit) {
+                                        $q->where('business_unit_id', $businessUnit->id);
+                                    })->count();
+                                @endphp
+                                @if($certCount > 0)
+                                    <span class="ml-1 inline-flex items-center justify-center px-1.5 py-0.5 text-xs font-bold leading-none text-purple-100 bg-purple-600 rounded-full">
+                                        {{ $certCount }}
+                                    </span>
+                                @endif
+                            </a>
+                        @else
+                            <a href="{{ route('land-certificates') }}" 
+                                class="inline-flex items-center px-2 py-1 text-xs font-medium text-purple-600 bg-purple-50 border border-purple-200 rounded hover:bg-purple-100">
+                                <svg class="w-3.5 h-3.5 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/>
+                                </svg>
+                                Certificates
+                                @php
+                                    $certCount = \App\Models\LandCertificate::count();
+                                @endphp
+                                @if($certCount > 0)
+                                    <span class="ml-1 inline-flex items-center justify-center px-1.5 py-0.5 text-xs font-bold leading-none text-purple-100 bg-purple-600 rounded-full">
+                                        {{ $certCount }}
+                                    </span>
+                                @endif
+                            </a>
+                        @endif
                     </div>
                 </div>
 
