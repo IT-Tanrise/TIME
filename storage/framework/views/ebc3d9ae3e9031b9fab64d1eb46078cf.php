@@ -1,6 +1,6 @@
 <nav x-data="{ open: false }" class="bg-white border-b border-gray-100">
     <!-- Primary Navigation Menu -->
-    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+    <div class="mx-auto px-4">
         <div class="flex justify-between h-16">
             <div class="flex">
                 <!-- Logo -->
@@ -53,7 +53,7 @@
 <?php $component = $__componentOriginalc295f12dca9d42f28a259237a5724830; ?>
 <?php unset($__componentOriginalc295f12dca9d42f28a259237a5724830); ?>
 <?php endif; ?> -->
-                    <?php if (isset($component)) { $__componentOriginalc295f12dca9d42f28a259237a5724830 = $component; } ?>
+                    <!-- <?php if (isset($component)) { $__componentOriginalc295f12dca9d42f28a259237a5724830 = $component; } ?>
 <?php if (isset($attributes)) { $__attributesOriginalc295f12dca9d42f28a259237a5724830 = $attributes; } ?>
 <?php $component = Illuminate\View\AnonymousComponent::resolve(['view' => 'components.nav-link','data' => ['href' => ''.e(route('business-units')).'','active' => request()->routeIs('business-units')]] + (isset($attributes) && $attributes instanceof Illuminate\View\ComponentAttributeBag ? $attributes->all() : [])); ?>
 <?php $component->withName('nav-link'); ?>
@@ -74,11 +74,40 @@
 <?php if (isset($__componentOriginalc295f12dca9d42f28a259237a5724830)): ?>
 <?php $component = $__componentOriginalc295f12dca9d42f28a259237a5724830; ?>
 <?php unset($__componentOriginalc295f12dca9d42f28a259237a5724830); ?>
-<?php endif; ?>
+<?php endif; ?> -->
                 </div>
             </div>
 
             <div class="hidden sm:flex sm:items-center sm:ms-6">
+                <!-- Current DateTime (GMT+7) -->
+                <div class="me-4 px-3 py-2 bg-gray-50 rounded-md border border-gray-200" x-data="{
+                    currentTime: '',
+                    updateTime() {
+                        const now = new Date();
+                        const gmt7Time = new Date(now.toLocaleString('en-US', { timeZone: 'Asia/Jakarta' }));
+                        
+                        const days = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
+                        const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+                        
+                        const dayName = days[gmt7Time.getDay()];
+                        const date = gmt7Time.getDate();
+                        const month = months[gmt7Time.getMonth()];
+                        const year = gmt7Time.getFullYear();
+                        const hours = String(gmt7Time.getHours()).padStart(2, '0');
+                        const minutes = String(gmt7Time.getMinutes()).padStart(2, '0');
+                        const seconds = String(gmt7Time.getSeconds()).padStart(2, '0');
+                        
+                        this.currentTime = `${dayName}, ${date} ${month} ${year} ${hours}:${minutes}:${seconds} GMT+7`;
+                    }
+                }" x-init="updateTime(); setInterval(() => updateTime(), 1000)">
+                    <div class="flex items-center space-x-2">
+                        <svg class="w-4 h-4 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                        </svg>
+                        <span class="text-xs font-medium text-gray-700" x-text="currentTime"></span>
+                    </div>
+                </div>
+
                 <!-- Teams Dropdown -->
                 <!--[if BLOCK]><![endif]--><?php if(Laravel\Jetstream\Jetstream::hasTeamFeatures()): ?>
                     <div class="ms-3 relative">
@@ -352,6 +381,35 @@
 
     <!-- Responsive Navigation Menu -->
     <div :class="{'block': open, 'hidden': ! open}" class="hidden sm:hidden">
+        <!-- Current DateTime (Mobile) -->
+        <div class="pt-2 pb-3 px-4" x-data="{
+            currentTime: '',
+            updateTime() {
+                const now = new Date();
+                const gmt7Time = new Date(now.toLocaleString('en-US', { timeZone: 'Asia/Jakarta' }));
+                
+                const days = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
+                const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+                
+                const dayName = days[gmt7Time.getDay()];
+                const date = gmt7Time.getDate();
+                const month = months[gmt7Time.getMonth()];
+                const year = gmt7Time.getFullYear();
+                const hours = String(gmt7Time.getHours()).padStart(2, '0');
+                const minutes = String(gmt7Time.getMinutes()).padStart(2, '0');
+                const seconds = String(gmt7Time.getSeconds()).padStart(2, '0');
+                
+                this.currentTime = `${dayName}, ${date} ${month} ${year} ${hours}:${minutes}:${seconds} GMT+7`;
+            }
+        }" x-init="updateTime(); setInterval(() => updateTime(), 1000)">
+            <div class="flex items-center space-x-2 px-3 py-2 bg-gray-50 rounded-md border border-gray-200">
+                <svg class="w-4 h-4 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                </svg>
+                <span class="text-xs font-medium text-gray-700" x-text="currentTime"></span>
+            </div>
+        </div>
+
         <div class="pt-2 pb-3 space-y-1">
             <?php if (isset($component)) { $__componentOriginald69b52d99510f1e7cd3d80070b28ca18 = $component; } ?>
 <?php if (isset($attributes)) { $__attributesOriginald69b52d99510f1e7cd3d80070b28ca18 = $attributes; } ?>
@@ -564,5 +622,4 @@
             </div>
         </div>
     </div>
-</nav>
-<?php /**PATH C:\xampp\tanrise-portal2\resources\views/navigation-menu.blade.php ENDPATH**/ ?>
+</nav><?php /**PATH C:\xampp\tanrise-portal2\resources\views/navigation-menu.blade.php ENDPATH**/ ?>

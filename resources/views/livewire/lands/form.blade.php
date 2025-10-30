@@ -30,6 +30,83 @@
                             @enderror
                         </div>
 
+                        <!-- Business Unit with Dropdown Search -->
+                        <div class="relative">
+                            <label for="businessUnitSearch" class="block text-sm font-medium text-gray-700">Business Unit *</label>
+                            <input type="text" 
+                                wire:model.live.debounce.300ms="businessUnitSearch"
+                                wire:focus="searchBusinessUnits"
+                                id="businessUnitSearch"
+                                placeholder="Search or select business unit..."
+                                class="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 sm:text-sm @error('business_unit_id') border-red-300 @enderror"
+                                autocomplete="off"
+                                @if($filterByBusinessUnit && !$allowBusinessUnitChange) readonly @endif>
+                            
+                            @if($showBusinessUnitDropdown && (!$filterByBusinessUnit || $allowBusinessUnitChange))
+                                <div class="absolute z-50 mt-1 w-full bg-white shadow-lg rounded-md py-1 text-sm ring-1 ring-black ring-opacity-5 focus:outline-none"
+                                     style="max-height: 240px; overflow-y: auto; overflow-x: hidden;"
+                                     wire:click.stop>
+                                    @php
+                                        $businessUnits = $this->getFilteredBusinessUnits();
+                                    @endphp
+                                    
+                                    @if(empty($businessUnitSearch ?? '') && $businessUnits->count() > 0)
+                                        <div class="px-3 py-2 text-xs text-blue-600 bg-blue-50 border-b border-blue-100 sticky top-0 z-10">
+                                            Showing available business units - start typing to filter
+                                        </div>
+                                    @endif
+                                    
+                                    <div class="max-h-48 overflow-y-auto">
+                                        @forelse($businessUnits as $unit)
+                                            <button type="button"
+                                                    wire:click.stop="selectBusinessUnit({{ $unit->id }}, '{{ addslashes($unit->name) }}')"
+                                                    class="w-full text-left px-3 py-2 text-sm text-gray-900 hover:bg-gray-100 focus:bg-gray-100 focus:outline-none
+                                                        @if($business_unit_id == $unit->id) bg-blue-50 text-blue-900 font-medium @endif">
+                                                {{ $unit->name }} ({{ $unit->code }})
+                                                @if($business_unit_id == $unit->id)
+                                                    <span class="float-right text-blue-600">✓</span>
+                                                @endif
+                                            </button>
+                                        @empty
+                                            <div class="px-3 py-2 text-sm text-gray-500">No business units found</div>
+                                        @endforelse
+                                    </div>
+                                    
+                                    @if($businessUnits->count() >= 20)
+                                        <div class="px-3 py-2 text-xs text-gray-500 bg-gray-50 border-t border-gray-100 sticky bottom-0">
+                                            Showing first 20 results - type to search for more
+                                        </div>
+                                    @endif
+                                </div>
+                            @endif
+                            
+                            @if($filterByBusinessUnit && !$allowBusinessUnitChange)
+                                <p class="mt-1 text-xs text-green-600">
+                                    Pre-selected based on current filter
+                                    <button type="button" 
+                                            wire:click="allowBusinessUnitChangeFunc" 
+                                            class="ml-2 text-blue-600 underline hover:text-blue-800">
+                                        Change
+                                    </button>
+                                </p>
+                            @elseif($filterByBusinessUnit && $allowBusinessUnitChange)
+                                <p class="mt-1 text-xs text-amber-600">
+                                    You can now change the business unit
+                                    <button type="button" 
+                                            wire:click="lockBusinessUnit" 
+                                            class="ml-2 text-green-600 underline hover:text-green-800">
+                                        Keep Current
+                                    </button>
+                                </p>
+                            @endif
+                            
+                            @error('business_unit_id') 
+                                <span class="text-red-500 text-xs">{{ $message }}</span> 
+                            @enderror
+                        </div>
+
+                        
+
                         <!-- Address -->
                         <div>
                             <label for="alamat" class="block text-sm font-medium text-gray-700">Address</label>
@@ -67,6 +144,11 @@
                             @enderror
                         </div>
 
+                        
+                    </div>
+
+                    <!-- Right Column -->
+                    <div class="space-y-4">
                         <!-- Year -->
                         <div>
                             <label for="tahun_perolehan" class="block text-sm font-medium text-gray-700">Year Acquired *</label>
@@ -80,7 +162,6 @@
                                 <span class="text-red-500 text-xs">{{ $message }}</span> 
                             @enderror
                         </div>
-
                         <!-- Status -->
                         <div>
                             <label for="status" class="block text-sm font-medium text-gray-700">Status *</label>
@@ -96,58 +177,6 @@
                                 <span class="text-red-500 text-xs">{{ $message }}</span> 
                             @enderror
                         </div>
-                    </div>
-
-                    <!-- Right Column -->
-                    <div class="space-y-4">
-                        <!-- Acquisition Value - WITH FORMATTING -->
-                        <div>
-                            <label for="nilai_perolehan" class="block text-sm font-medium text-gray-700">Acquisition Value (Rp) *</label>
-                            <input type="text" 
-                                   wire:model="nilai_perolehan_display"
-                                   id="nilai_perolehan"
-                                   placeholder="0"
-                                   class="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 sm:text-sm @error('nilai_perolehan') border-red-300 @enderror"
-                                   x-data 
-                                   x-on:input="
-                                       let value = $event.target.value.replace(/[^\d]/g, '');
-                                       if (value) {
-                                           $event.target.value = new Intl.NumberFormat('id-ID').format(value);
-                                           @this.set('nilai_perolehan', parseInt(value));
-                                       } else {
-                                           $event.target.value = '';
-                                           @this.set('nilai_perolehan', '');
-                                       }
-                                   ">
-                            @error('nilai_perolehan') 
-                                <span class="text-red-500 text-xs">{{ $message }}</span> 
-                            @enderror
-                        </div>
-
-                        <!-- Nominal B - WITH FORMATTING -->
-                        <div>
-                            <label for="nominal_b" class="block text-sm font-medium text-gray-700">Nominal B (Rp)</label>
-                            <input type="text" 
-                                   wire:model="nominal_b_display"
-                                   id="nominal_b"
-                                   placeholder="0"
-                                   class="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 sm:text-sm @error('nominal_b') border-red-300 @enderror"
-                                   x-data 
-                                   x-on:input="
-                                       let value = $event.target.value.replace(/[^\d]/g, '');
-                                       if (value) {
-                                           $event.target.value = new Intl.NumberFormat('id-ID').format(value);
-                                           @this.set('nominal_b', parseInt(value));
-                                       } else {
-                                           $event.target.value = '';
-                                           @this.set('nominal_b', '');
-                                       }
-                                   ">
-                            @error('nominal_b') 
-                                <span class="text-red-500 text-xs">{{ $message }}</span> 
-                            @enderror
-                        </div>
-
                         <!-- NJOP - WITH FORMATTING -->
                         <div>
                             <label for="njop" class="block text-sm font-medium text-gray-700">NJOP (Rp)</label>
@@ -171,15 +200,14 @@
                                 <span class="text-red-500 text-xs">{{ $message }}</span> 
                             @enderror
                         </div>
-
                         <!-- Estimated Market Price - WITH FORMATTING -->
-                        <div>
+                        <div>                            
                             <label for="est_harga_pasar" class="block text-sm font-medium text-gray-700">Estimated Market Price (Rp)</label>
                             <input type="text" 
-                                   wire:model="est_harga_pasar_display"
-                                   id="est_harga_pasar"
+                                   wire:model="nilai_perolehan_display"
+                                   id="nilai_perolehan"
                                    placeholder="0"
-                                   class="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 sm:text-sm @error('est_harga_pasar') border-red-300 @enderror"
+                                   class="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 sm:text-sm @error('nilai_perolehan') border-red-300 @enderror"
                                    x-data 
                                    x-on:input="
                                        let value = $event.target.value.replace(/[^\d]/g, '');
@@ -226,3 +254,44 @@
         </div>
     </div>
 </div>
+
+<!-- Click outside to close dropdowns -->
+<script>
+document.addEventListener('click', function(event) {
+    if (!event.target.closest('.relative')) {
+        @this.call('closeDropdowns');
+    }
+});
+</script>
+
+<!-- Custom Styles for Scrollable Dropdowns -->
+<style>
+.dropdown-container {
+    max-height: 240px !important;
+    overflow-y: auto !important;
+    overflow-x: hidden !important;
+}
+
+.dropdown-container::-webkit-scrollbar {
+    width: 6px;
+}
+
+.dropdown-container::-webkit-scrollbar-track {
+    background: #f1f1f1;
+    border-radius: 3px;
+}
+
+.dropdown-container::-webkit-scrollbar-thumb {
+    background: #c1c1c1;
+    border-radius: 3px;
+}
+
+.dropdown-container::-webkit-scrollbar-thumb:hover {
+    background: #a8a8a8;
+}
+
+[style*="max-height"][style*="overflow-y: auto"] {
+    scrollbar-width: thin;
+    scrollbar-color: #c1c1c1 #f1f1f1;
+}
+</style>

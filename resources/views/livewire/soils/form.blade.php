@@ -23,54 +23,6 @@
                     <div class="bg-gray-50 p-3 rounded-lg">
                         <h3 class="text-sm font-medium text-gray-900 mb-3">Basic Information</h3>
                         <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
-                            <!-- Land with Dropdown Search -->
-                            <div class="relative">
-                                <label for="landSearch" class="block text-xs font-medium text-gray-700">Land *</label>
-                                <input type="text" 
-                                       wire:model.live.debounce.300ms="landSearch"
-                                       wire:focus="searchLands"
-                                       id="landSearch"
-                                       placeholder="Search or select land..."
-                                       class="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 text-xs @error('land_id') border-red-300 @enderror"
-                                       autocomplete="off">
-                                
-                                @if($showLandDropdown)
-                                    <div class="absolute z-50 mt-1 w-full bg-white shadow-lg rounded-md py-1 text-xs ring-1 ring-black ring-opacity-5 focus:outline-none"
-                                         style="max-height: 240px; overflow-y: auto; overflow-x: hidden;"
-                                         wire:click.stop>
-                                        @php
-                                            $lands = $this->getFilteredLands();
-                                        @endphp
-                                        
-                                        @if(empty($landSearch ?? '') && $lands->count() > 0)
-                                            <div class="px-3 py-1.5 text-xs text-blue-600 bg-blue-50 border-b border-blue-100 sticky top-0 z-10">
-                                                Showing available lands - start typing to filter
-                                            </div>
-                                        @endif
-                                        
-                                        <div class="max-h-48 overflow-y-auto">
-                                            @forelse($lands as $land)
-                                                <button type="button"
-                                                        wire:click.stop="selectLand({{ $land->id }}, '{{ addslashes($land->lokasi_lahan) }}')"
-                                                        class="w-full text-left px-3 py-1.5 text-xs text-gray-900 hover:bg-gray-100 focus:bg-gray-100 focus:outline-none">
-                                                    {{ $land->lokasi_lahan }}
-                                                </button>
-                                            @empty
-                                                <div class="px-3 py-1.5 text-xs text-gray-500">No lands found</div>
-                                            @endforelse
-                                        </div>
-                                        
-                                        @if($lands->count() >= 20)
-                                            <div class="px-3 py-1.5 text-xs text-gray-500 bg-gray-50 border-t border-gray-100 sticky bottom-0">
-                                                Showing first 20 results - type to search for more
-                                            </div>
-                                        @endif
-                                    </div>
-                                @endif
-                                
-                                @error('land_id') <span class="text-red-500 text-xs">{{ $message }}</span> @enderror
-                            </div>
-
                             <!-- Business Unit with Dropdown Search -->
                             <div class="relative">
                                 <label for="businessUnitSearch" class="block text-xs font-medium text-gray-700">Business Unit *</label>
@@ -143,6 +95,74 @@
                                 
                                 @error('business_unit_id') <span class="text-red-500 text-xs">{{ $message }}</span> @enderror
                             </div>
+                            <!-- Land with Dropdown Search -->
+                            <div class="relative">
+                                <label for="landSearch" class="block text-xs font-medium text-gray-700">Land *</label>
+                                <input type="text" 
+                                    wire:model.live.debounce.300ms="landSearch"
+                                    wire:focus="searchLands"
+                                    id="landSearch"
+                                    placeholder="{{ $business_unit_id ? 'Search lands for selected business unit...' : 'Select a business unit first...' }}"
+                                    class="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 text-xs @error('land_id') border-red-300 @enderror"
+                                    autocomplete="off"
+                                    @if(!$business_unit_id) disabled @endif>
+                                
+                                @if(!$business_unit_id)
+                                    <p class="mt-1 text-xs text-amber-600">
+                                        Please select a business unit first to see available lands
+                                    </p>
+                                @elseif($business_unit_id)
+                                    <p class="mt-1 text-xs text-blue-600">
+                                        Showing lands from: {{ $businessUnitSearch }}
+                                    </p>
+                                @endif
+                                
+                                @if($showLandDropdown && $business_unit_id)
+                                    <div class="absolute z-50 mt-1 w-full bg-white shadow-lg rounded-md py-1 text-xs ring-1 ring-black ring-opacity-5 focus:outline-none"
+                                        style="max-height: 240px; overflow-y: auto; overflow-x: hidden;"
+                                        wire:click.stop>
+                                        @php
+                                            $lands = $this->getFilteredLands();
+                                        @endphp
+                                        
+                                        @if(empty($landSearch ?? '') && $lands->count() > 0)
+                                            <div class="px-3 py-1.5 text-xs text-blue-600 bg-blue-50 border-b border-blue-100 sticky top-0 z-10">
+                                                Showing lands from {{ $businessUnitSearch }} - start typing to filter
+                                            </div>
+                                        @endif
+                                        
+                                        <div class="max-h-48 overflow-y-auto">
+                                            @forelse($lands as $land)
+                                                <button type="button"
+                                                        wire:click.stop="selectLand({{ $land->id }}, '{{ addslashes($land->lokasi_lahan) }}')"
+                                                        class="w-full text-left px-3 py-1.5 text-xs text-gray-900 hover:bg-gray-100 focus:bg-gray-100 focus:outline-none">
+                                                    {{ $land->lokasi_lahan }}
+                                                    @if($land->kota_kabupaten)
+                                                        <span class="text-gray-500"> - {{ $land->kota_kabupaten }}</span>
+                                                    @endif
+                                                </button>
+                                            @empty
+                                                <div class="px-3 py-1.5 text-xs text-gray-500">
+                                                    No lands found for this business unit
+                                                    @if(!empty($landSearch))
+                                                        matching "{{ $landSearch }}"
+                                                    @endif
+                                                </div>
+                                            @endforelse
+                                        </div>
+                                        
+                                        @if($lands->count() >= 20)
+                                            <div class="px-3 py-1.5 text-xs text-gray-500 bg-gray-50 border-t border-gray-100 sticky bottom-0">
+                                                Showing first 20 results - type to search for more
+                                            </div>
+                                        @endif
+                                    </div>
+                                @endif
+                                
+                                @error('land_id') <span class="text-red-500 text-xs">{{ $message }}</span> @enderror
+                            </div>
+
+                            
                         </div>
                     </div>
 
@@ -265,7 +285,7 @@
 
                                             <!-- Land Location -->
                                             <div>
-                                                <label class="block text-xs font-medium text-gray-700 mb-1">Land Location *</label>
+                                                <label class="block text-xs font-medium text-gray-700 mb-1">Soil Location *</label>
                                                 <input wire:model="soilDetails.{{ $index }}.letak_tanah" type="text" 
                                                     class="w-full px-2 py-1.5 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-xs @error('soilDetails.'.$index.'.letak_tanah') border-red-500 @enderror">
                                                 @error('soilDetails.'.$index.'.letak_tanah') 
@@ -312,45 +332,6 @@
                                                 @enderror
                                             </div>
 
-                                            <!-- Price (FIXED: Better number formatting) -->
-                                            <div>
-                                                <label class="block text-xs font-medium text-gray-700 mb-1">Price (Rp) *</label>
-                                                <input 
-                                                    wire:model.live="soilDetails.{{ $index }}.harga_display" 
-                                                    type="text" 
-                                                    class="w-full px-2 py-1.5 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-xs @error('soilDetails.'.$index.'.harga') border-red-500 @enderror"
-                                                    placeholder="Enter price"
-                                                    x-data="{
-                                                        formatNumber(value) {
-                                                            // Remove all non-numeric characters
-                                                            let numericValue = value.replace(/[^\d]/g, '');
-                                                            if (numericValue) {
-                                                                // Format with thousand separators using Indonesian format (dot as thousand separator)
-                                                                return new Intl.NumberFormat('id-ID').format(parseInt(numericValue));
-                                                            }
-                                                            return '';
-                                                        }
-                                                    }"
-                                                    x-on:input="
-                                                        let rawValue = $event.target.value;
-                                                        let numericValue = rawValue.replace(/[^\d]/g, '');
-                                                        if (numericValue) {
-                                                            let formattedValue = new Intl.NumberFormat('id-ID').format(parseInt(numericValue));
-                                                            $event.target.value = formattedValue;
-                                                            @this.set('soilDetails.{{ $index }}.harga', parseInt(numericValue));
-                                                            @this.set('soilDetails.{{ $index }}.harga_display', formattedValue);
-                                                        } else {
-                                                            $event.target.value = '';
-                                                            @this.set('soilDetails.{{ $index }}.harga', '');
-                                                            @this.set('soilDetails.{{ $index }}.harga_display', '');
-                                                        }
-                                                    "
-                                                >
-                                                @error('soilDetails.'.$index.'.harga') 
-                                                    <span class="text-red-500 text-xs">{{ $message }}</span> 
-                                                @enderror
-                                            </div>
-
                                             <!-- Ownership Proof -->
                                             <div>
                                                 <label class="block text-xs font-medium text-gray-700 mb-1">Ownership Proof *</label>
@@ -365,6 +346,29 @@
                                                     <span class="text-red-500 text-xs">{{ $message }}</span> 
                                                 @enderror
                                             </div>
+
+                                            <!-- SHGB Expired Date - Conditional Display -->
+                                            @if(isset($soilDetails[$index]['bukti_kepemilikan']) && $soilDetails[$index]['bukti_kepemilikan'] === 'SHGB')
+                                            <div>
+                                                <label class="block text-xs font-medium text-gray-700 mb-1">
+                                                    SHGB Expired Date *
+                                                </label>
+                                                <input wire:model="soilDetails.{{ $index }}.shgb_expired_date" 
+                                                    type="date" 
+                                                    class="w-full px-2 py-1.5 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-xs @error('soilDetails.'.$index.'.shgb_expired_date') border-red-500 @enderror">
+                                                @error('soilDetails.'.$index.'.shgb_expired_date') 
+                                                    <span class="text-red-500 text-xs">{{ $message }}</span> 
+                                                @enderror
+                                                
+                                                <!-- Helper text for SHGB -->
+                                                <p class="mt-1 text-xs text-blue-600">
+                                                    <svg class="inline w-3 h-3 mr-1" fill="currentColor" viewBox="0 0 20 20">
+                                                        <path fill-rule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clip-rule="evenodd"/>
+                                                    </svg>
+                                                    SHGB requires expiration date tracking
+                                                </p>
+                                            </div>
+                                            @endif
 
                                             <!-- Ownership Proof Details -->
                                             <div>
@@ -405,6 +409,20 @@
                                                     placeholder="Enter Notaris/PPAT name"
                                                     class="w-full px-2 py-1.5 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-xs @error('soilDetails.'.$index.'.nama_notaris_ppat') border-red-500 @enderror">
                                                 @error('soilDetails.'.$index.'.nama_notaris_ppat') 
+                                                    <span class="text-red-500 text-xs">{{ $message }}</span> 
+                                                @enderror
+                                            </div>
+                                            <!-- Status -->
+                                            <div>
+                                                <label class="block text-xs font-medium text-gray-700 mb-1">Status *</label>
+                                                <select wire:model="soilDetails.{{ $index }}.status" 
+                                                        class="w-full px-2 py-1.5 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-xs @error('soilDetails.'.$index.'.status') border-red-500 @enderror">
+                                                    <option value="">Select Status</option>
+                                                    @foreach($this->getStatusOptions() as $key => $value)
+                                                        <option value="{{ $key }}">{{ $value }}</option>
+                                                    @endforeach
+                                                </select>
+                                                @error('soilDetails.'.$index.'.status') 
                                                     <span class="text-red-500 text-xs">{{ $message }}</span> 
                                                 @enderror
                                             </div>

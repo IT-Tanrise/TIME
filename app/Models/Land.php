@@ -6,7 +6,6 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
-use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 
 class Land extends Model
 {
@@ -14,51 +13,100 @@ class Land extends Model
 
     protected $fillable = [
         'lokasi_lahan',
-        'tahun_perolehan', 
-        'nilai_perolehan',
+        'tahun_perolehan',
+        'business_unit_id',
         'alamat',
         'link_google_maps',
         'kota_kabupaten',
         'status',
         'keterangan',
-        'nominal_b',
         'njop',
         'est_harga_pasar'
     ];
 
     protected $casts = [
-        'nilai_perolehan' => 'decimal:2',
-        'nominal_b' => 'decimal:2',
         'njop' => 'decimal:2',
         'est_harga_pasar' => 'decimal:2',
         'tahun_perolehan' => 'integer'
     ];
 
-    // Add the missing soils relationship
+    protected static function booted()
+    {
+        static::created(function ($land) {
+            if (auth()->check()) {
+                $isDirect = auth()->user()->can('land-data.approval');
+                
+                if ($isDirect) {
+                    LandHistory::recordHistory(
+                        $land->id,
+                        'created',
+                        null,
+                        $land->only($land->fillable),
+                        null
+                    );
+                }
+            }
+        });
+
+        static::updated(function ($land) {
+            if (auth()->check()) {
+                $isDirect = auth()->user()->can('land-data.approval');
+                
+                if ($isDirect) {
+                    $changes = $land->getChanges();
+                    unset($changes['updated_at']);
+                    
+                    if (!empty($changes)) {
+                        LandHistory::recordHistory(
+                            $land->id,
+                            'updated',
+                            $land->getOriginal(),
+                            $changes,
+                            null
+                        );
+                    }
+                }
+            }
+        });
+
+        static::deleting(function ($land) {
+            if (auth()->check()) {
+                $isDirect = auth()->user()->can('land-data.approval');
+                
+                if ($isDirect) {
+                    LandHistory::recordHistory(
+                        $land->id,
+                        'deleted',
+                        $land->toArray(),
+                        null,
+                        null
+                    );
+                }
+            }
+        });
+    }
+
+    // RELATIONSHIPS
+    
+    // Direct Business Unit relationship
+    public function businessUnit(): BelongsTo
+    {
+        return $this->belongsTo(BusinessUnit::class, 'business_unit_id');
+    }
+
+    // Soils relationship
     public function soils(): HasMany
     {
         return $this->hasMany(Soil::class);
     }
 
-    // Add projects relationship if it exists
+    // Projects relationship
     public function projects(): HasMany
     {
         return $this->hasMany(Project::class);
     }
 
-    // Relationship to get business units through soils
-    public function businessUnits(): BelongsToMany
-    {
-        return $this->belongsToMany(BusinessUnit::class, 'soils', 'land_id', 'business_unit_id')
-                    ->distinct();
-    }
-
-    // Helper method to get associated business units
-    public function getAssociatedBusinessUnitsAttribute()
-    {
-        return $this->businessUnits;
-    }
-
+    // Rentals relationships
     public function rentals(): HasMany
     {
         return $this->hasMany(RentLand::class);
@@ -74,30 +122,55 @@ class Land extends Model
         return $this->rentals()->where('end_rent', '<', now());
     }
 
-    // Get current active rental (if any)
+    public function approvals(): HasMany
+    {
+        return $this->hasMany(LandApproval::class);
+    }
+
+    public function pendingApprovals(): HasMany
+    {
+        return $this->approvals()->where('status', 'pending');
+    }
+
+    // RENTAL ATTRIBUTES
+
     public function getCurrentRentalAttribute()
     {
         return $this->activeRentals()->orderBy('end_rent', 'desc')->first();
     }
 
-    // Check if land is currently rented
     public function getIsRentedAttribute()
     {
         return $this->activeRentals()->exists();
     }
 
-    // Get total rented area (if partially rented)
     public function getTotalRentedAreaAttribute()
     {
         return $this->activeRentals()->sum('area_m2');
     }
 
-    // ======= MISSING METHODS FOR BLADE TEMPLATE =======
+    // SOIL-RELATED ATTRIBUTES
 
     // Get total soil area
     public function getTotalSoilAreaAttribute()
     {
         return $this->soils()->sum('luas');
+    }
+
+    // Get total soil price (sum of all soil prices)
+    public function getTotalSoilPriceAttribute()
+    {
+        return $this->soils()->sum('harga');
+    }
+
+    // Get formatted total soil price
+    public function getFormattedTotalSoilPriceAttribute()
+    {
+        $total = $this->total_soil_price;
+        if ($total > 0) {
+            return 'Rp ' . number_format($total, 0, ',', '.');
+        }
+        return 'Rp 0';
     }
 
     // Get formatted total soil area
@@ -110,18 +183,14 @@ class Land extends Model
         return '0 m²';
     }
 
-    // Get formatted acquisition value
-    public function getFormattedNilaiPerolehanAttribute()
-    {
-        return 'Rp ' . number_format($this->nilai_perolehan, 0, ',', '.');
-    }
-
-    // Get average price per m² based on acquisition value and total soil area
+    // Get average price per m² based on SOIL prices divided by SOIL area
     public function getAveragePricePerM2Attribute()
     {
         $totalArea = $this->total_soil_area;
-        if ($totalArea > 0 && $this->nilai_perolehan > 0) {
-            return $this->nilai_perolehan / $totalArea;
+        $totalPrice = $this->total_soil_price;
+        
+        if ($totalArea > 0 && $totalPrice > 0) {
+            return $totalPrice / $totalArea;
         }
         return 0;
     }
@@ -136,32 +205,7 @@ class Land extends Model
         return 'Rp 0';
     }
 
-    // Get business units count
-    public function getBusinessUnitsCountAttribute()
-    {
-        return $this->soils()->distinct('business_unit_id')->whereNotNull('business_unit_id')->count();
-    }
-
-    // Get business unit names (for single business unit display)
-    public function getBusinessUnitNamesAttribute()
-    {
-        return $this->soils()
-            ->with('businessUnit')
-            ->get()
-            ->pluck('businessUnit.name')
-            ->filter()
-            ->unique()
-            ->implode(', ');
-    }
-
-    // Get formatted nominal_b
-    public function getFormattedNominalBAttribute()
-    {
-        if ($this->nominal_b) {
-            return 'Rp ' . number_format($this->nominal_b, 0, ',', '.');
-        }
-        return null;
-    }
+    // FORMATTING ATTRIBUTES
 
     // Get formatted NJOP
     public function getFormattedNjopAttribute()
@@ -179,5 +223,15 @@ class Land extends Model
             return 'Rp ' . number_format($this->est_harga_pasar, 0, ',', '.');
         }
         return null;
+    }
+
+    public function certificates(): HasMany
+    {
+        return $this->hasMany(LandCertificate::class);
+    }
+
+    public function activeCertificates(): HasMany
+    {
+        return $this->certificates()->where('status', 'active');
     }
 }

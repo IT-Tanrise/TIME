@@ -11,55 +11,29 @@
         </div>
     @endif
 
-    @if (session()->has('warning'))
-        <div class="mb-4 bg-yellow-100 border border-yellow-400 text-yellow-700 px-4 py-3 rounded relative">
-            {{ session('warning') }}
-        </div>
-    @endif
-
     <div class="space-y-4">
         @forelse ($pendingApprovals as $approval)
-            <div class="bg-white border border-gray-200 rounded-lg shadow-sm
-                {{ $approval->change_type === 'delete' ? 'border-red-300' : '' }}">
+            <div class="bg-white border border-gray-200 rounded-lg shadow-sm">
                 <!-- Header -->
-                <div class="px-4 py-3 border-b border-gray-200 rounded-t-lg
-                    {{ $approval->change_type === 'delete' ? 'bg-red-50' : 'bg-gray-50' }}">
+                <div class="px-4 py-3 bg-gray-50 border-b border-gray-200 rounded-t-lg">
                     <div class="flex items-center justify-between">
                         <div class="flex-1">
-                            <div class="flex items-center space-x-3">
-                                <h3 class="text-lg font-medium text-gray-900">
-                                    Approval Request #{{ $approval->id }}
-                                </h3>
-                                @if($approval->change_type === 'delete')
-                                    <span class="inline-flex items-center px-2 py-1 rounded text-xs font-semibold bg-red-100 text-red-800">
-                                        <svg class="w-3 h-3 mr-1" fill="currentColor" viewBox="0 0 20 20">
-                                            <path fill-rule="evenodd" d="M9 2a1 1 0 000 2h2a1 1 0 100-2H9z" clip-rule="evenodd"/>
-                                            <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clip-rule="evenodd"/>
-                                        </svg>
-                                        DELETE REQUEST
-                                    </span>
-                                @endif
-                            </div>
+                            <h3 class="text-lg font-medium text-gray-900">
+                                Approval Request #{{ $approval->id }}
+                            </h3>
                             <div class="mt-1 flex items-center space-x-4 text-sm text-gray-500">
-                                @if($approval->soil)
-                                    <span>{{ $approval->soil->land->lokasi_lahan ?? 'N/A' }}</span>
-                                    <span>•</span>
-                                    <span>{{ $approval->soil->businessUnit->name ?? 'N/A' }}</span>
-                                    <span>•</span>
-                                @else
-                                    <span class="text-red-500">Record may be deleted</span>
-                                    <span>•</span>
-                                @endif
+                                <span>{{ $approval->soil->land->lokasi_lahan ?? 'N/A' }}</span>
+                                <span>•</span>
+                                <span>{{ $approval->soil->businessUnit->name ?? 'N/A' }}</span>
+                                <span>•</span>
                                 <span>Requested by: {{ $approval->requestedBy->name }}</span>
                                 <span>•</span>
                                 <span>{{ $approval->formatted_created_at }}</span>
                             </div>
                             <div class="mt-2">
                                 <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium
-                                    {{ $approval->change_type === 'details' ? 'bg-blue-100 text-blue-800' : 
-                                       ($approval->change_type === 'costs' ? 'bg-purple-100 text-purple-800' : 'bg-red-100 text-red-800') }}">
-                                    {{ $approval->change_type === 'details' ? 'Soil Details' : 
-                                       ($approval->change_type === 'costs' ? 'Additional Costs' : 'Delete Record') }}
+                                    {{ $approval->change_type === 'details' ? 'bg-blue-100 text-blue-800' : 'bg-purple-100 text-purple-800' }}">
+                                    {{ $approval->change_type === 'details' ? 'Soil Details' : 'Additional Costs' }}
                                 </span>
                             </div>
                         </div>
@@ -76,9 +50,7 @@
                 <!-- Details (Collapsible) -->
                 @if (isset($showDetails[$approval->id]) && $showDetails[$approval->id])
                     <div class="px-4 py-3 border-b border-gray-200">
-                        <h4 class="text-sm font-medium text-gray-900 mb-3">
-                            {{ $approval->change_type === 'delete' ? 'Deletion Request Details:' : 'Proposed Changes:' }}
-                        </h4>
+                        <h4 class="text-sm font-medium text-gray-900 mb-3">Proposed Changes:</h4>
                         
                         @if ($approval->change_type === 'details')
                             <div class="space-y-2">
@@ -93,69 +65,12 @@
                                     </div>
                                 @endforeach
                             </div>
-                            
-                        @elseif($approval->change_type === 'costs')
-                            @php $changes = $this->getCostChangeDetails($approval); @endphp
-                            @php $summary = $this->getCostChangeSummary($approval); @endphp
-                            @php $totals = $this->getCostDifference($approval); @endphp
-                            
-                            <div class="mt-4 p-4 bg-gray-50 rounded">
-                                <h4 class="font-medium">Cost Changes Summary:</h4>
-                                <p class="text-sm text-gray-600 mt-2">
-                                    {{ $summary['added'] }} added, {{ $summary['modified'] }} modified, {{ $summary['deleted'] }} deleted
-                                </p>
-                                <p class="text-sm text-gray-600">
-                                    Total change: {{ $totals['difference'] }}
-                                </p>
-                                
-                                @foreach($changes as $change)
-                                    <div class="mt-3 p-2 border-l-4 
-                                        @if($change['type'] === 'added') border-green-400 bg-green-50
-                                        @elseif($change['type'] === 'modified') border-yellow-400 bg-yellow-50
-                                        @else border-red-400 bg-red-50 @endif">
-                                        
-                                        <strong>{{ ucfirst($change['type']) }}:</strong> {{ $change['description'] }}
-                                        
-                                        @if($change['type'] === 'modified')
-                                            @foreach($change['changes'] as $field => $values)
-                                                <br><small>{{ ucfirst($field) }}: {{ $values['old'] }} → {{ $values['new'] }}</small>
-                                            @endforeach
-                                        @else
-                                            <br><small>{{ $change['cost_type'] ?? '' }} - {{ $change['amount'] ?? '' }} ({{ $change['date_cost'] ?? '' }})</small>
-                                        @endif
-                                    </div>
-                                @endforeach
-                            </div>
-                            
-                        @elseif($approval->change_type === 'delete')
-                            @php $deleteDetails = $this->getChangeDetails($approval); @endphp
-                            
-                            <div class="bg-red-50 border border-red-200 rounded-lg p-4">
-                                <div class="flex items-start">
-                                    <svg class="w-5 h-5 text-red-400 mt-0.5 mr-3 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
-                                        <path fill-rule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z" clip-rule="evenodd"/>
-                                    </svg>
-                                    <div class="flex-1">
-                                        <h4 class="text-sm font-medium text-red-800 mb-2">
-                                            This request will permanently delete the soil record and all associated data.
-                                        </h4>
-                                        
-                                        <div class="space-y-2 text-sm">
-                                            @foreach($deleteDetails as $detail)
-                                                <div class="flex items-start">
-                                                    <span class="font-medium text-red-700 w-32 flex-shrink-0">{{ $detail['field'] }}:</span>
-                                                    <span class="text-red-600">{{ $detail['value'] }}</span>
-                                                </div>
-                                            @endforeach
-                                        </div>
-                                        
-                                        @if($approval->getDeletionReason())
-                                            <div class="mt-3 p-3 bg-red-100 rounded">
-                                                <span class="font-medium text-red-700">Deletion Reason:</span>
-                                                <p class="text-red-600 mt-1">{{ $approval->getDeletionReason() }}</p>
-                                            </div>
-                                        @endif
-                                    </div>
+                        @else
+                            <div class="text-sm text-gray-600">
+                                <p>Additional costs modification requested. The user has made changes to the cost structure.</p>
+                                <div class="mt-2 bg-gray-50 p-3 rounded">
+                                    <p class="font-medium">Previous costs: {{ count($approval->old_data) }} items</p>
+                                    <p class="font-medium">New costs: {{ count($approval->new_data) }} items</p>
                                 </div>
                             </div>
                         @endif
@@ -163,44 +78,22 @@
                 @endif
 
                 <!-- Actions -->
-                <div class="px-4 py-3 rounded-b-lg
-                    {{ $approval->change_type === 'delete' ? 'bg-red-50' : 'bg-gray-50' }}">
+                <div class="px-4 py-3 bg-gray-50 rounded-b-lg">
                     <div class="flex items-center justify-between">
                         <div class="text-sm text-gray-600">
-                            <span class="font-medium">
-                                {{ $approval->change_type === 'delete' ? 'Record to Delete:' : 'Soil Record:' }}
-                            </span>
-                            @if($approval->soil)
-                                {{ $approval->soil->nama_penjual }} - {{ $approval->soil->letak_tanah }}
-                            @else
-                                <span class="text-red-500 italic">Record no longer exists</span>
-                            @endif
+                            <span class="font-medium">Soil Record:</span> {{ $approval->soil->nama_penjual }} - {{ $approval->soil->letak_tanah }}
                         </div>
                         <div class="flex items-center space-x-2">
-                            @if($approval->change_type === 'delete')
-                                <button 
-                                    wire:click="approve({{ $approval->id }})"
-                                    onclick="return confirm('⚠️ WARNING: This will permanently delete the soil record and all associated data. This action cannot be undone.\n\nAre you absolutely sure you want to approve this deletion?')"
-                                    class="inline-flex items-center px-3 py-1.5 border border-transparent text-sm font-medium rounded-md text-white bg-red-600 hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500">
-                                    <svg class="w-4 h-4 mr-1" fill="currentColor" viewBox="0 0 20 20">
-                                        <path fill-rule="evenodd" d="M9 2a1 1 0 000 2h2a1 1 0 100-2H9z" clip-rule="evenodd"/>
-                                        <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clip-rule="evenodd"/>
-                                    </svg>
-                                    Approve Deletion
-                                </button>
-                            @else
-                                <button 
-                                    wire:click="approve({{ $approval->id }})"
-                                    onclick="return confirm('Are you sure you want to approve these changes?')"
-                                    class="inline-flex items-center px-3 py-1.5 border border-transparent text-sm font-medium rounded-md text-white bg-green-600 hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500">
-                                    Approve
-                                </button>
-                            @endif
-                            
+                            <button 
+                                wire:click="approve({{ $approval->id }})"
+                                onclick="return confirm('Are you sure you want to approve these changes?')"
+                                class="inline-flex items-center px-3 py-1.5 border border-transparent text-sm font-medium rounded-md text-white bg-green-600 hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500">
+                                Approve
+                            </button>
                             <button 
                                 wire:click="showRejectModal({{ $approval->id }})"
                                 class="inline-flex items-center px-3 py-1.5 border border-transparent text-sm font-medium rounded-md text-white bg-red-600 hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500">
-                                {{ $approval->change_type === 'delete' ? 'Deny Deletion' : 'Reject' }}
+                                Reject
                             </button>
                         </div>
                     </div>
@@ -229,22 +122,14 @@
         <div class="fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full z-50">
             <div class="relative top-20 mx-auto p-5 border w-96 shadow-lg rounded-md bg-white">
                 <div class="mt-3">
-                    <h3 class="text-lg font-medium text-gray-900 mb-4">
-                        {{ App\Models\SoilApproval::find($rejectionApprovalId)?->change_type === 'delete' ? 'Deny Deletion Request' : 'Reject Changes' }}
-                    </h3>
-                    <p class="text-sm text-gray-600 mb-4">
-                        {{ App\Models\SoilApproval::find($rejectionApprovalId)?->change_type === 'delete' ? 
-                           'Please provide a reason for denying this deletion request:' : 
-                           'Please provide a reason for rejecting these changes:' }}
-                    </p>
+                    <h3 class="text-lg font-medium text-gray-900 mb-4">Reject Changes</h3>
+                    <p class="text-sm text-gray-600 mb-4">Please provide a reason for rejecting these changes:</p>
                     
                     <textarea 
                         wire:model="rejectionReason"
                         class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-indigo-500 focus:border-indigo-500"
                         rows="4"
-                        placeholder="{{ App\Models\SoilApproval::find($rejectionApprovalId)?->change_type === 'delete' ? 
-                                    'Enter reason for denying deletion...' : 
-                                    'Enter rejection reason...' }}"
+                        placeholder="Enter rejection reason..."
                     ></textarea>
                     
                     @error('rejectionReason') 
@@ -260,8 +145,7 @@
                         <button 
                             wire:click="rejectWithReason"
                             class="px-4 py-2 bg-red-600 text-white rounded-md hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-red-500">
-                            {{ App\Models\SoilApproval::find($rejectionApprovalId)?->change_type === 'delete' ? 
-                               'Deny Deletion' : 'Reject Changes' }}
+                            Reject Changes
                         </button>
                     </div>
                 </div>

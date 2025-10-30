@@ -116,7 +116,7 @@ class RentLands extends Component
 
     public function showDetailView($id)
     {
-        $this->selectedRent = RentLand::with(['land', 'land.businessUnits'])->findOrFail($id);
+        $this->selectedRent = RentLand::with(['land', 'land.businessUnit'])->findOrFail($id);
         $this->showDetail = true;
     }
 
@@ -180,13 +180,10 @@ class RentLands extends Component
         $query = Land::query();
         
         if ($this->currentBusinessUnitId) {
-            // Filter lands that have soils belonging to the business unit
-            $query->whereHas('soils', function ($soilQuery) {
-                $soilQuery->where('business_unit_id', $this->currentBusinessUnitId);
-            });
+            // Filter lands by direct business_unit_id
+            $query->where('business_unit_id', $this->currentBusinessUnitId);
         }
         
-        // Use the correct column name from your Land model
         return $query->orderBy('lokasi_lahan')->get();
     }
 
@@ -203,7 +200,7 @@ class RentLands extends Component
 
     public function render()
     {
-        $query = RentLand::with(['land', 'land.businessUnits']);
+        $query = RentLand::with(['land', 'land.businessUnit']);
 
         // Apply business unit filter
         if ($this->currentBusinessUnitId) {

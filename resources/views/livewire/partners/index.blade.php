@@ -7,9 +7,15 @@
     @else
         <!-- Compact Header -->
         <div class="bg-white shadow-sm border-b border-gray-200 sticky top-0 z-10">
-            <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="mx-auto px-4 sm:px-6 lg:px-8">
                 <div class="flex justify-between items-center py-3">
                     <div class="flex items-center space-x-3">
+                        <button onclick="history.back()" 
+                                class="inline-flex items-center px-4 py-2.5 bg-gray-600 border border-transparent rounded-lg font-medium text-sm text-white hover:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-gray-500 focus:ring-offset-2 transition ease-in-out duration-150 mr-4">
+                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18"/>
+                            </svg>
+                        </button>
                         <h1 class="text-xl font-semibold text-gray-900">
                             Ownerships
                             @if($businessUnit)
@@ -39,7 +45,7 @@
         </div>
 
         <!-- Main Content -->
-        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
+        <div class="mx-auto px-4 sm:px-6 lg:px-8 py-4">
             <!-- Compact Search Section -->
             @if(!$this->isFiltered())
                 <div class="bg-white rounded-lg shadow-sm border border-gray-200 p-4 mb-4">

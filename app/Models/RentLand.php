@@ -39,9 +39,7 @@ class RentLand extends Model
     public function scopeByBusinessUnit($query, $businessUnitId)
     {
         return $query->whereHas('land', function ($landQuery) use ($businessUnitId) {
-            $landQuery->whereHas('soils', function ($soilQuery) use ($businessUnitId) {
-                $soilQuery->where('business_unit_id', $businessUnitId);
-            });
+            $landQuery->where('business_unit_id', $businessUnitId);
         });
     }
 

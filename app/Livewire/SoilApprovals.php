@@ -39,9 +39,14 @@ class SoilApprovals extends Component
     
     public function render()
     {
-        $query = SoilApproval::with(['soil.land', 'soil.businessUnit', 'requestedBy'])
+        $query = SoilApproval::with(['requestedBy'])
+            ->leftJoin('soils', 'soil_approvals.soil_id', '=', 'soils.id')
+            ->leftJoin('lands', 'soils.land_id', '=', 'lands.id') 
+            ->leftJoin('business_units', 'soils.business_unit_id', '=', 'business_units.id')
+            ->select('soil_approvals.*') // Make sure to select only approval fields
+            ->with(['soil.land', 'soil.businessUnit']) // Still eager load relationships
             ->pending()
-            ->orderBy('created_at', 'desc');
+            ->orderBy('soil_approvals.created_at', 'desc');
 
         // Filter approvals based on user permissions
         $user = auth()->user();
@@ -52,14 +57,14 @@ class SoilApprovals extends Component
             // User can approve both types - show all
             // No additional filtering needed
         } elseif ($canApproveData && !$canApproveCosts) {
-            // User can only approve data changes and deletions
-            $query->whereIn('change_type', ['details', 'delete']);
+            // User can only approve data changes, creations, and deletions
+            $query->whereIn('soil_approvals.change_type', ['details', 'delete', 'create']);
         } elseif (!$canApproveData && $canApproveCosts) {
-            // User can only approve cost changes
-            $query->where('change_type', 'costs');
+            // User can only approve cost changes and interest
+            $query->whereIn('soil_approvals.change_type', ['costs', 'interest']);
         } else {
             // User has no approval permissions - show nothing
-            $query->where('id', '<', 0); // Force empty result
+            $query->where('soil_approvals.id', '<', 0); // Force empty result
         }
             
         $pendingApprovals = $query->paginate(10);
@@ -73,9 +78,11 @@ class SoilApprovals extends Component
         
         // Check if user has permission for this specific approval type
         $canApprove = false;
-        if (($approval->change_type === 'details' || $approval->change_type === 'delete') && auth()->user()->can('soil-data.approval')) {
+        if (($approval->change_type === 'details' || $approval->change_type === 'delete' || $approval->change_type === 'create') && auth()->user()->can('soil-data.approval')) {
             $canApprove = true;
         } elseif ($approval->change_type === 'costs' && auth()->user()->can('soil-data-costs.approval')) {
+            $canApprove = true;
+        } elseif ($approval->change_type === 'interest' && auth()->user()->can('soil-data-costs.approval')) {
             $canApprove = true;
         }
         
@@ -89,6 +96,8 @@ class SoilApprovals extends Component
             
             if ($approval->change_type === 'delete') {
                 session()->flash('message', 'Deletion approved and soil record has been deleted successfully.');
+            } elseif ($approval->change_type === 'create') {
+                session()->flash('message', 'Creation approved and new soil record has been created successfully.');
             } else {
                 session()->flash('message', 'Changes approved and applied successfully.');
             }
@@ -103,9 +112,11 @@ class SoilApprovals extends Component
         
         // Check if user has permission for this specific approval type
         $canReject = false;
-        if (($approval->change_type === 'details' || $approval->change_type === 'delete') && auth()->user()->can('soil-data.approval')) {
+        if (($approval->change_type === 'details' || $approval->change_type === 'delete' || $approval->change_type === 'create') && auth()->user()->can('soil-data.approval')) {
             $canReject = true;
         } elseif ($approval->change_type === 'costs' && auth()->user()->can('soil-data-costs.approval')) {
+            $canReject = true;
+        } elseif ($approval->change_type === 'interest' && auth()->user()->can('soil-data-costs.approval')) {
             $canReject = true;
         }
         
@@ -134,9 +145,11 @@ class SoilApprovals extends Component
             
             // Double-check permission before rejecting
             $canReject = false;
-            if (($approval->change_type === 'details' || $approval->change_type === 'delete') && auth()->user()->can('soil-data.approval')) {
+            if (($approval->change_type === 'details' || $approval->change_type === 'delete' || $approval->change_type === 'create') && auth()->user()->can('soil-data.approval')) {
                 $canReject = true;
             } elseif ($approval->change_type === 'costs' && auth()->user()->can('soil-data-costs.approval')) {
+                $canReject = true;
+            } elseif ($approval->change_type === 'interest' && auth()->user()->can('soil-data-costs.approval')) {
                 $canReject = true;
             }
             
@@ -150,12 +163,77 @@ class SoilApprovals extends Component
             
             if ($approval->change_type === 'delete') {
                 session()->flash('message', 'Deletion request rejected successfully.');
+            } elseif ($approval->change_type === 'create') {
+                session()->flash('message', 'Creation request rejected successfully.');
             } else {
                 session()->flash('message', 'Changes rejected successfully.');
             }
             
             $this->hideRejectModal();
         }
+    }
+
+    private function getCreateChangeDetails($approval)
+    {
+        $details = [];
+        $newData = $approval->new_data;
+        
+        if (!$newData) {
+            return [];
+        }
+        
+        $fieldLabels = [
+            'land_id' => 'Land',
+            'business_unit_id' => 'Business Unit',
+            'nama_penjual' => 'Seller Name',
+            'alamat_penjual' => 'Seller Address',
+            'nomor_ppjb' => 'PPJB Number',
+            'tanggal_ppjb' => 'PPJB Date',
+            'letak_tanah' => 'Soil Location',
+            'luas' => 'Area (mÂ²)',
+            'harga' => 'Price',
+            'bukti_kepemilikan' => 'Ownership Proof',
+            'bukti_kepemilikan_details' => 'Ownership Details',
+            'atas_nama' => 'Owner Name',
+            'nop_pbb' => 'PBB Number',
+            'nama_notaris_ppat' => 'Notary Name',
+            'keterangan' => 'Notes'
+        ];
+        
+        foreach ($newData as $field => $value) {
+            if ($value !== null && $value !== '') {
+                $label = $fieldLabels[$field] ?? ucfirst(str_replace('_', ' ', $field));
+                
+                if (in_array($field, ['luas', 'harga'])) {
+                    $details[] = [
+                        'field' => $label,
+                        'value' => number_format($value, 0, ',', '.')
+                    ];
+                } elseif (in_array($field, ['land_id', 'business_unit_id'])) {
+                    // For foreign keys, resolve to names if possible
+                    if ($field === 'land_id') {
+                        $land = \App\Models\Land::find($value);
+                        $details[] = [
+                            'field' => $label,
+                            'value' => $land ? $land->lokasi_lahan : "ID: {$value}"
+                        ];
+                    } elseif ($field === 'business_unit_id') {
+                        $businessUnit = \App\Models\BusinessUnit::find($value);
+                        $details[] = [
+                            'field' => $label,
+                            'value' => $businessUnit ? $businessUnit->name : "ID: {$value}"
+                        ];
+                    }
+                } else {
+                    $details[] = [
+                        'field' => $label,
+                        'value' => $value
+                    ];
+                }
+            }
+        }
+        
+        return $details;
     }
     
     public function formatCurrency($amount)
@@ -171,6 +249,10 @@ class SoilApprovals extends Component
             return $this->getCostChangeDetails($approval);
         } elseif ($approval->change_type === 'delete') {
             return $this->getDeleteChangeDetails($approval);
+        } elseif ($approval->change_type === 'create') {
+            return $this->getCreateChangeDetails($approval);
+        } elseif ($approval->change_type === 'interest') {
+            return $this->getInterestChangeDetails($approval);
         }
         
         return [];
@@ -189,7 +271,7 @@ class SoilApprovals extends Component
             'alamat_penjual' => 'Seller Address',
             'nomor_ppjb' => 'PPJB Number',
             'tanggal_ppjb' => 'PPJB Date',
-            'letak_tanah' => 'Land Location',
+            'letak_tanah' => 'Soil Location',
             'luas' => 'Area (m²)',
             'harga' => 'Price',
             'bukti_kepemilikan' => 'Ownership Proof',
@@ -356,6 +438,118 @@ class SoilApprovals extends Component
                     'cost_type' => ucfirst(str_replace('_', ' ', $oldCost['cost_type'] ?? 'standard')),
                     'date_cost' => $oldCost['date_cost'] ?? '',
                     'amount' => $this->formatCurrency($oldCost['harga'] ?? 0)
+                ];
+            }
+        }
+        
+        return $changes;
+    }
+
+    private function getInterestChangeDetails($approval)
+    {
+        $changes = [];
+        $oldData = $approval->old_data ?? [];
+        $newData = $approval->new_data ?? [];
+        
+        // Create lookup arrays for easier comparison
+        $oldInterestById = collect($oldData)->keyBy('id');
+        $newInterestById = collect($newData)->keyBy('id');
+        
+        // Track all interest IDs from both old and new data
+        $allInterestIds = collect($oldData)->pluck('id')->merge(collect($newData)->pluck('id'))->filter()->unique();
+        
+        // Check for new interest periods (without an ID in new data)
+        $newInterestWithoutId = collect($newData)->filter(function ($interest) {
+            return empty($interest['id']) || is_null($interest['id']);
+        });
+        
+        foreach ($newInterestWithoutId as $newInterest) {
+            $days = \Carbon\Carbon::parse($newInterest['start_date'])->diffInDays(\Carbon\Carbon::parse($newInterest['end_date']));
+            $changes[] = [
+                'type' => 'added',
+                'start_date' => \Carbon\Carbon::parse($newInterest['start_date'])->format('d/m/Y'),
+                'end_date' => \Carbon\Carbon::parse($newInterest['end_date'])->format('d/m/Y'),
+                'days' => $days,
+                'remarks' => $newInterest['remarks'] ?? '',
+                'harga_perolehan' => $this->formatCurrency($newInterest['harga_perolehan'] ?? 0),
+                'bunga' => number_format($newInterest['bunga'] ?? 0, 2) . '%',
+            ];
+        }
+        
+        // Check for modifications and deletions
+        foreach ($allInterestIds as $interestId) {
+            $oldInterest = $oldInterestById->get($interestId);
+            $newInterest = $newInterestById->get($interestId);
+            
+            if ($oldInterest && $newInterest) {
+                // MODIFIED INTEREST - check if any field has changed
+                $hasChanges = false;
+                $changeDetails = [];
+                
+                if ($oldInterest['start_date'] != $newInterest['start_date']) {
+                    $hasChanges = true;
+                    $changeDetails['start_date'] = [
+                        'old' => \Carbon\Carbon::parse($oldInterest['start_date'])->format('d/m/Y'),
+                        'new' => \Carbon\Carbon::parse($newInterest['start_date'])->format('d/m/Y')
+                    ];
+                }
+                
+                if ($oldInterest['end_date'] != $newInterest['end_date']) {
+                    $hasChanges = true;
+                    $changeDetails['end_date'] = [
+                        'old' => \Carbon\Carbon::parse($oldInterest['end_date'])->format('d/m/Y'),
+                        'new' => \Carbon\Carbon::parse($newInterest['end_date'])->format('d/m/Y')
+                    ];
+                }
+                
+                if ($oldInterest['harga_perolehan'] != $newInterest['harga_perolehan']) {
+                    $hasChanges = true;
+                    $changeDetails['harga_perolehan'] = [
+                        'old' => $this->formatCurrency($oldInterest['harga_perolehan']),
+                        'new' => $this->formatCurrency($newInterest['harga_perolehan'])
+                    ];
+                }
+                
+                if ($oldInterest['bunga'] != $newInterest['bunga']) {
+                    $hasChanges = true;
+                    $changeDetails['bunga'] = [
+                        'old' => number_format($oldInterest['bunga'], 2) . '%',
+                        'new' => number_format($newInterest['bunga'], 2) . '%'
+                    ];
+                }
+                
+                if (($oldInterest['remarks'] ?? '') != ($newInterest['remarks'] ?? '')) {
+                    $hasChanges = true;
+                    $changeDetails['remarks'] = [
+                        'old' => $oldInterest['remarks'] ?? '-',
+                        'new' => $newInterest['remarks'] ?? '-'
+                    ];
+                }
+                
+                if ($hasChanges) {
+                    $oldDays = \Carbon\Carbon::parse($oldInterest['start_date'])->diffInDays(\Carbon\Carbon::parse($oldInterest['end_date']));
+                    $newDays = \Carbon\Carbon::parse($newInterest['start_date'])->diffInDays(\Carbon\Carbon::parse($newInterest['end_date']));
+                    
+                    $changes[] = [
+                        'type' => 'modified',
+                        'period' => \Carbon\Carbon::parse($newInterest['start_date'])->format('d/m/Y') . ' - ' . \Carbon\Carbon::parse($newInterest['end_date'])->format('d/m/Y'),
+                        'old_days' => $oldDays,
+                        'new_days' => $newDays,
+                        'changes' => $changeDetails
+                    ];
+                }
+                
+            } elseif ($oldInterest && !$newInterest) {
+                // DELETED INTEREST
+                $days = \Carbon\Carbon::parse($oldInterest['start_date'])->diffInDays(\Carbon\Carbon::parse($oldInterest['end_date']));
+                $changes[] = [
+                    'type' => 'deleted',
+                    'start_date' => \Carbon\Carbon::parse($oldInterest['start_date'])->format('d/m/Y'),
+                    'end_date' => \Carbon\Carbon::parse($oldInterest['end_date'])->format('d/m/Y'),
+                    'days' => $days,
+                    'remarks' => $oldInterest['remarks'] ?? '',
+                    'harga_perolehan' => $this->formatCurrency($oldInterest['harga_perolehan'] ?? 0),
+                    'bunga' => number_format($oldInterest['bunga'] ?? 0, 2) . '%',
                 ];
             }
         }
