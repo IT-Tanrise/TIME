@@ -43,8 +43,6 @@ Route::middleware(['auth'])->group(function () {
         Route::get('/land-approvals', App\Livewire\LandApprovals::class)->name('land-approvals');
         Route::get('/lands/{landId}/history', \App\Livewire\LandHistories::class)
             ->name('lands.history');
-        Route::get('/land-certificates/{businessUnit?}/{land?}', \App\Livewire\LandCertificates::class)
-        ->name('land-certificates')
         ->middleware(['permission:lands.access']);
     });
 
