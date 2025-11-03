@@ -38,12 +38,10 @@ Route::middleware(['auth'])->group(function () {
     // Land Routes
     Route::middleware(['permission:lands.access'])->group(function () {
         Route::get('/lands', Lands::class)->name('lands');
-        Route::get('/lands/business-unit/{businessUnit}', Lands::class)->name('lands.by-business-unit')
-            ->where('businessUnit', '[0-9]+');
+        Route::get('/lands/business-unit/{businessUnit}', Lands::class)->name('lands.by-business-unit')->where('businessUnit', '[0-9]+');
         Route::get('/land-approvals', App\Livewire\LandApprovals::class)->name('land-approvals');
         Route::get('/lands/{landId}/history', \App\Livewire\LandHistories::class)
             ->name('lands.history');
-        ->middleware(['permission:lands.access']);
     });
 
     Route::get('/projects', Projects::class)->name('projects');
