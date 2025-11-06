@@ -13,6 +13,7 @@ use App\Livewire\RentLands;
 use App\Livewire\SoilHistories;
 use App\Livewire\SoilApprovals;
 use App\Livewire\VendorsIFCA;
+use App\Livewire\PreSoilsBuy;
 
 use App\Http\Controllers\RoleController;
 use App\Http\Controllers\PermissionController;
@@ -63,6 +64,14 @@ Route::middleware(['auth'])->group(function () {
         //csv
         Route::post('/soils/export', [App\Http\Controllers\SoilExportController::class, 'exportCsv'])
         ->name('soils.export');
+    });
+
+
+    Route::get('/pre-soil-buy-approvals', [PreSoilBuyApprovalController::class, 'index'])->name('pre-soil-buy-approvals');
+    // Pre-Soil-Buy Routes
+    Route::middleware(['permission:pre-soil-buy.access'])->group(function () {
+        Route::get('/preSoilBuy', preSoilsBuy::class)->name('preSoilBuy.index');
+
     });
 
     // Rent Routes

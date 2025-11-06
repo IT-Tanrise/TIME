@@ -1,8 +1,8 @@
 {{-- resources/views/livewire/lands/form.blade.php --}}
 <div>
-    <div class="bg-white overflow-hidden shadow-xl sm:rounded-lg">
+    <div class="overflow-hidden bg-white shadow-xl sm:rounded-lg">
         <div class="p-6 bg-white border-b border-gray-200">
-            <div class="flex justify-between items-center mb-6">
+            <div class="flex items-center justify-between mb-6">
                 <h2 class="text-2xl font-semibold text-gray-900">
                     {{ $isEdit ? 'Edit Land' : 'Add New Land' }}
                 </h2>
@@ -15,7 +15,7 @@
             </div>
 
             <form wire:submit="save">
-                <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div class="grid grid-cols-1 gap-6 md:grid-cols-2">
                     <!-- Left Column -->
                     <div class="space-y-4">
                         <!-- Location -->
@@ -26,7 +26,7 @@
                                    id="lokasi_lahan"
                                    class="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 sm:text-sm @error('lokasi_lahan') border-red-300 @enderror">
                             @error('lokasi_lahan') 
-                                <span class="text-red-500 text-xs">{{ $message }}</span> 
+                                <span class="text-xs text-red-500">{{ $message }}</span> 
                             @enderror
                         </div>
 
@@ -43,7 +43,7 @@
                                 @if($filterByBusinessUnit && !$allowBusinessUnitChange) readonly @endif>
                             
                             @if($showBusinessUnitDropdown && (!$filterByBusinessUnit || $allowBusinessUnitChange))
-                                <div class="absolute z-50 mt-1 w-full bg-white shadow-lg rounded-md py-1 text-sm ring-1 ring-black ring-opacity-5 focus:outline-none"
+                                <div class="absolute z-50 w-full py-1 mt-1 text-sm bg-white rounded-md shadow-lg ring-1 ring-black ring-opacity-5 focus:outline-none"
                                      style="max-height: 240px; overflow-y: auto; overflow-x: hidden;"
                                      wire:click.stop>
                                     @php
@@ -51,12 +51,12 @@
                                     @endphp
                                     
                                     @if(empty($businessUnitSearch ?? '') && $businessUnits->count() > 0)
-                                        <div class="px-3 py-2 text-xs text-blue-600 bg-blue-50 border-b border-blue-100 sticky top-0 z-10">
+                                        <div class="sticky top-0 z-10 px-3 py-2 text-xs text-blue-600 border-b border-blue-100 bg-blue-50">
                                             Showing available business units - start typing to filter
                                         </div>
                                     @endif
                                     
-                                    <div class="max-h-48 overflow-y-auto">
+                                    <div class="overflow-y-auto max-h-48">
                                         @forelse($businessUnits as $unit)
                                             <button type="button"
                                                     wire:click.stop="selectBusinessUnit({{ $unit->id }}, '{{ addslashes($unit->name) }}')"
@@ -73,7 +73,7 @@
                                     </div>
                                     
                                     @if($businessUnits->count() >= 20)
-                                        <div class="px-3 py-2 text-xs text-gray-500 bg-gray-50 border-t border-gray-100 sticky bottom-0">
+                                        <div class="sticky bottom-0 px-3 py-2 text-xs text-gray-500 border-t border-gray-100 bg-gray-50">
                                             Showing first 20 results - type to search for more
                                         </div>
                                     @endif
@@ -101,7 +101,7 @@
                             @endif
                             
                             @error('business_unit_id') 
-                                <span class="text-red-500 text-xs">{{ $message }}</span> 
+                                <span class="text-xs text-red-500">{{ $message }}</span> 
                             @enderror
                         </div>
 
@@ -115,7 +115,7 @@
                                       rows="3"
                                       class="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 sm:text-sm @error('alamat') border-red-300 @enderror"></textarea>
                             @error('alamat') 
-                                <span class="text-red-500 text-xs">{{ $message }}</span> 
+                                <span class="text-xs text-red-500">{{ $message }}</span> 
                             @enderror
                         </div>
 
@@ -128,7 +128,7 @@
                                    placeholder="https://maps.google.com/..."
                                    class="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 sm:text-sm @error('link_google_maps') border-red-300 @enderror">
                             @error('link_google_maps') 
-                                <span class="text-red-500 text-xs">{{ $message }}</span> 
+                                <span class="text-xs text-red-500">{{ $message }}</span> 
                             @enderror
                         </div>
 
@@ -140,7 +140,7 @@
                                    id="kota_kabupaten"
                                    class="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 sm:text-sm @error('kota_kabupaten') border-red-300 @enderror">
                             @error('kota_kabupaten') 
-                                <span class="text-red-500 text-xs">{{ $message }}</span> 
+                                <span class="text-xs text-red-500">{{ $message }}</span> 
                             @enderror
                         </div>
 
@@ -159,7 +159,7 @@
                                    max="{{ date('Y') + 10 }}"
                                    class="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 sm:text-sm @error('tahun_perolehan') border-red-300 @enderror">
                             @error('tahun_perolehan') 
-                                <span class="text-red-500 text-xs">{{ $message }}</span> 
+                                <span class="text-xs text-red-500">{{ $message }}</span> 
                             @enderror
                         </div>
                         <!-- Status -->
@@ -174,7 +174,7 @@
                                 @endforeach
                             </select>
                             @error('status') 
-                                <span class="text-red-500 text-xs">{{ $message }}</span> 
+                                <span class="text-xs text-red-500">{{ $message }}</span> 
                             @enderror
                         </div>
                         <!-- NJOP - WITH FORMATTING -->
@@ -197,7 +197,7 @@
                                        }
                                    ">
                             @error('njop') 
-                                <span class="text-red-500 text-xs">{{ $message }}</span> 
+                                <span class="text-xs text-red-500">{{ $message }}</span> 
                             @enderror
                         </div>
                         <!-- Estimated Market Price - WITH FORMATTING -->
@@ -220,7 +220,7 @@
                                        }
                                    ">
                             @error('est_harga_pasar') 
-                                <span class="text-red-500 text-xs">{{ $message }}</span> 
+                                <span class="text-xs text-red-500">{{ $message }}</span> 
                             @enderror
                         </div>
 
@@ -232,21 +232,21 @@
                                       rows="3"
                                       class="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 sm:text-sm @error('keterangan') border-red-300 @enderror"></textarea>
                             @error('keterangan') 
-                                <span class="text-red-500 text-xs">{{ $message }}</span> 
+                                <span class="text-xs text-red-500">{{ $message }}</span> 
                             @enderror
                         </div>
                     </div>
                 </div>
 
                 <!-- Form Actions -->
-                <div class="flex justify-end space-x-3 mt-6">
+                <div class="flex justify-end mt-6 space-x-3">
                     <button type="button" 
                             wire:click="backToIndex"
-                            class="px-4 py-2 bg-gray-300 border border-transparent rounded-md font-semibold text-xs text-gray-700 uppercase tracking-widest hover:bg-gray-400 focus:outline-none focus:border-gray-500 focus:shadow-outline-gray active:bg-gray-400 transition ease-in-out duration-150">
+                            class="px-4 py-2 text-xs font-semibold tracking-widest text-gray-700 uppercase transition duration-150 ease-in-out bg-gray-300 border border-transparent rounded-md hover:bg-gray-400 focus:outline-none focus:border-gray-500 focus:shadow-outline-gray active:bg-gray-400">
                         Cancel
                     </button>
                     <button type="submit" 
-                            class="inline-flex items-center px-4 py-2 bg-blue-600 border border-transparent rounded-md font-semibold text-xs text-white uppercase tracking-widest hover:bg-blue-700 focus:outline-none focus:border-blue-700 focus:shadow-outline-blue active:bg-blue-600 transition ease-in-out duration-150">
+                            class="inline-flex items-center px-4 py-2 text-xs font-semibold tracking-widest text-white uppercase transition duration-150 ease-in-out bg-blue-600 border border-transparent rounded-md hover:bg-blue-700 focus:outline-none focus:border-blue-700 focus:shadow-outline-blue active:bg-blue-600">
                         {{ $isEdit ? 'Update Land' : 'Create Land' }}
                     </button>
                 </div>
