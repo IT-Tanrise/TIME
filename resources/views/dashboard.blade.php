@@ -164,7 +164,7 @@
                                 @can('pre-soil-buy.access')
                                     <a href="{{ route('preSoilBuy.index') }}"
                                         class="block px-3 py-1.5 text-xs text-gray-700 hover:bg-blue-50 rounded-t-lg">📄
-                                        Pre-Soil-Buy</a>
+                                        Pre Soil Buy</a>
                                 @endcan
                             </div>
                         </div>

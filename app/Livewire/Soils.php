@@ -14,9 +14,16 @@ use App\Models\BiayaTambahanSoil;
 use Livewire\Attributes\On;
 use Illuminate\Support\Facades\DB;
 
+use Maatwebsite\Excel\Facades\Excel;
+use PhpOffice\PhpSpreadsheet\IOFactory;
+use PhpOffice\PhpSpreadsheet\Cell\Coordinate;
+use \Carbon\Carbon;
+use Livewire\WithFileUploads;
+
 class Soils extends Component
 {
     use WithPagination;
+    use WithFileUploads;
 
     public $soil;
     public $soilId;
@@ -90,6 +97,20 @@ class Soils extends Component
 
     public $sortField = 'created_at';
     public $sortDirection = 'desc';
+
+    // Properties untuk import
+    public $showImportModal = false;
+    public $importFile;
+    public $importPreview = [];
+    // Properties untuk dropdown import
+    public $import_business_unit_id = null;
+    public $import_land_id = null;
+    public $importBusinessUnitSearch = '';
+    public $importLandSearch = '';
+    public $showImportBusinessUnitDropdown = false;
+    public $showImportLandDropdown = false;
+
+    public $perPage = 10;
 
     protected $rules = [
         'land_id' => 'required|exists:lands,id',
@@ -350,9 +371,45 @@ class Soils extends Component
         return $cleaned ? (int) $cleaned : 0;
     }
 
+
+    public function getTotalInvestmentProperty()
+    {
+        return $this->soils->sum(function ($soil) {
+            return $soil->harga + $soil->total_biaya_tambahan + $soil->total_biaya_interest;
+        });
+    }
+
+    public function getHasAdditionalCostsProperty()
+    {
+        return $this->soils->sum(function ($soil) {
+            return $soil->biayaTambahanSoils->count() + $soil->biayaTambahanInterestSoils->count();
+        }) > 0;
+    }
+
+    public function getTotalAdditionalCostsCountProperty()
+    {
+        return $this->soils->sum(function ($soil) {
+            return $soil->biayaTambahanSoils->count() + $soil->biayaTambahanInterestSoils->count();
+        });
+    }
+
+    public function getTotalAdditionalCostsAmountProperty()
+    {
+        return $this->soils->sum(function ($soil) {
+            return $soil->total_biaya_tambahan + $soil->total_biaya_interest;
+        });
+    }
+
+    public function getTotalAreaProperty()
+    {
+        return $this->soils->sum('luas');
+    }
+
+    // Ubah render method
     public function render()
     {
-        $soils = Soil::with(['land', 'businessUnit', 'createdBy', 'updatedBy'])
+        // Simpan query hasil ke property $this->soils agar bisa diakses di computed properties
+        $this->soils = Soil::with(['land', 'businessUnit', 'createdBy', 'updatedBy', 'biayaTambahanSoils', 'biayaTambahanInterestSoils'])
             ->when($this->search, function ($query) {
                 $query->where('nama_penjual', 'like', '%' . $this->search . '%')
                     ->orWhere('letak_tanah', 'like', '%' . $this->search . '%')
@@ -367,16 +424,17 @@ class Soils extends Component
             ->when($this->filterLand, function ($query) {
                 $query->where('land_id', $this->filterLand);
             })
-            ->when($this->filterStatus, function ($query) { // ADD THIS
+            ->when($this->filterStatus, function ($query) {
                 $query->where('status', $this->filterStatus);
             })
             ->orderBy($this->sortField, $this->sortDirection)
-            ->paginate(10);
+            ->paginate($this->perPage);
 
         $businessUnits = BusinessUnit::orderBy('name')->get();
         $lands = Land::orderBy('lokasi_lahan')->get();
 
-        return view('livewire.soils.index', compact('soils', 'businessUnits', 'lands'));
+        return view('livewire.soils.index', compact('businessUnits', 'lands'))
+            ->with('soils', $this->soils);
     }
 
     public function setBusinessUnitFilter($businessUnitId)
@@ -703,6 +761,413 @@ class Soils extends Component
             $this->showForm = false;
         }
     }
+    // Validation rules untuk import
+    protected function importRules()
+    {
+        return [
+            'importFile' => 'required|file|mimes:xlsx,xls|max:10240',
+            'import_business_unit_id' => 'required|exists:business_units,id',
+            'import_land_id' => 'required|exists:lands,id',
+        ];
+    }
+
+    public function showImportModalView()
+    {
+        $this->showImportModal = true;
+        $this->resetImportDropdowns();
+    }
+
+    public function closeImportModal()
+    {
+        $this->showImportModal = false;
+        $this->importFile = null;
+        $this->importPreview = [];
+        $this->resetImportDropdowns();
+    }
+
+    private function resetImportDropdowns()
+    {
+        $this->import_business_unit_id = null;
+        $this->import_land_id = null;
+        $this->importBusinessUnitSearch = '';
+        $this->importLandSearch = '';
+        $this->showImportBusinessUnitDropdown = false;
+        $this->showImportLandDropdown = false;
+    }
+
+    // Methods untuk dropdown search import
+    public function searchImportBusinessUnits()
+    {
+        $this->showImportBusinessUnitDropdown = true;
+    }
+
+    public function searchImportLands()
+    {
+        if ($this->import_business_unit_id) {
+            $this->showImportLandDropdown = true;
+        }
+    }
+
+    public function getFilteredImportBusinessUnits()
+    {
+        if (empty($this->importBusinessUnitSearch)) {
+            return BusinessUnit::orderBy('name')->limit(20)->get();
+        }
+
+        return BusinessUnit::where('name', 'like', '%' . $this->importBusinessUnitSearch . '%')
+            ->orderBy('name')
+            ->limit(20)
+            ->get();
+    }
+
+    public function getFilteredImportLands()
+    {
+        if (!$this->import_business_unit_id) {
+            return collect();
+        }
+
+        $query = Land::where('business_unit_id', $this->import_business_unit_id);
+
+        if (!empty($this->importLandSearch)) {
+            $query->where('lokasi_lahan', 'like', '%' . $this->importLandSearch . '%');
+        }
+
+        return $query->orderBy('lokasi_lahan')->limit(20)->get();
+    }
+
+    public function selectImportBusinessUnit($id, $name)
+    {
+        $this->import_business_unit_id = $id;
+        $this->importBusinessUnitSearch = $name;
+        $this->showImportBusinessUnitDropdown = false;
+        $this->import_land_id = null;
+        $this->importLandSearch = '';
+    }
+
+    public function selectImportLand($id, $name)
+    {
+        $this->import_land_id = $id;
+        $this->importLandSearch = $name;
+        $this->showImportLandDropdown = false;
+    }
+
+    public function importExcel()
+    {
+        $this->validate($this->importRules());
+
+        try {
+            $path = $this->importFile->getRealPath();
+            $spreadsheet = IOFactory::load($path);
+            $worksheet = $spreadsheet->getActiveSheet();
+
+            // Get all merge cells
+            $mergeCells = $worksheet->getMergeCells();
+
+            // Parse data dari row 6 (row pertama data)
+            $highestRow = $worksheet->getHighestRow();
+            $dataRows = [];
+            $priceMap = [];
+
+            // First pass: Baca semua data dengan struktur yang benar
+            for ($row = 6; $row <= $highestRow; $row++) {
+                $rowData = [
+                    'no' => $this->parseRowNumber($worksheet->getCell("B{$row}")->getValue()),
+                    'nama_penjual' => $this->cleanCellValue($worksheet->getCell("C{$row}")->getValue()),
+                    'alamat_penjual' => $this->cleanCellValue($worksheet->getCell("D{$row}")->getValue()),
+                    'nama_pembeli' => $this->cleanCellValue($worksheet->getCell("E{$row}")->getValue()),
+                    'alamat_pembeli' => $this->cleanCellValue($worksheet->getCell("F{$row}")->getValue()),
+                    'nomor_tanggal_ppjb' => $this->cleanCellValue($worksheet->getCell("G{$row}")->getValue()),
+                    'notaris' => $this->cleanCellValue($worksheet->getCell("H{$row}")->getValue()),
+                    'letak_tanah' => $this->cleanCellValue($worksheet->getCell("I{$row}")->getValue()),
+                    'luas' => $worksheet->getCell("J{$row}")->getValue(),
+                    'bukti_kepemilikan_full' => $this->cleanCellValue($worksheet->getCell("K{$row}")->getValue()),
+                    'atas_nama' => $this->cleanCellValue($worksheet->getCell("L{$row}")->getValue()),
+                    'harga' => $worksheet->getCell("M{$row}")->getValue(),
+                    'keterangan' => $this->cleanCellValue($worksheet->getCell("N{$row}")->getValue()),
+                ];
+
+                // Skip empty rows
+                if (empty($rowData['nama_penjual']) && empty($rowData['letak_tanah'])) {
+                    continue;
+                }
+
+                $dataRows[$row] = $rowData;
+            }
+
+            // Second pass: Handle merged cells untuk harga
+            foreach ($mergeCells as $mergeCell) {
+                preg_match('/([A-Z]+)(\d+):([A-Z]+)(\d+)/', $mergeCell, $matches);
+                if (!$matches) continue;
+
+                $colStart = $matches[1];
+                $rowStart = (int)$matches[2];
+                $colEnd = $matches[3];
+                $rowEnd = (int)$matches[4];
+
+                // Jika merge di kolom M (Harga)
+                if ($colStart === 'M' && $colEnd === 'M') {
+                    $mergedPrice = $worksheet->getCell("M{$rowStart}")->getValue();
+
+                    // Simpan info merge
+                    if ($mergedPrice) {
+                        for ($r = $rowStart; $r <= $rowEnd; $r++) {
+                            $priceMap[$r] = [
+                                'total' => $mergedPrice,
+                                'start_row' => $rowStart,
+                                'end_row' => $rowEnd
+                            ];
+                        }
+                    }
+                }
+            }
+
+            // Third pass: Group data berdasarkan Nomor PPJB, Tanggal PPJB, dan Nama Penjual
+            $groupedData = [];
+            foreach ($dataRows as $row => $data) {
+                // Parse nomor dan tanggal PPJB
+                $ppjbInfo = $this->parsePpjbData($data['nomor_tanggal_ppjb']);
+
+                $groupKey = $this->createGroupKey(
+                    $ppjbInfo['nomor'],
+                    $ppjbInfo['tanggal'],
+                    $data['nama_penjual']
+                );
+
+                if (!isset($groupedData[$groupKey])) {
+                    $groupedData[$groupKey] = [
+                        'nomor_ppjb' => $ppjbInfo['nomor'],
+                        'tanggal_ppjb' => $ppjbInfo['tanggal'],
+                        'nama_penjual' => $data['nama_penjual'],
+                        'alamat_penjual' => $data['alamat_penjual'],
+                        'rows' => [],
+                        'total_luas' => 0,
+                        'total_harga' => 0,
+                        'harga_per_m2' => 0,
+                    ];
+                }
+
+                $luasRow = $this->parseFormattedNumberLuas($data['luas']);
+                $groupedData[$groupKey]['rows'][$row] = $data;
+                $groupedData[$groupKey]['total_luas'] += $luasRow;
+
+                // Tambahkan harga ke total group jika ada harga di row ini
+                if (!empty($data['harga'])) {
+                    $groupedData[$groupKey]['total_harga'] += $this->parseFormattedNumberLuas($data['harga']);
+                }
+            }
+
+            // Fourth pass: Hitung total harga untuk setiap group dari merge cells
+            foreach ($groupedData as $groupKey => &$group) {
+                // Jika total_harga masih 0, cari dari merge cells
+                if ($group['total_harga'] == 0) {
+                    foreach ($group['rows'] as $row => $data) {
+                        if (isset($priceMap[$row])) {
+                            $group['total_harga'] = $priceMap[$row]['total'];
+                            break; // Ambil harga dari merge cell pertama yang ditemukan
+                        }
+                    }
+                }
+
+                // Hitung harga per m² untuk group
+                if ($group['total_luas'] > 0 && $group['total_harga'] > 0) {
+                    $group['harga_per_m2'] = $group['total_harga'] / $group['total_luas'];
+                }
+            }
+
+            // Fifth pass: Build final data dengan distribusi harga berdasarkan luas
+            $finalData = [];
+            foreach ($groupedData as $groupKey => $group) {
+                foreach ($group['rows'] as $row => $data) {
+                    $luasRow = $this->parseFormattedNumberLuas($data['luas']);
+
+                    // Parse bukti kepemilikan
+                    $buktiParts = $this->parseBuktiKepemilikan($data['bukti_kepemilikan_full']);
+
+                    // Hitung harga untuk row ini berdasarkan harga per m² dan luas row
+                    $hargaRow = $group['harga_per_m2'] * $luasRow;
+
+                    $finalData[] = [
+                        'land_id' => $this->import_land_id, // Gunakan land_id dari dropdown
+                        'business_unit_id' => $this->import_business_unit_id, // Gunakan business_unit_id dari dropdown
+                        'nama_penjual' => $data['nama_penjual'],
+                        'alamat_penjual' => $data['alamat_penjual'],
+                        'nomor_ppjb' => $group['nomor_ppjb'],
+                        'tanggal_ppjb' => $group['tanggal_ppjb'],
+                        'letak_tanah' => $data['letak_tanah'],
+                        'luas' => $luasRow,
+                        'harga' => $hargaRow,
+                        'bukti_kepemilikan' => $buktiParts['jenis'],
+                        'bukti_kepemilikan_details' => $buktiParts['nomor'],
+                        'shgb_expired_date' => null,
+                        'atas_nama' => $data['atas_nama'],
+                        'nop_pbb' => null,
+                        'nama_notaris_ppat' => $data['notaris'],
+                        'keterangan' => $data['keterangan'] ?? null,
+                        'status' => 'active',
+                        'created_by' => auth()->id(),
+                        'updated_by' => auth()->id(),
+                    ];
+                }
+            }
+
+            //dd($finalData);
+
+            // Save data
+            if (auth()->user()->can('soil-data.approval')) {
+                $createdCount = 0;
+                foreach ($finalData as $soilData) {
+                    Soil::create($soilData);
+                    $createdCount++;
+                }
+                session()->flash('message', "{$createdCount} soil records imported successfully from Excel.");
+            } else {
+                $requestCount = 0;
+                foreach ($finalData as $soilData) {
+                    SoilApproval::create([
+                        'soil_id' => null,
+                        'requested_by' => auth()->id(),
+                        'old_data' => [],
+                        'new_data' => $soilData,
+                        'change_type' => 'create',
+                        'status' => 'pending'
+                    ]);
+                    $requestCount++;
+                }
+                session()->flash('warning', "{$requestCount} soil record import requests have been submitted for approval.");
+            }
+
+            $this->closeImportModal();
+        } catch (\Exception $e) {
+            session()->flash('error', 'Import failed: ' . $e->getMessage());
+            \Log::error('Import Excel Error: ' . $e->getMessage(), [
+                'trace' => $e->getTraceAsString()
+            ]);
+        }
+    }
+
+
+    /**
+     * Parse nomor dan tanggal PPJB dari format "No. 44, tanggal 14-07-2015"
+     */
+    private function parsePpjbData($text)
+    {
+        $nomor = '';
+        $tanggal = null;
+
+        if (empty($text)) {
+            return ['nomor' => '', 'tanggal' => null];
+        }
+
+        if (preg_match('/No\.?\s*([A-Za-z0-9\/\-.]+)/i', $text, $matches)) {
+            $nomor = trim(rtrim($matches[1], ','));
+        }
+
+        if (preg_match('/(?:(?:tanggal|tgl)\s*)?(\d{1,2}[-\/]\d{1,2}[-\/]\d{2,4})/i', $text, $matches)) {
+            try {
+                $dateStr = str_replace('/', '-', $matches[1]);
+                $tanggal = Carbon::createFromFormat('d-m-Y', $dateStr)->format('Y-m-d');
+            } catch (\Exception $e) {
+                $tanggal = null;
+            }
+        }
+
+        return [
+            'nomor' => $nomor,
+            'tanggal' => $tanggal
+        ];
+    }
+
+    /**
+     * Create group key untuk grouping data
+     */
+    private function createGroupKey($nomorPpjb, $tanggalPpjb, $namaPenjual)
+    {
+        return md5($nomorPpjb . '|' . $tanggalPpjb . '|' . $namaPenjual);
+    }
+
+    /**
+     * Parse row number dari formula =ROW(B1)
+     */
+    private function parseRowNumber($value)
+    {
+        if (empty($value)) {
+            return '';
+        }
+
+        // Handle formula seperti "=ROW(B1)"
+        if (is_string($value) && preg_match('/=ROW\([A-Z](\d+)\)/', $value, $matches)) {
+            return (int)$matches[1];
+        }
+
+        return $value;
+    }
+
+    /**
+     * Clean cell value - handle formula dan nilai langsung
+     */
+    private function cleanCellValue($value)
+    {
+        if (empty($value)) {
+            return '';
+        }
+
+        // Handle formula seperti "=ROW(B1)"
+        if (is_string($value) && strpos($value, '=ROW(') === 0) {
+            return '';
+        }
+
+        return trim($value);
+    }
+
+    /**
+     * Parse bukti kepemilikan dari teks
+     */
+    private function parseBuktiKepemilikan($text)
+    {
+        $jenis = '';
+        $nomor = '';
+
+        if (empty($text)) {
+            return ['jenis' => '', 'nomor' => ''];
+        }
+
+        $text = trim($text);
+
+        // Pola umum: "SHM No. 158", "HGB No.1037", "Sertifikat 140", "SHGB 30"
+        if (preg_match('/^(SHM|HGB|SHGB|SHMM|Sertifikat|Sertipikat|S\.K|Letter C|S\.K Gubernur)\s*(?:No\.?)?\s*([A-Za-z0-9\/.-]+)?$/i', $text, $matches)) {
+            $jenis = strtoupper(trim($matches[1]));
+            $nomor = isset($matches[2]) ? trim($matches[2]) : '';
+        } else {
+            // Kalau gak cocok pattern — anggap semua sebagai jenis
+            $jenis = $text;
+        }
+
+        return [
+            'jenis' => $jenis,
+            'nomor' => $nomor
+        ];
+    }
+
+
+    /**
+     * Parse formatted number (tetap sama)
+     */
+    private function parseFormattedNumberLuas($value)
+    {
+        if (is_numeric($value)) {
+            return (float)$value;
+        }
+
+        if (is_string($value)) {
+            $cleaned = preg_replace('/[^\d,.-]/', '', $value);
+            $cleaned = str_replace(',', '.', $cleaned);
+            return (float)$cleaned;
+        }
+
+        return 0;
+    }
+
+
 
     public function saveAdditionalCosts()
     {

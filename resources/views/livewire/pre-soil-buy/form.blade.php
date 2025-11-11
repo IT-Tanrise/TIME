@@ -256,7 +256,7 @@
                     <!-- Sales Object Description -->
                     <div class="space-y-2 md:col-span-2">
                         <label class="block text-sm font-semibold text-gray-700">
-                            Sales Object Description <span class="text-red-500">*</span>
+                            Sales Object (Objek Jual Beli)<span class="text-red-500">*</span>
                         </label>
                         <textarea wire:model="objek_jual_beli" rows="4"
                             class="w-full px-4 py-3 transition-all duration-200 border border-gray-300 rounded-lg shadow-sm resize-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
