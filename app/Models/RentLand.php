@@ -159,4 +159,45 @@ class RentLand extends Model
             default => 'gray'
         };
     }
+
+    /**
+     * Get the interest rate for a specific month/year
+     * 
+     * @param int $month
+     * @param int $year
+     * @return float|null
+     */
+    public function getInterestRate(int $month, int $year): ?float
+    {
+        return \App\Models\LandInterestRate::getRate($month, $year);
+    }
+
+    /**
+     * Get current month's interest rate
+     * 
+     * @return float|null
+     */
+    public function getCurrentInterestRate(): ?float
+    {
+        return $this->getInterestRate((int) date('m'), (int) date('Y'));
+    }
+
+    /**
+     * Calculate interest for a given amount
+     * 
+     * @param float $amount
+     * @param int $month
+     * @param int $year
+     * @return float
+     */
+    public function calculateInterest(float $amount, int $month, int $year): float
+    {
+        $rate = $this->getInterestRate($month, $year);
+        
+        if (!$rate) {
+            return 0;
+        }
+        
+        return ($amount * $rate) / 100;
+    }
 }

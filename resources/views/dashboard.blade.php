@@ -132,7 +132,10 @@
                             <button onclick="showBusinessUnitModal('lands')" class="w-full text-left px-3 py-1.5 text-xs text-gray-700 hover:bg-blue-50">🏞️ Lands</button>
                             @endcan
                             @can('soils.access')
-                            <button onclick="showBusinessUnitModal('soils')" class="w-full text-left px-3 py-1.5 text-xs text-gray-700 hover:bg-blue-50 rounded-b-lg">🌱 Soils</button>
+                            <button onclick="showBusinessUnitModal('soils')" class="w-full text-left px-3 py-1.5 text-xs text-gray-700 hover:bg-blue-50">🌱 Soils</button>
+                            @endcan
+                            @can('land-interest-rates.access')
+                            <button onclick="showBusinessUnitModal('land-interest-rates')" class="w-full text-left px-3 py-1.5 text-xs text-gray-700 hover:bg-blue-50">📈 Land Interest Rates</button>
                             @endcan
                         </div>
                     </div>
@@ -867,6 +870,8 @@
                 title.textContent = 'Select Business Unit for Lands';
             } else if (module === 'soils') {
                 title.textContent = 'Select Business Unit for Soils';
+            } else if (module === 'soils') {
+                title.textContent = 'Select Business Unit for Soils';
             }
             
             modal.classList.remove('hidden');
@@ -884,12 +889,16 @@
                     url = '{{ route("lands") }}';
                 } else if (currentModule === 'soils') {
                     url = '{{ route("soils") }}';
+                } else if (currentModule === 'land-interest-rates') {
+                    url = '{{ route("land-interest-rates") }}';
                 }
             } else {
                 if (currentModule === 'lands') {
                     url = '/lands/business-unit/' + businessUnitId;
                 } else if (currentModule === 'soils') {
                     url = '/soils/business-unit/' + businessUnitId;
+                } else if (currentModule === 'land-interest-rates') {
+                    url = '/land-interest-rates/business-unit/' + businessUnitId;
                 }
             }
             

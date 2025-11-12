@@ -44,6 +44,14 @@ Route::middleware(['auth'])->group(function () {
             ->name('lands.history');
     });
 
+    // Land Interest Rates
+    Route::middleware(['permission:land-interest-rates.access'])->group(function () {
+        Route::get('/land-interest-rates', \App\Livewire\LandInterestRates::class)
+            ->name('land-interest-rates');
+        Route::get('/land-interest-rates/business-unit/{businessUnit}', \App\Livewire\LandInterestRates::class)
+            ->name('land-interest-rates.by-business-unit');
+    });
+
     Route::get('/projects', Projects::class)->name('projects');
 
     // Business Units Routes

@@ -143,7 +143,10 @@
                             <button onclick="showBusinessUnitModal('lands')" class="w-full text-left px-3 py-1.5 text-xs text-gray-700 hover:bg-blue-50">🏞️ Lands</button>
                             <?php endif; ?>
                             <?php if (app(\Illuminate\Contracts\Auth\Access\Gate::class)->check('soils.access')): ?>
-                            <button onclick="showBusinessUnitModal('soils')" class="w-full text-left px-3 py-1.5 text-xs text-gray-700 hover:bg-blue-50 rounded-b-lg">🌱 Soils</button>
+                            <button onclick="showBusinessUnitModal('soils')" class="w-full text-left px-3 py-1.5 text-xs text-gray-700 hover:bg-blue-50">🌱 Soils</button>
+                            <?php endif; ?>
+                            <?php if (app(\Illuminate\Contracts\Auth\Access\Gate::class)->check('land-interest-rates.access')): ?>
+                            <button onclick="showBusinessUnitModal('land-interest-rates')" class="w-full text-left px-3 py-1.5 text-xs text-gray-700 hover:bg-blue-50">📈 Land Interest Rates</button>
                             <?php endif; ?>
                         </div>
                     </div>
@@ -911,6 +914,8 @@ if (isset($__slots)) unset($__slots);
                 title.textContent = 'Select Business Unit for Lands';
             } else if (module === 'soils') {
                 title.textContent = 'Select Business Unit for Soils';
+            } else if (module === 'soils') {
+                title.textContent = 'Select Business Unit for Soils';
             }
             
             modal.classList.remove('hidden');
@@ -928,12 +933,16 @@ if (isset($__slots)) unset($__slots);
                     url = '<?php echo e(route("lands")); ?>';
                 } else if (currentModule === 'soils') {
                     url = '<?php echo e(route("soils")); ?>';
+                } else if (currentModule === 'land-interest-rates') {
+                    url = '<?php echo e(route("land-interest-rates")); ?>';
                 }
             } else {
                 if (currentModule === 'lands') {
                     url = '/lands/business-unit/' + businessUnitId;
                 } else if (currentModule === 'soils') {
                     url = '/soils/business-unit/' + businessUnitId;
+                } else if (currentModule === 'land-interest-rates') {
+                    url = '/land-interest-rates/business-unit/' + businessUnitId;
                 }
             }
             
