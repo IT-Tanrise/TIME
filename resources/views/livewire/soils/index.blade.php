@@ -607,7 +607,7 @@
                                             class="text-sm font-medium text-gray-900">{{ $soil->bukti_kepemilikan }}</span>
                                         @if ($soil->bukti_kepemilikan_details)
                                             <span class="text-xs text-gray-500">
-                                                {{ Str::limit($soil->bukti_kepemilikan_details, 25) }}
+                                                No. {{ Str::limit($soil->bukti_kepemilikan_details, 25) }}
                                             </span>
                                         @endif
 
@@ -655,7 +655,7 @@
                                 <!-- PPJB/AJB -->
                                 <td class="px-4 py-3">
                                     <div class="flex flex-col">
-                                        <span class="text-sm font-medium text-gray-900">{{ $soil->nomor_ppjb }}</span>
+                                        <span class="text-sm font-medium text-gray-900">No. {{ $soil->nomor_ppjb }}</span>
                                         <span
                                             class="text-xs text-gray-500">{{ $soil->tanggal_ppjb->format('d/m/Y') }}</span>
                                     </div>

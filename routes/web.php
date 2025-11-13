@@ -14,12 +14,13 @@ use App\Livewire\SoilHistories;
 use App\Livewire\SoilApprovals;
 use App\Livewire\VendorsIFCA;
 use App\Livewire\PreSoilsBuy;
+use App\Livewire\PreSoilBuyApprovalController;
+   
 
 use App\Http\Controllers\RoleController;
 use App\Http\Controllers\PermissionController;
 use App\Http\Controllers\UserController;
 
-   
 Route::get('posts', Posts::class)->name('posts')->middleware('auth');
 Route::get('tasks', Tasks::class)->name('tasks')->middleware('auth');
 
@@ -67,7 +68,7 @@ Route::middleware(['auth'])->group(function () {
     });
 
 
-    Route::get('/pre-soil-buy-approvals', [PreSoilBuyApprovalController::class, 'index'])->name('pre-soil-buy-approvals');
+    
     // Pre-Soil-Buy Routes
     Route::middleware(['permission:pre-soil-buy.access'])->group(function () {
         Route::get('/preSoilBuy', preSoilsBuy::class)->name('preSoilBuy.index');

@@ -1643,6 +1643,7 @@ class Soils extends Component
             'SHP' => 'Sertifikat Hak Pakai (SHP)',
             'Girik/Letter C' => 'Girik/Letter C',
             'AJB' => 'Akta Jual Beli (AJB)',
+            'SERTIPIKAT' => 'SERTIPIKAT',
             'Petok D' => 'Petok D',
             'Lainnya' => 'Lainnya'
         ];
