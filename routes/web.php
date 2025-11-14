@@ -40,10 +40,21 @@ Route::middleware(['auth'])->group(function () {
     // Land Routes
     Route::middleware(['permission:lands.access'])->group(function () {
         Route::get('/lands', Lands::class)->name('lands');
-        Route::get('/lands/business-unit/{businessUnit}', Lands::class)->name('lands.by-business-unit')->where('businessUnit', '[0-9]+');
+        Route::get('/lands/business-unit/{businessUnit}', Lands::class)->name('lands.by-business-unit')
+            ->where('businessUnit', '[0-9]+');
         Route::get('/land-approvals', App\Livewire\LandApprovals::class)->name('land-approvals');
         Route::get('/lands/{landId}/history', \App\Livewire\LandHistories::class)
             ->name('lands.history');
+        Route::get('/land-certificates/{businessUnit?}/{land?}', \App\Livewire\LandCertificates::class)
+        ->name('land-certificates');
+    });
+
+    // Land Interest Rates
+    Route::middleware(['permission:land-interest-rates.access'])->group(function () {
+        Route::get('/land-interest-rates', \App\Livewire\LandInterestRates::class)
+            ->name('land-interest-rates');
+        Route::get('/land-interest-rates/business-unit/{businessUnit}', \App\Livewire\LandInterestRates::class)
+            ->name('land-interest-rates.by-business-unit');
     });
 
     Route::get('/projects', Projects::class)->name('projects');

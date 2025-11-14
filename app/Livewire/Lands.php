@@ -53,6 +53,14 @@ class Lands extends Component
     public $filterByBusinessUnit = null;
     public $businessUnit = null;
 
+    // Interest calculation properties
+    public $showInterestCalculation = false;
+    public $interestMonth;
+    public $interestYear;
+
+    public $showProjects = false;
+    public $showSoils = false;
+
     protected function rules()
     {
         return [
@@ -70,7 +78,7 @@ class Lands extends Component
     }
 
     public function mount($businessUnit = null)
-    {
+    {        
         if ($businessUnit) {
             if (is_numeric($businessUnit)) {
                 $this->businessUnit = BusinessUnit::find($businessUnit);
@@ -87,7 +95,7 @@ class Lands extends Component
     public function render()
     {
         $lands = Land::with([
-                'businessUnit:id,name,code', // Direct business unit
+                'businessUnit:id,name,code',
                 'soils:id,land_id,luas,harga', 
                 'soils.biayaTambahanSoils:id,soil_id,harga',
                 'pendingApprovals'
@@ -129,7 +137,6 @@ class Lands extends Component
     {
         $this->resetForm();
         
-        // Auto-fill business unit if filtered
         if ($this->filterByBusinessUnit && $this->businessUnit) {
             $this->business_unit_id = $this->filterByBusinessUnit;
             $this->businessUnitSearch = $this->businessUnit->name;
@@ -155,7 +162,6 @@ class Lands extends Component
         $this->njop = $this->land->njop;
         $this->est_harga_pasar = $this->land->est_harga_pasar;
 
-        // Set business unit search display
         if ($this->land->businessUnit) {
             $this->businessUnitSearch = $this->land->businessUnit->name;
         }
@@ -170,6 +176,12 @@ class Lands extends Component
     {
         $this->landId = $id;
         $this->showDetailForm = true;
+        
+        // Initialize interest calculation to current month/year
+        $this->interestMonth = date('n');
+        $this->interestYear = date('Y');
+        
+        $this->showInterestCalculation = false;
     }
 
     // Business Unit Dropdown Methods
@@ -217,6 +229,186 @@ class Lands extends Component
     public function closeDropdowns()
     {
         $this->showBusinessUnitDropdown = false;
+    }
+
+    // Interest Calculation Methods
+    public function toggleInterestCalculation()
+    {
+        $this->showInterestCalculation = !$this->showInterestCalculation;
+    }
+
+    public function updateInterestCalculation()
+    {
+        $this->validate([
+            'interestMonth' => 'required|integer|min:1|max:12',
+            'interestYear' => 'required|integer|min:2020|max:' . (date('Y') + 1),
+        ]);
+        
+        $this->dispatch('interest-calculation-updated');
+    }
+
+    // UPDATED: When year changes, adjust month accordingly
+    public function updatedInterestYear($value)
+    {
+        $land = Land::find($this->landId);
+        if (!$land) {
+            return;
+        }
+
+        $firstCostInfo = $this->getFirstCostDate();
+        if (!$firstCostInfo) {
+            return;
+        }
+
+        $minMonth = $firstCostInfo['month'];
+        $minYear = $firstCostInfo['year'];
+        $currentMonth = (int)date('n');
+        $currentYear = (int)date('Y');
+        
+        // Adjust interestMonth based on selected year
+        if ($value == $minYear && $value == $currentYear) {
+            // Same year as first cost and current year - default to current month
+            $this->interestMonth = $currentMonth;
+        } elseif ($value == $minYear) {
+            // If selected year is the first year, default to first cost month
+            $this->interestMonth = $minMonth;
+        } elseif ($value == $currentYear) {
+            // If selected year is current year, default to current month
+            $this->interestMonth = $currentMonth;
+        } else {
+            // For years in between, default to January
+            $this->interestMonth = 1;
+        }
+    }
+
+    // UPDATED: When month changes, ensure it's valid for selected year
+    public function updatedInterestMonth($value)
+    {
+        $land = Land::find($this->landId);
+        if (!$land) {
+            return;
+        }
+
+        $firstCostInfo = $this->getFirstCostDate();
+        if (!$firstCostInfo) {
+            return;
+        }
+
+        $minMonth = $firstCostInfo['month'];
+        $minYear = $firstCostInfo['year'];
+        $currentMonth = (int)date('n');
+        $currentYear = (int)date('Y');
+        
+        // Validate month based on selected year
+        if ($this->interestYear == $minYear && $this->interestYear == $currentYear) {
+            // Same year as first cost and current year
+            $this->interestMonth = max($minMonth, min($value, $currentMonth));
+        } elseif ($this->interestYear == $minYear) {
+            // First year - must be >= minMonth
+            $this->interestMonth = max($minMonth, $value);
+        } elseif ($this->interestYear == $currentYear) {
+            // Current year - must be <= current month
+            $this->interestMonth = min($value, $currentMonth);
+        }
+    }
+
+    // NEW: Helper method to get first cost date
+    private function getFirstCostDate()
+    {
+        if (!$this->landId) {
+            return null;
+        }
+
+        $land = Land::find($this->landId);
+        if (!$land) {
+            return null;
+        }
+
+        $firstCost = \App\Models\BiayaTambahanSoil::whereHas('soil', function($query) use ($land) {
+                $query->where('land_id', $land->id);
+            })
+            ->orderBy('date_cost', 'asc')
+            ->first();
+        
+        if (!$firstCost) {
+            return null;
+        }
+        
+        $date = \Carbon\Carbon::parse($firstCost->date_cost);
+        
+        return [
+            'date' => $date,
+            'month' => $date->month,
+            'year' => $date->year,
+            'formatted' => $date->format('d F Y'),
+        ];
+    }
+
+    // UPDATED: Get available months based on selected year
+    public function getAvailableMonthsProperty()
+    {
+        if (!$this->landId) {
+            return range(1, 12);
+        }
+
+        $firstCostInfo = $this->getFirstCostDate();
+        if (!$firstCostInfo) {
+            return range(1, (int)date('n'));
+        }
+        
+        $minMonth = $firstCostInfo['month'];
+        $minYear = $firstCostInfo['year'];
+        $currentMonth = (int)date('n');
+        $currentYear = (int)date('Y');
+        
+        // Generate available months based on selected year
+        if ($this->interestYear == $minYear && $this->interestYear == $currentYear) {
+            // Same year as first cost and current year
+            return range($minMonth, $currentMonth);
+        } elseif ($this->interestYear == $minYear) {
+            // If it's the first year, start from minMonth
+            return range($minMonth, 12);
+        } elseif ($this->interestYear == $currentYear) {
+            // If it's current year, end at current month
+            return range(1, $currentMonth);
+        } else {
+            // For years in between, all months available
+            return range(1, 12);
+        }
+    }
+
+    // UPDATED: Get available years from first cost to current year
+    public function getAvailableYearsProperty()
+    {
+        if (!$this->landId) {
+            return [(int)date('Y')];
+        }
+
+        $firstCostInfo = $this->getFirstCostDate();
+        if (!$firstCostInfo) {
+            return [(int)date('Y')];
+        }
+        
+        $minYear = $firstCostInfo['year'];
+        $currentYear = (int)date('Y');
+        
+        return range($minYear, $currentYear);
+    }
+
+    // UPDATED: Get first cost info for display
+    public function getFirstCostInfoProperty()
+    {
+        $firstCostInfo = $this->getFirstCostDate();
+        
+        if (!$firstCostInfo) {
+            return null;
+        }
+        
+        return [
+            'date' => $firstCostInfo['date'],
+            'formatted' => $firstCostInfo['formatted'],
+            'period' => $firstCostInfo['date']->format('M Y') . ' to ' . date('M Y')
+        ];
     }
 
     public function save()
@@ -334,7 +526,8 @@ class Lands extends Component
             'business_unit_id', 'businessUnitSearch', 'alamat', 'link_google_maps', 
             'kota_kabupaten', 'status', 'keterangan', 'njop', 'est_harga_pasar',
             'njop_display', 'est_harga_pasar_display',
-            'showBusinessUnitDropdown', 'allowBusinessUnitChange'
+            'showBusinessUnitDropdown', 'allowBusinessUnitChange',
+            'showProjects', 'showSoils', 'showInterestCalculation' // Updated
         ]);
         $this->resetValidation();
     }

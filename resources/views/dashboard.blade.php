@@ -1161,6 +1161,8 @@
                 title.textContent = 'Select Business Unit for Lands';
             } else if (module === 'soils') {
                 title.textContent = 'Select Business Unit for Soils';
+            } else if (module === 'soils') {
+                title.textContent = 'Select Business Unit for Soils';
             }
 
             modal.classList.remove('hidden');
@@ -1178,12 +1180,16 @@
                     url = '{{ route('lands') }}';
                 } else if (currentModule === 'soils') {
                     url = '{{ route('soils') }}';
+                } else if (currentModule === 'land-interest-rates') {
+                    url = '{{ route('land-interest-rates') }}';
                 }
             } else {
                 if (currentModule === 'lands') {
                     url = '/lands/business-unit/' + businessUnitId;
                 } else if (currentModule === 'soils') {
                     url = '/soils/business-unit/' + businessUnitId;
+                } else if (currentModule === 'land-interest-rates') {
+                    url = '/land-interest-rates/business-unit/' + businessUnitId;
                 }
             }
 
