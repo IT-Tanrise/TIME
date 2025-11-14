@@ -14,18 +14,25 @@ use App\Models\BiayaTambahanSoil;
 use Livewire\Attributes\On;
 use Illuminate\Support\Facades\DB;
 
+use Maatwebsite\Excel\Facades\Excel;
+use PhpOffice\PhpSpreadsheet\IOFactory;
+use PhpOffice\PhpSpreadsheet\Cell\Coordinate;
+use \Carbon\Carbon;
+use Livewire\WithFileUploads;
+
 class Soils extends Component
 {
     use WithPagination;
+    use WithFileUploads;
 
     public $soil;
     public $soilId;
     public $land_id = '';
     public $business_unit_id = '';
-    
+
     // Multiple soil details array
     public $soilDetails = [];
-    
+
     public $showForm = false;
     public $showDetailForm = false;
     public $showAdditionalCostsForm = false;
@@ -90,6 +97,20 @@ class Soils extends Component
 
     public $sortField = 'created_at';
     public $sortDirection = 'desc';
+
+    // Properties untuk import
+    public $showImportModal = false;
+    public $importFile;
+    public $importPreview = [];
+    // Properties untuk dropdown import
+    public $import_business_unit_id = null;
+    public $import_land_id = null;
+    public $importBusinessUnitSearch = '';
+    public $importLandSearch = '';
+    public $showImportBusinessUnitDropdown = false;
+    public $showImportLandDropdown = false;
+
+    public $perPage = 10;
 
     protected $rules = [
         'land_id' => 'required|exists:lands,id',
@@ -194,7 +215,7 @@ class Soils extends Component
     public function exportToExcel()
     {
         $this->validate($this->getExportRules());
-        
+
         $params = [
             'export_type' => $this->exportType,
             'date_from' => $this->exportDateFrom,
@@ -204,10 +225,10 @@ class Soils extends Component
             'land_id' => $this->filterLand,
             '_token' => csrf_token(),
         ];
-        
+
         $this->hideExportModalView();
         session()->flash('message', 'Export completed successfully!');
-        
+
         $this->dispatch('submit-export-form', params: $params);
     }
 
@@ -218,34 +239,34 @@ class Soils extends Component
 
         switch ($this->exportType) {
             case 'current':
-                $query->when($this->search, function($q) {
+                $query->when($this->search, function ($q) {
                     $q->where('nama_penjual', 'like', '%' . $this->search . '%')
-                      ->orWhere('letak_tanah', 'like', '%' . $this->search . '%')
-                      ->orWhere('nomor_ppjb', 'like', '%' . $this->search . '%');
+                        ->orWhere('letak_tanah', 'like', '%' . $this->search . '%')
+                        ->orWhere('nomor_ppjb', 'like', '%' . $this->search . '%');
                 })
-                ->when($this->filterBusinessUnit, function($q) {
-                    $q->where('business_unit_id', $this->filterBusinessUnit);
-                })
-                ->when($this->filterByBusinessUnit, function($q) {
-                    $q->where('business_unit_id', $this->filterByBusinessUnit);
-                })
-                ->when($this->filterLand, function($q) {
-                    $q->where('land_id', $this->filterLand);
-                });
+                    ->when($this->filterBusinessUnit, function ($q) {
+                        $q->where('business_unit_id', $this->filterBusinessUnit);
+                    })
+                    ->when($this->filterByBusinessUnit, function ($q) {
+                        $q->where('business_unit_id', $this->filterByBusinessUnit);
+                    })
+                    ->when($this->filterLand, function ($q) {
+                        $q->where('land_id', $this->filterLand);
+                    });
                 break;
 
             case 'date_range':
                 if ($this->exportDateFrom && $this->exportDateTo) {
                     $query->whereBetween('created_at', [$this->exportDateFrom, $this->exportDateTo]);
                 }
-                $query->when($this->filterByBusinessUnit, function($q) {
+                $query->when($this->filterByBusinessUnit, function ($q) {
                     $q->where('business_unit_id', $this->filterByBusinessUnit);
                 });
                 break;
 
             case 'all':
             default:
-                $query->when($this->filterByBusinessUnit, function($q) {
+                $query->when($this->filterByBusinessUnit, function ($q) {
                     $q->where('business_unit_id', $this->filterByBusinessUnit);
                 });
                 break;
@@ -350,33 +371,70 @@ class Soils extends Component
         return $cleaned ? (int) $cleaned : 0;
     }
 
+
+    public function getTotalInvestmentProperty()
+    {
+        return $this->soils->sum(function ($soil) {
+            return $soil->harga + $soil->total_biaya_tambahan + $soil->total_biaya_interest;
+        });
+    }
+
+    public function getHasAdditionalCostsProperty()
+    {
+        return $this->soils->sum(function ($soil) {
+            return $soil->biayaTambahanSoils->count() + $soil->biayaTambahanInterestSoils->count();
+        }) > 0;
+    }
+
+    public function getTotalAdditionalCostsCountProperty()
+    {
+        return $this->soils->sum(function ($soil) {
+            return $soil->biayaTambahanSoils->count() + $soil->biayaTambahanInterestSoils->count();
+        });
+    }
+
+    public function getTotalAdditionalCostsAmountProperty()
+    {
+        return $this->soils->sum(function ($soil) {
+            return $soil->total_biaya_tambahan + $soil->total_biaya_interest;
+        });
+    }
+
+    public function getTotalAreaProperty()
+    {
+        return $this->soils->sum('luas');
+    }
+
+    // Ubah render method
     public function render()
     {
-        $soils = Soil::with(['land', 'businessUnit', 'createdBy', 'updatedBy'])
-            ->when($this->search, function($query) {
+        // Simpan query hasil ke property $this->soils agar bisa diakses di computed properties
+        $this->soils = Soil::with(['land', 'businessUnit', 'createdBy', 'updatedBy', 'biayaTambahanSoils', 'biayaTambahanInterestSoils'])
+            ->when($this->search, function ($query) {
                 $query->where('nama_penjual', 'like', '%' . $this->search . '%')
                     ->orWhere('letak_tanah', 'like', '%' . $this->search . '%')
                     ->orWhere('nomor_ppjb', 'like', '%' . $this->search . '%');
             })
-            ->when($this->filterBusinessUnit, function($query) {
+            ->when($this->filterBusinessUnit, function ($query) {
                 $query->where('business_unit_id', $this->filterBusinessUnit);
             })
-            ->when($this->filterByBusinessUnit, function($query) {
+            ->when($this->filterByBusinessUnit, function ($query) {
                 $query->where('business_unit_id', $this->filterByBusinessUnit);
             })
-            ->when($this->filterLand, function($query) {
+            ->when($this->filterLand, function ($query) {
                 $query->where('land_id', $this->filterLand);
             })
-            ->when($this->filterStatus, function($query) { // ADD THIS
+            ->when($this->filterStatus, function ($query) {
                 $query->where('status', $this->filterStatus);
             })
             ->orderBy($this->sortField, $this->sortDirection)
-            ->paginate(10);
+            ->paginate($this->perPage);
 
         $businessUnits = BusinessUnit::orderBy('name')->get();
         $lands = Land::orderBy('lokasi_lahan')->get();
 
-        return view('livewire.soils.index', compact('soils', 'businessUnits', 'lands'));
+        return view('livewire.soils.index', compact('businessUnits', 'lands'))
+            ->with('soils', $this->soils);
     }
 
     public function setBusinessUnitFilter($businessUnitId)
@@ -393,7 +451,7 @@ class Soils extends Component
     public function showCreateForm()
     {
         $this->resetForm();
-        
+
         if ($this->filterByBusinessUnit && $this->businessUnit) {
             $this->business_unit_id = $this->filterByBusinessUnit;
             $this->businessUnitSearch = $this->businessUnit->name;
@@ -401,7 +459,7 @@ class Soils extends Component
         } else {
             $this->allowBusinessUnitChange = true;
         }
-        
+
         $this->showForm = true;
         $this->isEdit = false;
     }
@@ -412,7 +470,7 @@ class Soils extends Component
         $this->soilId = $this->soil->id;
         $this->editMode = $mode;
         $this->editSource = $source;
-        
+
         if ($mode === 'details') {
             $this->land_id = $this->soil->land_id;
             $this->business_unit_id = $this->soil->business_unit_id;
@@ -448,16 +506,15 @@ class Soils extends Component
             $this->sellerAddressSearch = [$this->soil->alamat_penjual];
             $this->showSellerNameDropdown = [false];
             $this->showSellerAddressDropdown = [false];
-            
+
             $this->showForm = true;
-            
         } elseif ($mode === 'costs') {
             $this->soilPrice = $this->soil->harga;
             $this->soilPriceDisplay = $this->formatNumber($this->soil->harga);
-            
+
             $this->biayaTambahan = [];
             $this->descriptionSearch = [];
-            
+
             foreach ($this->soil->biayaTambahanSoils as $index => $biaya) {
                 $this->biayaTambahan[] = [
                     'id' => $biaya->id,
@@ -467,16 +524,15 @@ class Soils extends Component
                     'cost_type' => $biaya->cost_type,
                     'date_cost' => $biaya->date_cost ? $biaya->date_cost->format('Y-m-d') : '',
                 ];
-                
+
                 $this->descriptionSearch[$index] = $biaya->description->description ?? '';
             }
-            
+
             $this->showAdditionalCostsForm = true;
-            
         } elseif ($mode === 'interest') {
             // NEW: Handle interest costs mode
             $this->biayaInterest = [];
-            
+
             foreach ($this->soil->biayaTambahanInterestSoils as $index => $interest) {
                 $this->biayaInterest[] = [
                     'id' => $interest->id,
@@ -488,10 +544,10 @@ class Soils extends Component
                     'bunga' => $interest->bunga,
                 ];
             }
-            
+
             $this->showInterestCostsForm = true;
         }
-        
+
         $this->isEdit = true;
     }
 
@@ -510,12 +566,12 @@ class Soils extends Component
             if (auth()->user()->can('soil-data.approval')) {
                 $soil = Soil::findOrFail($this->soilId);
                 $detail = $this->soilDetails[0];
-                
+
                 // Prepare SHGB date - handle empty string
                 // Normalize dates - store only date part without time
                 $tanggalPpjb = !empty($detail['tanggal_ppjb']) ? \Carbon\Carbon::parse($detail['tanggal_ppjb'])->format('Y-m-d') : null;
                 $shgbDate = !empty($detail['shgb_expired_date']) ? \Carbon\Carbon::parse($detail['shgb_expired_date'])->format('Y-m-d') : null;
-                
+
                 $soil->update([
                     'land_id' => $this->land_id,
                     'business_unit_id' => $this->business_unit_id,
@@ -534,22 +590,34 @@ class Soils extends Component
                     'keterangan' => $detail['keterangan'],
                     'status' => $detail['status'] ?? 'active',
                 ]);
-                
+
                 session()->flash('message', 'Soil record details updated successfully.');
             } else {
                 $soil = Soil::findOrFail($this->soilId);
                 $detail = $this->soilDetails[0];
-                
+
                 $oldData = $soil->only([
-                    'land_id', 'business_unit_id', 'nama_penjual', 'alamat_penjual', 
-                    'nomor_ppjb', 'tanggal_ppjb', 'letak_tanah', 'luas',
-                    'bukti_kepemilikan', 'bukti_kepemilikan_details', 'shgb_expired_date',
-                    'atas_nama', 'nop_pbb', 'nama_notaris_ppat', 'keterangan', 'status'
+                    'land_id',
+                    'business_unit_id',
+                    'nama_penjual',
+                    'alamat_penjual',
+                    'nomor_ppjb',
+                    'tanggal_ppjb',
+                    'letak_tanah',
+                    'luas',
+                    'bukti_kepemilikan',
+                    'bukti_kepemilikan_details',
+                    'shgb_expired_date',
+                    'atas_nama',
+                    'nop_pbb',
+                    'nama_notaris_ppat',
+                    'keterangan',
+                    'status'
                 ]);
-                
+
                 // Prepare SHGB date - handle empty string
                 $shgbDate = !empty($detail['shgb_expired_date']) ? $detail['shgb_expired_date'] : null;
-                
+
                 $newData = [
                     'land_id' => $this->land_id,
                     'business_unit_id' => $this->business_unit_id,
@@ -587,13 +655,13 @@ class Soils extends Component
                         'change_type' => 'details',
                         'status' => 'pending'
                     ]);
-                    
+
                     session()->flash('warning', 'Your soil data changes have been submitted for approval and are pending review.');
                 } else {
                     session()->flash('info', 'No changes detected. The data is identical to the existing record.');
                 }
             }
-            
+
             if ($this->editSource === 'detail') {
                 $this->showForm = false;
                 $this->showDetailForm = true;
@@ -602,28 +670,27 @@ class Soils extends Component
                 $this->resetForm();
                 $this->showForm = false;
             }
-            
         } else {
             // NEW: CREATE NEW RECORDS
-            $validDetails = collect($this->soilDetails)->filter(function($detail) {
-                return !empty($detail['nama_penjual']) && 
-                    !empty($detail['alamat_penjual']) && 
+            $validDetails = collect($this->soilDetails)->filter(function ($detail) {
+                return !empty($detail['nama_penjual']) &&
+                    !empty($detail['alamat_penjual']) &&
                     !empty($detail['nomor_ppjb']) &&
                     !empty($detail['letak_tanah']);
             })->values()->all();
-            
+
             if (empty($validDetails)) {
                 session()->flash('error', 'No valid soil details to save.');
                 return;
             }
-            
+
             if (auth()->user()->can('soil-data.approval')) {
                 $createdCount = 0;
-                
+
                 foreach ($validDetails as $detail) {
                     // Prepare SHGB date - handle empty string
                     $shgbDate = !empty($detail['shgb_expired_date']) ? $detail['shgb_expired_date'] : null;
-                    
+
                     $createData = [
                         'land_id' => $this->land_id,
                         'business_unit_id' => $this->business_unit_id,
@@ -641,22 +708,21 @@ class Soils extends Component
                         'nop_pbb' => trim($detail['nop_pbb'] ?? ''),
                         'nama_notaris_ppat' => trim($detail['nama_notaris_ppat'] ?? ''),
                         'keterangan' => trim($detail['keterangan'] ?? ''),
-                        'status' => trim($detail['status'] ?? 'active'), 
+                        'status' => trim($detail['status'] ?? 'active'),
                     ];
-                    
+
                     Soil::create($createData);
                     $createdCount++;
                 }
-                
+
                 session()->flash('message', $createdCount . ' soil record(s) created successfully. Please set soil price in Manage Costs.');
-                
             } else {
                 $requestCount = 0;
-                
+
                 foreach ($validDetails as $detail) {
                     // Prepare SHGB date - handle empty string
                     $shgbDate = !empty($detail['shgb_expired_date']) ? $detail['shgb_expired_date'] : null;
-                    
+
                     $createData = [
                         'land_id' => $this->land_id,
                         'business_unit_id' => $this->business_unit_id,
@@ -675,7 +741,7 @@ class Soils extends Component
                         'nama_notaris_ppat' => trim($detail['nama_notaris_ppat'] ?? ''),
                         'keterangan' => trim($detail['keterangan'] ?? ''),
                     ];
-                    
+
                     SoilApproval::create([
                         'soil_id' => null,
                         'requested_by' => auth()->id(),
@@ -684,17 +750,424 @@ class Soils extends Component
                         'change_type' => 'create',
                         'status' => 'pending'
                     ]);
-                    
+
                     $requestCount++;
                 }
-                
+
                 session()->flash('warning', $requestCount . ' soil record creation request(s) have been submitted for approval and are pending review.');
             }
-            
+
             $this->resetForm();
             $this->showForm = false;
         }
     }
+    // Validation rules untuk import
+    protected function importRules()
+    {
+        return [
+            'importFile' => 'required|file|mimes:xlsx,xls|max:10240',
+            'import_business_unit_id' => 'required|exists:business_units,id',
+            'import_land_id' => 'required|exists:lands,id',
+        ];
+    }
+
+    public function showImportModalView()
+    {
+        $this->showImportModal = true;
+        $this->resetImportDropdowns();
+    }
+
+    public function closeImportModal()
+    {
+        $this->showImportModal = false;
+        $this->importFile = null;
+        $this->importPreview = [];
+        $this->resetImportDropdowns();
+    }
+
+    private function resetImportDropdowns()
+    {
+        $this->import_business_unit_id = null;
+        $this->import_land_id = null;
+        $this->importBusinessUnitSearch = '';
+        $this->importLandSearch = '';
+        $this->showImportBusinessUnitDropdown = false;
+        $this->showImportLandDropdown = false;
+    }
+
+    // Methods untuk dropdown search import
+    public function searchImportBusinessUnits()
+    {
+        $this->showImportBusinessUnitDropdown = true;
+    }
+
+    public function searchImportLands()
+    {
+        if ($this->import_business_unit_id) {
+            $this->showImportLandDropdown = true;
+        }
+    }
+
+    public function getFilteredImportBusinessUnits()
+    {
+        if (empty($this->importBusinessUnitSearch)) {
+            return BusinessUnit::orderBy('name')->limit(20)->get();
+        }
+
+        return BusinessUnit::where('name', 'like', '%' . $this->importBusinessUnitSearch . '%')
+            ->orderBy('name')
+            ->limit(20)
+            ->get();
+    }
+
+    public function getFilteredImportLands()
+    {
+        if (!$this->import_business_unit_id) {
+            return collect();
+        }
+
+        $query = Land::where('business_unit_id', $this->import_business_unit_id);
+
+        if (!empty($this->importLandSearch)) {
+            $query->where('lokasi_lahan', 'like', '%' . $this->importLandSearch . '%');
+        }
+
+        return $query->orderBy('lokasi_lahan')->limit(20)->get();
+    }
+
+    public function selectImportBusinessUnit($id, $name)
+    {
+        $this->import_business_unit_id = $id;
+        $this->importBusinessUnitSearch = $name;
+        $this->showImportBusinessUnitDropdown = false;
+        $this->import_land_id = null;
+        $this->importLandSearch = '';
+    }
+
+    public function selectImportLand($id, $name)
+    {
+        $this->import_land_id = $id;
+        $this->importLandSearch = $name;
+        $this->showImportLandDropdown = false;
+    }
+
+    public function importExcel()
+    {
+        $this->validate($this->importRules());
+
+        try {
+            $path = $this->importFile->getRealPath();
+            $spreadsheet = IOFactory::load($path);
+            $worksheet = $spreadsheet->getActiveSheet();
+
+            // Get all merge cells
+            $mergeCells = $worksheet->getMergeCells();
+
+            // Parse data dari row 6 (row pertama data)
+            $highestRow = $worksheet->getHighestRow();
+            $dataRows = [];
+            $priceMap = [];
+
+            // First pass: Baca semua data dengan struktur yang benar
+            for ($row = 6; $row <= $highestRow; $row++) {
+                $rowData = [
+                    'no' => $this->parseRowNumber($worksheet->getCell("B{$row}")->getValue()),
+                    'nama_penjual' => $this->cleanCellValue($worksheet->getCell("C{$row}")->getValue()),
+                    'alamat_penjual' => $this->cleanCellValue($worksheet->getCell("D{$row}")->getValue()),
+                    'nama_pembeli' => $this->cleanCellValue($worksheet->getCell("E{$row}")->getValue()),
+                    'alamat_pembeli' => $this->cleanCellValue($worksheet->getCell("F{$row}")->getValue()),
+                    'nomor_tanggal_ppjb' => $this->cleanCellValue($worksheet->getCell("G{$row}")->getValue()),
+                    'notaris' => $this->cleanCellValue($worksheet->getCell("H{$row}")->getValue()),
+                    'letak_tanah' => $this->cleanCellValue($worksheet->getCell("I{$row}")->getValue()),
+                    'luas' => $worksheet->getCell("J{$row}")->getValue(),
+                    'bukti_kepemilikan_full' => $this->cleanCellValue($worksheet->getCell("K{$row}")->getValue()),
+                    'atas_nama' => $this->cleanCellValue($worksheet->getCell("L{$row}")->getValue()),
+                    'harga' => $worksheet->getCell("M{$row}")->getValue(),
+                    'keterangan' => $this->cleanCellValue($worksheet->getCell("N{$row}")->getValue()),
+                ];
+
+                // Skip empty rows
+                if (empty($rowData['nama_penjual']) && empty($rowData['letak_tanah'])) {
+                    continue;
+                }
+
+                $dataRows[$row] = $rowData;
+            }
+
+            // Second pass: Handle merged cells untuk harga
+            foreach ($mergeCells as $mergeCell) {
+                preg_match('/([A-Z]+)(\d+):([A-Z]+)(\d+)/', $mergeCell, $matches);
+                if (!$matches) continue;
+
+                $colStart = $matches[1];
+                $rowStart = (int)$matches[2];
+                $colEnd = $matches[3];
+                $rowEnd = (int)$matches[4];
+
+                // Jika merge di kolom M (Harga)
+                if ($colStart === 'M' && $colEnd === 'M') {
+                    $mergedPrice = $worksheet->getCell("M{$rowStart}")->getValue();
+
+                    // Simpan info merge
+                    if ($mergedPrice) {
+                        for ($r = $rowStart; $r <= $rowEnd; $r++) {
+                            $priceMap[$r] = [
+                                'total' => $mergedPrice,
+                                'start_row' => $rowStart,
+                                'end_row' => $rowEnd
+                            ];
+                        }
+                    }
+                }
+            }
+
+            // Third pass: Group data berdasarkan Nomor PPJB, Tanggal PPJB, dan Nama Penjual
+            $groupedData = [];
+            foreach ($dataRows as $row => $data) {
+                // Parse nomor dan tanggal PPJB
+                $ppjbInfo = $this->parsePpjbData($data['nomor_tanggal_ppjb']);
+
+                $groupKey = $this->createGroupKey(
+                    $ppjbInfo['nomor'],
+                    $ppjbInfo['tanggal'],
+                    $data['nama_penjual']
+                );
+
+                if (!isset($groupedData[$groupKey])) {
+                    $groupedData[$groupKey] = [
+                        'nomor_ppjb' => $ppjbInfo['nomor'],
+                        'tanggal_ppjb' => $ppjbInfo['tanggal'],
+                        'nama_penjual' => $data['nama_penjual'],
+                        'alamat_penjual' => $data['alamat_penjual'],
+                        'rows' => [],
+                        'total_luas' => 0,
+                        'total_harga' => 0,
+                        'harga_per_m2' => 0,
+                    ];
+                }
+
+                $luasRow = $this->parseFormattedNumberLuas($data['luas']);
+                $groupedData[$groupKey]['rows'][$row] = $data;
+                $groupedData[$groupKey]['total_luas'] += $luasRow;
+
+                // Tambahkan harga ke total group jika ada harga di row ini
+                if (!empty($data['harga'])) {
+                    $groupedData[$groupKey]['total_harga'] += $this->parseFormattedNumberLuas($data['harga']);
+                }
+            }
+
+            // Fourth pass: Hitung total harga untuk setiap group dari merge cells
+            foreach ($groupedData as $groupKey => &$group) {
+                // Jika total_harga masih 0, cari dari merge cells
+                if ($group['total_harga'] == 0) {
+                    foreach ($group['rows'] as $row => $data) {
+                        if (isset($priceMap[$row])) {
+                            $group['total_harga'] = $priceMap[$row]['total'];
+                            break; // Ambil harga dari merge cell pertama yang ditemukan
+                        }
+                    }
+                }
+
+                // Hitung harga per m² untuk group
+                if ($group['total_luas'] > 0 && $group['total_harga'] > 0) {
+                    $group['harga_per_m2'] = $group['total_harga'] / $group['total_luas'];
+                }
+            }
+
+            // Fifth pass: Build final data dengan distribusi harga berdasarkan luas
+            $finalData = [];
+            foreach ($groupedData as $groupKey => $group) {
+                foreach ($group['rows'] as $row => $data) {
+                    $luasRow = $this->parseFormattedNumberLuas($data['luas']);
+
+                    // Parse bukti kepemilikan
+                    $buktiParts = $this->parseBuktiKepemilikan($data['bukti_kepemilikan_full']);
+
+                    // Hitung harga untuk row ini berdasarkan harga per m² dan luas row
+                    $hargaRow = $group['harga_per_m2'] * $luasRow;
+
+                    $finalData[] = [
+                        'land_id' => $this->import_land_id, // Gunakan land_id dari dropdown
+                        'business_unit_id' => $this->import_business_unit_id, // Gunakan business_unit_id dari dropdown
+                        'nama_penjual' => $data['nama_penjual'],
+                        'alamat_penjual' => $data['alamat_penjual'],
+                        'nomor_ppjb' => $group['nomor_ppjb'],
+                        'tanggal_ppjb' => $group['tanggal_ppjb'],
+                        'letak_tanah' => $data['letak_tanah'],
+                        'luas' => $luasRow,
+                        'harga' => $hargaRow,
+                        'bukti_kepemilikan' => $buktiParts['jenis'],
+                        'bukti_kepemilikan_details' => $buktiParts['nomor'],
+                        'shgb_expired_date' => null,
+                        'atas_nama' => $data['atas_nama'],
+                        'nop_pbb' => null,
+                        'nama_notaris_ppat' => $data['notaris'],
+                        'keterangan' => $data['keterangan'] ?? null,
+                        'status' => 'active',
+                        'created_by' => auth()->id(),
+                        'updated_by' => auth()->id(),
+                    ];
+                }
+            }
+
+            //dd($finalData);
+
+            // Save data
+            if (auth()->user()->can('soil-data.approval')) {
+                $createdCount = 0;
+                foreach ($finalData as $soilData) {
+                    Soil::create($soilData);
+                    $createdCount++;
+                }
+                session()->flash('message', "{$createdCount} soil records imported successfully from Excel.");
+            } else {
+                $requestCount = 0;
+                foreach ($finalData as $soilData) {
+                    SoilApproval::create([
+                        'soil_id' => null,
+                        'requested_by' => auth()->id(),
+                        'old_data' => [],
+                        'new_data' => $soilData,
+                        'change_type' => 'create',
+                        'status' => 'pending'
+                    ]);
+                    $requestCount++;
+                }
+                session()->flash('warning', "{$requestCount} soil record import requests have been submitted for approval.");
+            }
+
+            $this->closeImportModal();
+        } catch (\Exception $e) {
+            session()->flash('error', 'Import failed: ' . $e->getMessage());
+            \Log::error('Import Excel Error: ' . $e->getMessage(), [
+                'trace' => $e->getTraceAsString()
+            ]);
+        }
+    }
+
+
+    /**
+     * Parse nomor dan tanggal PPJB dari format "No. 44, tanggal 14-07-2015"
+     */
+    private function parsePpjbData($text)
+    {
+        $nomor = '';
+        $tanggal = null;
+
+        if (empty($text)) {
+            return ['nomor' => '', 'tanggal' => null];
+        }
+
+        if (preg_match('/No\.?\s*([A-Za-z0-9\/\-.]+)/i', $text, $matches)) {
+            $nomor = trim(rtrim($matches[1], ','));
+        }
+
+        if (preg_match('/(?:(?:tanggal|tgl)\s*)?(\d{1,2}[-\/]\d{1,2}[-\/]\d{2,4})/i', $text, $matches)) {
+            try {
+                $dateStr = str_replace('/', '-', $matches[1]);
+                $tanggal = Carbon::createFromFormat('d-m-Y', $dateStr)->format('Y-m-d');
+            } catch (\Exception $e) {
+                $tanggal = null;
+            }
+        }
+
+        return [
+            'nomor' => $nomor,
+            'tanggal' => $tanggal
+        ];
+    }
+
+    /**
+     * Create group key untuk grouping data
+     */
+    private function createGroupKey($nomorPpjb, $tanggalPpjb, $namaPenjual)
+    {
+        return md5($nomorPpjb . '|' . $tanggalPpjb . '|' . $namaPenjual);
+    }
+
+    /**
+     * Parse row number dari formula =ROW(B1)
+     */
+    private function parseRowNumber($value)
+    {
+        if (empty($value)) {
+            return '';
+        }
+
+        // Handle formula seperti "=ROW(B1)"
+        if (is_string($value) && preg_match('/=ROW\([A-Z](\d+)\)/', $value, $matches)) {
+            return (int)$matches[1];
+        }
+
+        return $value;
+    }
+
+    /**
+     * Clean cell value - handle formula dan nilai langsung
+     */
+    private function cleanCellValue($value)
+    {
+        if (empty($value)) {
+            return '';
+        }
+
+        // Handle formula seperti "=ROW(B1)"
+        if (is_string($value) && strpos($value, '=ROW(') === 0) {
+            return '';
+        }
+
+        return trim($value);
+    }
+
+    /**
+     * Parse bukti kepemilikan dari teks
+     */
+    private function parseBuktiKepemilikan($text)
+    {
+        $jenis = '';
+        $nomor = '';
+
+        if (empty($text)) {
+            return ['jenis' => '', 'nomor' => ''];
+        }
+
+        $text = trim($text);
+
+        // Pola umum: "SHM No. 158", "HGB No.1037", "Sertifikat 140", "SHGB 30"
+        if (preg_match('/^(SHM|HGB|SHGB|SHMM|Sertifikat|Sertipikat|S\.K|Letter C|S\.K Gubernur)\s*(?:No\.?)?\s*([A-Za-z0-9\/.-]+)?$/i', $text, $matches)) {
+            $jenis = strtoupper(trim($matches[1]));
+            $nomor = isset($matches[2]) ? trim($matches[2]) : '';
+        } else {
+            // Kalau gak cocok pattern — anggap semua sebagai jenis
+            $jenis = $text;
+        }
+
+        return [
+            'jenis' => $jenis,
+            'nomor' => $nomor
+        ];
+    }
+
+
+    /**
+     * Parse formatted number (tetap sama)
+     */
+    private function parseFormattedNumberLuas($value)
+    {
+        if (is_numeric($value)) {
+            return (float)$value;
+        }
+
+        if (is_string($value)) {
+            $cleaned = preg_replace('/[^\d,.-]/', '', $value);
+            $cleaned = str_replace(',', '.', $cleaned);
+            return (float)$cleaned;
+        }
+
+        return 0;
+    }
+
+
 
     public function saveAdditionalCosts()
     {
@@ -707,22 +1180,22 @@ class Soils extends Component
         ]);
 
         $soil = Soil::findOrFail($this->soilId);
-        
+
         if (auth()->user()->can('soil-data-costs.approval')) {
             // User has cost approval permission - update directly
-            
+
             // Save soil price
             $soil->update([
                 'harga' => $this->parseFormattedNumber($this->soilPrice)
             ]);
-            
+
             // Save additional costs
             $this->updateBiayaTambahan($soil, $this->biayaTambahan);
-            
+
             session()->flash('message', 'Soil price and additional costs updated successfully.');
         } else {
             // User needs approval - check if costs changed
-            $oldCostData = $soil->biayaTambahanSoils()->with('description')->get()->map(function($cost) {
+            $oldCostData = $soil->biayaTambahanSoils()->with('description')->get()->map(function ($cost) {
                 return [
                     'id' => $cost->id,
                     'description_id' => $cost->description_id,
@@ -733,7 +1206,7 @@ class Soils extends Component
                 ];
             })->toArray();
 
-            $newCostData = collect($this->biayaTambahan)->map(function($biaya) {
+            $newCostData = collect($this->biayaTambahan)->map(function ($biaya) {
                 $description = \App\Models\DescriptionBiayaTambahanSoil::find($biaya['description_id']);
                 return [
                     'id' => $biaya['id'] ?? null,
@@ -778,11 +1251,11 @@ class Soils extends Component
                         'status' => 'pending'
                     ]);
                 }
-                
+
                 session()->flash('warning', 'Your cost changes have been submitted for approval and are pending review.');
             }
         }
-        
+
         // Return based on where the edit was initiated from
         if ($this->editSource === 'detail') {
             $this->showAdditionalCostsForm = false;
@@ -797,7 +1270,7 @@ class Soils extends Component
     public function updatedSoilPrice($value)
     {
         $numericValue = $this->parseFormattedNumber($value);
-        
+
         if ($numericValue) {
             $this->soilPrice = $numericValue;
             $this->soilPriceDisplay = $this->formatNumber($numericValue);
@@ -811,10 +1284,10 @@ class Soils extends Component
     {
         // Use database transaction to prevent partial updates
         DB::transaction(function () use ($soil, $biayaTambahan) {
-            
+
             // Set history logging flag to prevent automatic history creation
             $soil->historyLogging = true;
-            
+
             if (empty($biayaTambahan) || !is_array($biayaTambahan)) {
                 // Delete all existing costs
                 $existingCosts = $soil->biayaTambahanSoils()->with('description')->get();
@@ -826,19 +1299,21 @@ class Soils extends Component
                         'cost_type' => $cost->cost_type,
                         'date_cost' => $cost->date_cost,
                     ];
-                    
+
                     $soil->logAdditionalCostHistory('deleted', [], $oldCostData);
                 }
-                
+
                 $soil->biayaTambahanSoils()->delete();
-                
+
                 // Reset history logging flag
                 $soil->historyLogging = false;
                 return;
             }
 
             $existingIds = collect($biayaTambahan)
-                ->filter(function($item) { return isset($item['id']); })
+                ->filter(function ($item) {
+                    return isset($item['id']);
+                })
                 ->pluck('id')
                 ->toArray();
 
@@ -847,7 +1322,7 @@ class Soils extends Component
                 ->whereNotIn('id', $existingIds)
                 ->with('description')
                 ->get();
-                
+
             foreach ($costsToDelete as $cost) {
                 $description = $cost->description->description ?? 'Unknown';
                 $oldCostData = [
@@ -856,19 +1331,19 @@ class Soils extends Component
                     'cost_type' => $cost->cost_type,
                     'date_cost' => $cost->date_cost,
                 ];
-                
+
                 $soil->logAdditionalCostHistory('deleted', [], $oldCostData);
             }
-            
+
             $soil->biayaTambahanSoils()->whereNotIn('id', $existingIds)->delete();
 
             foreach ($biayaTambahan as $biaya) {
                 if (!empty($biaya['description_id']) && !empty($biaya['harga'])) {
                     $harga = $this->parseFormattedNumber($biaya['harga']);
-                    
+
                     $description = \App\Models\DescriptionBiayaTambahanSoil::find($biaya['description_id']);
                     $descriptionName = $description->description ?? 'Unknown';
-                    
+
                     $costData = [
                         'description' => $descriptionName,
                         'harga' => $harga,
@@ -879,7 +1354,7 @@ class Soils extends Component
                     if (isset($biaya['id'])) {
                         // UPDATE EXISTING COST
                         $existingCost = BiayaTambahanSoil::with('description')->find($biaya['id']);
-                        
+
                         if ($existingCost) {
                             $oldCostData = [
                                 'description' => $existingCost->description->description ?? 'Unknown',
@@ -887,14 +1362,14 @@ class Soils extends Component
                                 'cost_type' => $existingCost->cost_type,
                                 'date_cost' => $existingCost->date_cost,
                             ];
-                            
+
                             $hasChanges = (
                                 $existingCost->description_id != $biaya['description_id'] ||
                                 $existingCost->harga != $harga ||
                                 $existingCost->cost_type != $biaya['cost_type'] ||
                                 $existingCost->date_cost != $biaya['date_cost']
                             );
-                            
+
                             if ($hasChanges) {
                                 // Update without triggering model events
                                 $existingCost->update([
@@ -903,7 +1378,7 @@ class Soils extends Component
                                     'cost_type' => $biaya['cost_type'],
                                     'date_cost' => $biaya['date_cost']
                                 ]);
-                                
+
                                 // Only create our custom history entry
                                 $soil->logAdditionalCostHistory('updated', $costData, $oldCostData);
                             }
@@ -917,12 +1392,12 @@ class Soils extends Component
                             'cost_type' => $biaya['cost_type'],
                             'date_cost' => $biaya['date_cost'],
                         ]);
-                        
+
                         $soil->logAdditionalCostHistory('added', $costData);
                     }
                 }
             }
-            
+
             // Reset history logging flag
             $soil->historyLogging = false;
         });
@@ -934,7 +1409,7 @@ class Soils extends Component
     public function delete($id)
     {
         $soil = Soil::findOrFail($id);
-        
+
         // Check if user has deletion approval permission
         if (auth()->user()->can('soil-data.approval')) {
             // User has approval permission - delete directly
@@ -944,14 +1419,26 @@ class Soils extends Component
         } else {
             // User needs approval - create deletion approval request
             $oldData = $soil->only([
-                'land_id', 'business_unit_id', 'nama_penjual', 'alamat_penjual', 
-                'nomor_ppjb', 'tanggal_ppjb', 'letak_tanah', 'luas', 'harga', 
-                'bukti_kepemilikan', 'bukti_kepemilikan_details', 'atas_nama', 
-                'nop_pbb', 'nama_notaris_ppat', 'keterangan', 'status'
+                'land_id',
+                'business_unit_id',
+                'nama_penjual',
+                'alamat_penjual',
+                'nomor_ppjb',
+                'tanggal_ppjb',
+                'letak_tanah',
+                'luas',
+                'harga',
+                'bukti_kepemilikan',
+                'bukti_kepemilikan_details',
+                'atas_nama',
+                'nop_pbb',
+                'nama_notaris_ppat',
+                'keterangan',
+                'status'
             ]);
 
             // Include related costs in the deletion approval
-            $oldCostData = $soil->biayaTambahanSoils()->with('description')->get()->map(function($cost) {
+            $oldCostData = $soil->biayaTambahanSoils()->with('description')->get()->map(function ($cost) {
                 return [
                     'id' => $cost->id,
                     'description_id' => $cost->description_id,
@@ -972,7 +1459,7 @@ class Soils extends Component
                 'change_type' => 'delete',
                 'status' => 'pending'
             ]);
-            
+
             session()->flash('warning', 'Your deletion request has been submitted for approval and is pending review.');
         }
     }
@@ -983,10 +1470,10 @@ class Soils extends Component
     public function deleteWithReason()
     {
         $this->validate($this->getDeleteRules());
-        
+
         if ($this->deleteSoilId) {
             $soil = Soil::findOrFail($this->deleteSoilId);
-            
+
             // Check if user has deletion approval permission
             if (auth()->user()->can('soil-data.approval')) {
                 // User has approval permission - delete directly
@@ -996,14 +1483,26 @@ class Soils extends Component
             } else {
                 // User needs approval - create deletion approval request with reason
                 $oldData = $soil->only([
-                    'land_id', 'business_unit_id', 'nama_penjual', 'alamat_penjual', 
-                    'nomor_ppjb', 'tanggal_ppjb', 'letak_tanah', 'luas', 'harga', 
-                    'bukti_kepemilikan', 'bukti_kepemilikan_details', 'atas_nama', 
-                    'nop_pbb', 'nama_notaris_ppat', 'keterangan', 'status'
+                    'land_id',
+                    'business_unit_id',
+                    'nama_penjual',
+                    'alamat_penjual',
+                    'nomor_ppjb',
+                    'tanggal_ppjb',
+                    'letak_tanah',
+                    'luas',
+                    'harga',
+                    'bukti_kepemilikan',
+                    'bukti_kepemilikan_details',
+                    'atas_nama',
+                    'nop_pbb',
+                    'nama_notaris_ppat',
+                    'keterangan',
+                    'status'
                 ]);
 
                 // Include related costs in the deletion approval
-                $oldCostData = $soil->biayaTambahanSoils()->with('description')->get()->map(function($cost) {
+                $oldCostData = $soil->biayaTambahanSoils()->with('description')->get()->map(function ($cost) {
                     return [
                         'id' => $cost->id,
                         'description_id' => $cost->description_id,
@@ -1024,10 +1523,10 @@ class Soils extends Component
                     'change_type' => 'delete',
                     'status' => 'pending'
                 ]);
-                
+
                 session()->flash('warning', 'Your deletion request has been submitted for approval and is pending review.');
             }
-            
+
             $this->hideDeleteModalView();
         }
     }
@@ -1044,12 +1543,25 @@ class Soils extends Component
     public function resetForm()
     {
         $this->reset([
-            'soil', 'soilId', 'land_id', 'editMode', 'editSource', 'biayaTambahan', 'biayaInterest',
-            'descriptionSearch', 'showDescriptionDropdown',
-            'sellerNameSearch', 'sellerAddressSearch', 'showSellerNameDropdown', 'showSellerAddressDropdown',
-            'landSearch', 'showLandDropdown', 'businessUnitSearch', 'showBusinessUnitDropdown'
+            'soil',
+            'soilId',
+            'land_id',
+            'editMode',
+            'editSource',
+            'biayaTambahan',
+            'biayaInterest',
+            'descriptionSearch',
+            'showDescriptionDropdown',
+            'sellerNameSearch',
+            'sellerAddressSearch',
+            'showSellerNameDropdown',
+            'showSellerAddressDropdown',
+            'landSearch',
+            'showLandDropdown',
+            'businessUnitSearch',
+            'showBusinessUnitDropdown'
         ]);
-        
+
         // Reinitialize with clean state
         $this->initializeSoilDetails();
 
@@ -1062,7 +1574,7 @@ class Soils extends Component
             $this->businessUnitSearch = '';
             $this->allowBusinessUnitChange = true;
         }
-        
+
         $this->resetValidation();
     }
 
@@ -1072,12 +1584,12 @@ class Soils extends Component
         $this->filterLand = '';
         $this->filterStatus = ''; // ADD THIS LINE
         $this->search = '';
-        
+
         $this->filterBusinessUnitSearch = '';
         $this->filterLandSearch = '';
         $this->showBusinessUnitFilterDropdown = false;
         $this->showLandFilterDropdown = false;
-        
+
         $this->resetPage();
     }
 
@@ -1131,6 +1643,7 @@ class Soils extends Component
             'SHP' => 'Sertifikat Hak Pakai (SHP)',
             'Girik/Letter C' => 'Girik/Letter C',
             'AJB' => 'Akta Jual Beli (AJB)',
+            'SERTIPIKAT' => 'SERTIPIKAT',
             'Petok D' => 'Petok D',
             'Lainnya' => 'Lainnya'
         ];
@@ -1139,9 +1652,9 @@ class Soils extends Component
     public function addSoilDetail()
     {
         $this->soilDetails[] = $this->createEmptySoilDetail();
-        
+
         $newIndex = count($this->soilDetails) - 1;
-        
+
         $this->sellerNameSearch[$newIndex] = '';
         $this->sellerAddressSearch[$newIndex] = '';
         $this->showSellerNameDropdown[$newIndex] = false;
@@ -1157,7 +1670,7 @@ class Soils extends Component
             array_splice($this->sellerAddressSearch, $index, 1);
             array_splice($this->showSellerNameDropdown, $index, 1);
             array_splice($this->showSellerAddressDropdown, $index, 1);
-            
+
             // Re-index arrays to prevent gaps
             $this->soilDetails = array_values($this->soilDetails);
             $this->sellerNameSearch = array_values($this->sellerNameSearch);
@@ -1183,12 +1696,12 @@ class Soils extends Component
         if (!is_array($this->showSellerAddressDropdown)) {
             $this->showSellerAddressDropdown = [];
         }
-        
+
         for ($i = 0; $i < count($this->soilDetails); $i++) {
             $this->showSellerNameDropdown[$i] = ($i === $index);
             $this->showSellerAddressDropdown[$i] = false;
         }
-        
+
         $this->showSellerNameDropdown[$index] = true;
     }
 
@@ -1202,16 +1715,16 @@ class Soils extends Component
     public function getFilteredSellerNames($index)
     {
         $search = $this->sellerNameSearch[$index] ?? '';
-        
+
         $query = Soil::select('nama_penjual')
             ->distinct()
             ->whereNotNull('nama_penjual')
             ->where('nama_penjual', '!=', '');
-        
+
         if (!empty(trim($search))) {
             $query->where('nama_penjual', 'like', '%' . $search . '%');
         }
-        
+
         return $query->orderBy('nama_penjual')->limit(20)->get();
     }
 
@@ -1231,12 +1744,12 @@ class Soils extends Component
         if (!is_array($this->showSellerAddressDropdown)) {
             $this->showSellerAddressDropdown = [];
         }
-        
+
         for ($i = 0; $i < count($this->soilDetails); $i++) {
             $this->showSellerNameDropdown[$i] = false;
             $this->showSellerAddressDropdown[$i] = ($i === $index);
         }
-        
+
         $this->showSellerAddressDropdown[$index] = true;
     }
 
@@ -1250,16 +1763,16 @@ class Soils extends Component
     public function getFilteredSellerAddresses($index)
     {
         $search = $this->sellerAddressSearch[$index] ?? '';
-        
+
         $query = Soil::select('alamat_penjual')
             ->distinct()
             ->whereNotNull('alamat_penjual')
             ->where('alamat_penjual', '!=', '');
-        
+
         if (!empty(trim($search))) {
             $query->where('alamat_penjual', 'like', '%' . $search . '%');
         }
-        
+
         return $query->orderBy('alamat_penjual')->limit(20)->get();
     }
 
@@ -1274,7 +1787,7 @@ class Soils extends Component
             'cost_type' => 'standard',
             'date_cost' => '',
         ];
-        
+
         // Ensure arrays are properly sized
         if (!is_array($this->descriptionSearch)) {
             $this->descriptionSearch = [];
@@ -1282,7 +1795,7 @@ class Soils extends Component
         if (!is_array($this->showDescriptionDropdown)) {
             $this->showDescriptionDropdown = [];
         }
-        
+
         $this->descriptionSearch[$index] = '';
         $this->showDescriptionDropdown[$index] = false;
     }
@@ -1293,12 +1806,12 @@ class Soils extends Component
         unset($this->biayaTambahan[$index]);
         unset($this->descriptionSearch[$index]);
         unset($this->showDescriptionDropdown[$index]);
-        
+
         // Re-index arrays to prevent gaps
         $this->biayaTambahan = array_values($this->biayaTambahan);
         $this->descriptionSearch = array_values($this->descriptionSearch);
         $this->showDescriptionDropdown = array_values($this->showDescriptionDropdown);
-        
+
         // Dispatch event to clean up any DOM references
         $this->dispatch('cost-item-removed', removedIndex: $index);
     }
@@ -1308,8 +1821,8 @@ class Soils extends Component
         if (empty($this->biayaTambahan) || !is_array($this->biayaTambahan)) {
             return 0;
         }
-        
-        return collect($this->biayaTambahan)->sum(function($item) {
+
+        return collect($this->biayaTambahan)->sum(function ($item) {
             if (isset($item['harga'])) {
                 $parsed = $this->parseFormattedNumber($item['harga']);
                 return is_numeric($parsed) ? (int)$parsed : 0;
@@ -1330,7 +1843,7 @@ class Soils extends Component
         if (!is_array($this->showDescriptionDropdown)) {
             $this->showDescriptionDropdown = [];
         }
-        
+
         // Keep dropdown open when there's a value or when empty (to show all options)
         $this->showDescriptionDropdown[$key] = true;
     }
@@ -1341,15 +1854,15 @@ class Soils extends Component
         if (!is_array($this->showDescriptionDropdown)) {
             $this->showDescriptionDropdown = [];
         }
-        
+
         // Close all other dropdowns first - same as business unit dropdown
         for ($i = 0; $i < count($this->biayaTambahan); $i++) {
             $this->showDescriptionDropdown[$i] = false;
         }
-        
+
         // Open the requested dropdown
         $this->showDescriptionDropdown[$index] = true;
-        
+
         // Initialize search if not set
         if (!isset($this->descriptionSearch[$index])) {
             $this->descriptionSearch[$index] = '';
@@ -1362,12 +1875,12 @@ class Soils extends Component
         if (isset($this->biayaTambahan[$index])) {
             $this->biayaTambahan[$index]['description_id'] = $descriptionId;
         }
-        
+
         if (!is_array($this->descriptionSearch)) {
             $this->descriptionSearch = [];
         }
         $this->descriptionSearch[$index] = $descriptionName;
-        
+
         // Close dropdown
         $this->showDescriptionDropdown[$index] = false;
     }
@@ -1375,14 +1888,14 @@ class Soils extends Component
     public function getFilteredDescriptions($index)
     {
         $search = $this->descriptionSearch[$index] ?? '';
-        
+
         $query = DescriptionBiayaTambahanSoil::query();
-        
+
         // Apply search filter if there's text
         if (!empty(trim($search))) {
             $query->where('description', 'like', '%' . trim($search) . '%');
         }
-        
+
         return $query->orderBy('description')->limit(20)->get();
     }
 
@@ -1390,9 +1903,9 @@ class Soils extends Component
     {
         $parts = explode('.', $propertyName);
         $index = $parts[0];
-        
+
         $numericValue = $this->parseFormattedNumber($value);
-        
+
         if ($numericValue) {
             $this->biayaTambahan[$index]['harga'] = $numericValue;
             $this->biayaTambahan[$index]['harga_display'] = $this->formatNumber($numericValue);
@@ -1406,9 +1919,9 @@ class Soils extends Component
     {
         $parts = explode('.', $propertyName);
         $index = $parts[0];
-        
+
         $numericValue = $this->parseFormattedNumber($value);
-        
+
         if ($numericValue) {
             $this->soilDetails[$index]['luas'] = $numericValue;
             $this->soilDetails[$index]['luas_display'] = $this->formatNumber($numericValue);
@@ -1469,9 +1982,9 @@ class Soils extends Component
     public function getFilteredLands()
     {
         $search = $this->landSearch ?? '';
-        
+
         $query = Land::query();
-        
+
         // IMPORTANT: Only show lands if business unit is selected
         if (!empty($this->business_unit_id)) {
             $query->where('business_unit_id', $this->business_unit_id);
@@ -1479,15 +1992,15 @@ class Soils extends Component
             // If no business unit selected, return empty collection
             return collect();
         }
-        
+
         // Apply search filter
         if (!empty(trim($search))) {
-            $query->where(function($q) use ($search) {
+            $query->where(function ($q) use ($search) {
                 $q->where('lokasi_lahan', 'like', '%' . $search . '%')
-                ->orWhere('kota_kabupaten', 'like', '%' . $search . '%');
+                    ->orWhere('kota_kabupaten', 'like', '%' . $search . '%');
             });
         }
-        
+
         return $query->orderBy('lokasi_lahan')->limit(20)->get();
     }
 
@@ -1517,7 +2030,7 @@ class Soils extends Component
     {
         $this->allowBusinessUnitChange = false;
         $this->showBusinessUnitDropdown = false;
-        
+
         if ($this->filterByBusinessUnit && $this->businessUnit) {
             $this->business_unit_id = $this->businessUnit->id;
             $this->businessUnitSearch = $this->businessUnit->name;
@@ -1528,7 +2041,7 @@ class Soils extends Component
     {
         // Store old business unit id to check if it changed
         $oldBusinessUnitId = $this->business_unit_id;
-        
+
         $this->business_unit_id = $businessUnitId;
         $this->businessUnitSearch = $businessUnitName;
         $this->showBusinessUnitDropdown = false;
@@ -1538,7 +2051,7 @@ class Soils extends Component
             $this->land_id = '';
             $this->landSearch = '';
             $this->showLandDropdown = false;
-            
+
             if ($this->filterByBusinessUnit && $businessUnitId != $this->filterByBusinessUnit) {
                 session()->flash('warning', 'You have changed the business unit from the filtered selection. Land options have been reset.');
             }
@@ -1548,9 +2061,9 @@ class Soils extends Component
     public function getFilteredBusinessUnits()
     {
         $search = $this->businessUnitSearch ?? '';
-        
+
         $query = BusinessUnit::query();
-        
+
         if ($this->filterByBusinessUnit && !$this->allowBusinessUnitChange) {
             $query->where('id', $this->filterByBusinessUnit);
         } else {
@@ -1558,7 +2071,7 @@ class Soils extends Component
                 $query->where('name', 'like', '%' . $search . '%');
             }
         }
-        
+
         return $query->orderBy('name')->limit(20)->get();
     }
 
@@ -1590,18 +2103,18 @@ class Soils extends Component
     {
         // Store old filter to check if it changed
         $oldFilterBusinessUnit = $this->filterBusinessUnit;
-        
+
         $this->filterBusinessUnit = $businessUnitId;
         $this->filterBusinessUnitSearch = $businessUnitName;
         $this->showBusinessUnitFilterDropdown = false;
-        
+
         // Reset land filter if business unit filter changed
         if ($oldFilterBusinessUnit != $businessUnitId) {
             $this->filterLand = '';
             $this->filterLandSearch = '';
             $this->showLandFilterDropdown = false;
         }
-        
+
         $this->resetPage();
     }
 
@@ -1610,28 +2123,28 @@ class Soils extends Component
         $this->filterBusinessUnit = '';
         $this->filterBusinessUnitSearch = '';
         $this->showBusinessUnitFilterDropdown = false;
-        
+
         // Also clear land filter since it depends on business unit
         $this->filterLand = '';
         $this->filterLandSearch = '';
         $this->showLandFilterDropdown = false;
-        
+
         $this->resetPage();
     }
 
     public function getFilteredBusinessUnitsForFilter()
     {
         $search = $this->filterBusinessUnitSearch ?? '';
-        
+
         $query = BusinessUnit::query();
-        
+
         if (!empty(trim($search))) {
-            $query->where(function($q) use ($search) {
+            $query->where(function ($q) use ($search) {
                 $q->where('name', 'like', '%' . $search . '%')
-                ->orWhere('code', 'like', '%' . $search . '%');
+                    ->orWhere('code', 'like', '%' . $search . '%');
             });
         }
-        
+
         return $query->orderBy('name')->limit(20)->get();
     }
 
@@ -1671,9 +2184,9 @@ class Soils extends Component
     public function getFilteredLandsForFilter()
     {
         $search = $this->filterLandSearch ?? '';
-        
+
         $query = Land::query();
-        
+
         // Priority 1: Filter by business unit from filter dropdown
         if (!empty($this->filterBusinessUnit)) {
             $query->where('business_unit_id', $this->filterBusinessUnit);
@@ -1686,15 +2199,15 @@ class Soils extends Component
         else {
             return collect();
         }
-        
+
         // Apply search filter
         if (!empty(trim($search))) {
-            $query->where(function($q) use ($search) {
+            $query->where(function ($q) use ($search) {
                 $q->where('lokasi_lahan', 'like', '%' . $search . '%')
-                ->orWhere('kota_kabupaten', 'like', '%' . $search . '%');
+                    ->orWhere('kota_kabupaten', 'like', '%' . $search . '%');
             });
         }
-        
+
         return $query->orderBy('lokasi_lahan')->limit(20)->get();
     }
 
@@ -1705,22 +2218,22 @@ class Soils extends Component
     {
         foreach ($newData as $key => $newValue) {
             $oldValue = $oldData[$key] ?? null;
-            
+
             // Special handling for dates - normalize format
             if ($key === 'tanggal_ppjb' || str_ends_with($key, '_date')) {
                 $oldValue = $this->normalizeDateValue($oldValue);
                 $newValue = $this->normalizeDateValue($newValue);
             }
-            
+
             // Normalize values for comparison
             $oldNormalized = $this->normalizeValue($oldValue);
             $newNormalized = $this->normalizeValue($newValue);
-            
+
             if ($oldNormalized !== $newNormalized) {
                 return true;
             }
         }
-        
+
         return false;
     }
 
@@ -1729,12 +2242,12 @@ class Soils extends Component
         if (empty($value)) {
             return '';
         }
-        
+
         // If it's a Carbon instance
         if ($value instanceof \Carbon\Carbon) {
             return $value->format('Y-m-d');
         }
-        
+
         // If it's a DateTime string with timezone info
         if (is_string($value) && str_contains($value, 'T')) {
             try {
@@ -1743,12 +2256,12 @@ class Soils extends Component
                 return $value;
             }
         }
-        
+
         // If it's already in Y-m-d format
         if (is_string($value) && preg_match('/^\d{4}-\d{2}-\d{2}$/', $value)) {
             return $value;
         }
-        
+
         // Try to parse any other format
         try {
             return \Carbon\Carbon::parse($value)->format('Y-m-d');
@@ -1766,39 +2279,41 @@ class Soils extends Component
         if (count($oldCostData) !== count($newCostData)) {
             return true;
         }
-        
+
         // Create lookup arrays by ID
         $oldCostsById = collect($oldCostData)->keyBy('id');
         $newCostsById = collect($newCostData)->keyBy('id')->filter(fn($item) => !empty($item['id']));
-        
+
         // Check for new costs (without ID)
         $hasNewCosts = collect($newCostData)->filter(fn($item) => empty($item['id']))->isNotEmpty();
         if ($hasNewCosts) {
             return true;
         }
-        
+
         // Check for deleted costs
         $oldIds = $oldCostsById->keys();
         $newIds = $newCostsById->keys();
         if ($oldIds->diff($newIds)->isNotEmpty()) {
             return true;
         }
-        
+
         // Check for modified costs
         foreach ($newIds as $costId) {
             $oldCost = $oldCostsById->get($costId);
             $newCost = $newCostsById->get($costId);
-            
+
             if ($oldCost && $newCost) {
-                if ($oldCost['description_id'] != $newCost['description_id'] ||
+                if (
+                    $oldCost['description_id'] != $newCost['description_id'] ||
                     $oldCost['harga'] != $newCost['harga'] ||
                     $oldCost['cost_type'] != $newCost['cost_type'] ||
-                    $oldCost['date_cost'] != $newCost['date_cost']) {
+                    $oldCost['date_cost'] != $newCost['date_cost']
+                ) {
                     return true;
                 }
             }
         }
-        
+
         return false;
     }
 
@@ -1810,22 +2325,22 @@ class Soils extends Component
         if (is_null($value)) {
             return '';
         }
-        
+
         if (is_string($value)) {
             return trim($value);
         }
-        
+
         return $value;
     }
 
     public function addBiayaInterest()
     {
         $index = count($this->biayaInterest);
-        
+
         // Calculate default start_date from last entry's end_date
         $lastInterest = end($this->biayaInterest);
         $defaultStartDate = $lastInterest ? $lastInterest['end_date'] : date('Y-m-d');
-        
+
         $this->biayaInterest[] = [
             'start_date' => $defaultStartDate,
             'end_date' => '',
@@ -1853,14 +2368,14 @@ class Soils extends Component
         ]);
 
         $soil = Soil::findOrFail($this->soilId);
-        
+
         if (auth()->user()->can('soil-data-costs.approval')) {
             // User has cost approval permission - update directly
             $this->updateBiayaInterest($soil, $this->biayaInterest);
             session()->flash('message', 'Interest costs updated successfully.');
         } else {
             // User needs approval - create approval request
-            $oldInterestData = $soil->biayaTambahanInterestSoils()->get()->map(function($interest) {
+            $oldInterestData = $soil->biayaTambahanInterestSoils()->get()->map(function ($interest) {
                 return [
                     'id' => $interest->id,
                     'start_date' => $interest->start_date->format('Y-m-d'),
@@ -1871,7 +2386,7 @@ class Soils extends Component
                 ];
             })->toArray();
 
-            $newInterestData = collect($this->biayaInterest)->map(function($interest) {
+            $newInterestData = collect($this->biayaInterest)->map(function ($interest) {
                 return [
                     'id' => $interest['id'] ?? null,
                     'start_date' => $interest['start_date'],
@@ -1892,13 +2407,13 @@ class Soils extends Component
                     'change_type' => 'interest',
                     'status' => 'pending'
                 ]);
-                
+
                 session()->flash('warning', 'Your interest cost changes have been submitted for approval and are pending review.');
             } else {
                 session()->flash('info', 'No changes detected. The interest data is identical to the existing record.');
             }
         }
-        
+
         // Return based on where the edit was initiated from
         if ($this->editSource === 'detail') {
             $this->showInterestCostsForm = false;
@@ -1914,7 +2429,7 @@ class Soils extends Component
     {
         DB::transaction(function () use ($soil, $biayaInterest) {
             $soil->historyLogging = true;
-            
+
             if (empty($biayaInterest) || !is_array($biayaInterest)) {
                 $existingInterests = $soil->biayaTambahanInterestSoils()->get();
                 foreach ($existingInterests as $interest) {
@@ -1925,24 +2440,26 @@ class Soils extends Component
                         'harga_perolehan' => $interest->harga_perolehan,
                         'bunga' => $interest->bunga,
                     ];
-                    
+
                     $soil->logInterestHistory('deleted', [], $oldData);
                 }
-                
+
                 $soil->biayaTambahanInterestSoils()->delete();
                 $soil->historyLogging = false;
                 return;
             }
 
             $existingIds = collect($biayaInterest)
-                ->filter(function($item) { return isset($item['id']); })
+                ->filter(function ($item) {
+                    return isset($item['id']);
+                })
                 ->pluck('id')
                 ->toArray();
 
             $interestsToDelete = $soil->biayaTambahanInterestSoils()
                 ->whereNotIn('id', $existingIds)
                 ->get();
-                
+
             foreach ($interestsToDelete as $interest) {
                 $oldData = [
                     'start_date' => $interest->start_date->format('Y-m-d'),
@@ -1951,16 +2468,16 @@ class Soils extends Component
                     'harga_perolehan' => $interest->harga_perolehan,
                     'bunga' => $interest->bunga,
                 ];
-                
+
                 $soil->logInterestHistory('deleted', [], $oldData);
             }
-            
+
             $soil->biayaTambahanInterestSoils()->whereNotIn('id', $existingIds)->delete();
 
             foreach ($biayaInterest as $interest) {
                 if (!empty($interest['start_date']) && !empty($interest['end_date'])) {
                     $hargaPerolehan = $this->parseFormattedNumber($interest['harga_perolehan']);
-                    
+
                     $interestData = [
                         'start_date' => $interest['start_date'],
                         'end_date' => $interest['end_date'],
@@ -1971,7 +2488,7 @@ class Soils extends Component
 
                     if (isset($interest['id'])) {
                         $existingInterest = BiayaTambahanInterestSoil::find($interest['id']);
-                        
+
                         if ($existingInterest) {
                             $oldData = [
                                 'start_date' => $existingInterest->start_date->format('Y-m-d'),
@@ -1980,7 +2497,7 @@ class Soils extends Component
                                 'harga_perolehan' => $existingInterest->harga_perolehan,
                                 'bunga' => $existingInterest->bunga,
                             ];
-                            
+
                             $hasChanges = (
                                 $existingInterest->start_date->format('Y-m-d') != $interest['start_date'] ||
                                 $existingInterest->end_date->format('Y-m-d') != $interest['end_date'] ||
@@ -1988,7 +2505,7 @@ class Soils extends Component
                                 $existingInterest->harga_perolehan != $hargaPerolehan ||
                                 $existingInterest->bunga != $interest['bunga']
                             );
-                            
+
                             if ($hasChanges) {
                                 $existingInterest->update($interestData);
                                 $soil->logInterestHistory('updated', $interestData, $oldData);
@@ -1998,12 +2515,12 @@ class Soils extends Component
                         BiayaTambahanInterestSoil::create(array_merge([
                             'soil_id' => $soil->id,
                         ], $interestData));
-                        
+
                         $soil->logInterestHistory('added', $interestData);
                     }
                 }
             }
-            
+
             $soil->historyLogging = false;
         });
     }
@@ -2013,36 +2530,38 @@ class Soils extends Component
         if (count($oldData) !== count($newData)) {
             return true;
         }
-        
+
         $oldById = collect($oldData)->keyBy('id');
         $newById = collect($newData)->keyBy('id')->filter(fn($item) => !empty($item['id']));
-        
+
         $hasNewItems = collect($newData)->filter(fn($item) => empty($item['id']))->isNotEmpty();
         if ($hasNewItems) {
             return true;
         }
-        
+
         $oldIds = $oldById->keys();
         $newIds = $newById->keys();
         if ($oldIds->diff($newIds)->isNotEmpty()) {
             return true;
         }
-        
+
         foreach ($newIds as $id) {
             $old = $oldById->get($id);
             $new = $newById->get($id);
-            
+
             if ($old && $new) {
-                if ($old['start_date'] != $new['start_date'] ||
+                if (
+                    $old['start_date'] != $new['start_date'] ||
                     $old['end_date'] != $new['end_date'] ||
                     $old['remarks'] != $new['remarks'] ||
                     $old['harga_perolehan'] != $new['harga_perolehan'] ||
-                    $old['bunga'] != $new['bunga']) {
+                    $old['bunga'] != $new['bunga']
+                ) {
                     return true;
                 }
             }
         }
-        
+
         return false;
     }
 
@@ -2050,9 +2569,9 @@ class Soils extends Component
     {
         $parts = explode('.', $propertyName);
         $index = $parts[0];
-        
+
         $numericValue = $this->parseFormattedNumber($value);
-        
+
         if ($numericValue) {
             $this->biayaInterest[$index]['harga_perolehan'] = $numericValue;
             $this->biayaInterest[$index]['harga_perolehan_display'] = $this->formatNumber($numericValue);

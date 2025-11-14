@@ -4,9 +4,13 @@ namespace App\Livewire;
 
 use App\Models\LandApproval;
 use App\Models\SoilApproval;
+use App\Models\PreSoilBuy;
+use App\Models\PreSoilBuyApproval;
 use Livewire\Component;
 use Livewire\WithPagination;
 use Illuminate\Support\Collection;
+
+
 
 class MergedApprovals extends Component
 {
@@ -15,11 +19,13 @@ class MergedApprovals extends Component
     public $showDetails = [];
     public $selectedApprovals = [];
     public $selectAll = false;
-    public $filterType = 'all'; // 'all', 'land', 'soil'
+    public $filterType = 'all';
     public $showRejectionModal = false;
     public $rejectionReason = '';
     public $bulkAction = false;
-    
+    public $showModalPreSoilBuy= false;
+    public $selectedPreSoilBuy;
+
     protected $listeners = ['refreshApprovals' => '$refresh'];
 
     public function render()
@@ -38,6 +44,20 @@ class MergedApprovals extends Component
     {
         $landApprovals = collect();
         $soilApprovals = collect();
+        $preSoilBuyApprovals = collect();
+
+        // Get Pre-Soil Buy Approvals if user has permission
+        if (auth()->user()->can('pre-soil-buy.approval') && in_array($this->filterType, ['all', 'pre-soil-buy'])) {
+            $preSoilBuyApprovals = PreSoilBuyApproval::with(['preSoilBuy', 'createdBy', 'approvedBy'])
+                ->where('status', 'pending')
+                ->latest()
+                ->get()
+                ->map(function ($approval) {
+                    $approval->approval_type = 'pre-soil-buy';
+                    $approval->unique_id = 'pre_soil_buy_' . $approval->id;
+                    return $approval;
+                });
+        }
 
         // Get Land Approvals if user has permission
         if (auth()->user()->can('land-data.approval') && in_array($this->filterType, ['all', 'land'])) {
@@ -45,7 +65,7 @@ class MergedApprovals extends Component
                 ->pending()
                 ->latest()
                 ->get()
-                ->map(function($approval) {
+                ->map(function ($approval) {
                     $approval->approval_type = 'land';
                     $approval->unique_id = 'land_' . $approval->id;
                     return $approval;
@@ -58,36 +78,32 @@ class MergedApprovals extends Component
                 ->pending()
                 ->latest();
 
-            // Filter based on user permissions
             $user = auth()->user();
             $canApproveData = $user->can('soil-data.approval');
             $canApproveCosts = $user->can('soil-data-costs.approval');
             $canApproveInterestCosts = $user->can('soil-data-interest-costs.approval');
 
-            // FIXED: Better permission logic
             $allowedChangeTypes = [];
-            
+
             if ($canApproveData) {
                 $allowedChangeTypes = array_merge($allowedChangeTypes, ['details', 'delete', 'create']);
             }
-            
+
             if ($canApproveCosts) {
                 $allowedChangeTypes[] = 'costs';
             }
-            
+
             if ($canApproveInterestCosts) {
                 $allowedChangeTypes[] = 'interest';
             }
 
-            // If user has at least one permission, filter by allowed types
             if (!empty($allowedChangeTypes)) {
                 $query->whereIn('change_type', $allowedChangeTypes);
             } else {
-                // No permissions, show nothing
                 $query->where('id', '<', 0);
             }
 
-            $soilApprovals = $query->get()->map(function($approval) {
+            $soilApprovals = $query->get()->map(function ($approval) {
                 $approval->approval_type = 'soil';
                 $approval->unique_id = 'soil_' . $approval->id;
                 return $approval;
@@ -95,7 +111,9 @@ class MergedApprovals extends Component
         }
 
         // Merge and sort by created_at
-        return $landApprovals->concat($soilApprovals)
+        return $landApprovals
+            ->concat($soilApprovals)
+            ->concat($preSoilBuyApprovals)
             ->sortByDesc('created_at')
             ->values();
     }
@@ -133,8 +151,18 @@ class MergedApprovals extends Component
 
         foreach ($this->selectedApprovals as $uniqueId) {
             try {
-                [$type, $id] = explode('_', $uniqueId);
-                
+                $parts = explode('_', $uniqueId);
+
+                if (count($parts) === 4 && $parts[0] === 'pre' && $parts[1] === 'soil' && $parts[2] === 'buy') {
+                    // Handle pre_soil_buy_X
+                    $type = 'pre_soil_buy';
+                    $id = $parts[3];
+                } else {
+                    // Handle land_X and soil_X
+                    $type = $parts[0];
+                    $id = $parts[1];
+                }
+
                 if ($type === 'land') {
                     $approval = LandApproval::find($id);
                     if ($approval && auth()->user()->can('land-data.approval')) {
@@ -152,11 +180,17 @@ class MergedApprovals extends Component
                         } elseif ($approval->change_type === 'interest' && auth()->user()->can('soil-data-interest-costs.approval')) {
                             $canApprove = true;
                         }
-                        
+
                         if ($canApprove) {
                             $approval->approve();
                             $successCount++;
                         }
+                    }
+                } elseif ($type === 'pre_soil_buy') {
+                    $approval = PreSoilBuyApproval::find($id);
+                    if ($approval && auth()->user()->can('pre-soil-buy.approval')) {
+                        $approval->approve(auth()->id());
+                        $successCount++;
                     }
                 }
             } catch (\Exception $e) {
@@ -169,10 +203,9 @@ class MergedApprovals extends Component
 
         if ($successCount > 0) {
             session()->flash('message', "{$successCount} approval(s) processed successfully.");
-
             $this->dispatch('reload-page');
         }
-        
+
         if (!empty($errors)) {
             session()->flash('error', implode(' ', $errors));
         }
@@ -184,7 +217,7 @@ class MergedApprovals extends Component
             session()->flash('error', 'Please select at least one approval to reject.');
             return;
         }
-        
+
         $this->bulkAction = true;
         $this->rejectionReason = '';
         $this->showRejectionModal = true;
@@ -222,8 +255,18 @@ class MergedApprovals extends Component
 
         foreach ($this->selectedApprovals as $uniqueId) {
             try {
-                [$type, $id] = explode('_', $uniqueId);
-                
+                $parts = explode('_', $uniqueId);
+
+                if (count($parts) === 4 && $parts[0] === 'pre' && $parts[1] === 'soil' && $parts[2] === 'buy') {
+                    // Handle pre_soil_buy_X
+                    $type = 'pre_soil_buy';
+                    $id = $parts[3];
+                } else {
+                    // Handle land_X and soil_X
+                    $type = $parts[0];
+                    $id = $parts[1];
+                }
+
                 if ($type === 'land') {
                     $approval = LandApproval::find($id);
                     if ($approval && auth()->user()->can('land-data.approval')) {
@@ -241,11 +284,17 @@ class MergedApprovals extends Component
                         } elseif ($approval->change_type === 'interest' && auth()->user()->can('soil-data-interest-costs.approval')) {
                             $canReject = true;
                         }
-                        
+
                         if ($canReject) {
                             $approval->reject($this->rejectionReason);
                             $successCount++;
                         }
+                    }
+                } elseif ($type === 'pre_soil_buy') {
+                    $approval = PreSoilBuyApproval::find($id);
+                    if ($approval && auth()->user()->can('pre-soil-buy.approval')) {
+                        $approval->reject(auth()->id(), $this->rejectionReason);
+                        $successCount++;
                     }
                 }
             } catch (\Exception $e) {
@@ -259,10 +308,9 @@ class MergedApprovals extends Component
 
         if ($successCount > 0) {
             session()->flash('message', "{$successCount} approval(s) rejected successfully.");
-
             $this->dispatch('reload-page');
         }
-        
+
         if (!empty($errors)) {
             session()->flash('error', implode(' ', $errors));
         }
@@ -272,11 +320,50 @@ class MergedApprovals extends Component
     {
         if ($approval->approval_type === 'land') {
             return $this->getLandChangeDetails($approval);
-        } elseif ($approval->change_type === 'interest') {
+        } elseif ($approval->approval_type === 'soil' && $approval->change_type === 'interest') {
             return $this->getInterestChangeDetails($approval);
-        } else {
+        } elseif ($approval->approval_type === 'soil') {
             return $this->getSoilChangeDetails($approval);
+        } elseif ($approval->approval_type === 'pre-soil-buy') {
+            return $this->getPreSoilBuyChangeDetails($approval);
         }
+
+        return [];
+    }
+
+    public function getPreSoilBuyChangeDetails($approval)
+    {
+        $details = [];
+        $newData = $approval->new_data ?? [];
+
+        if (!empty($newData)) {
+            $fields = [
+                'nama_penjual' => 'Seller Name',
+                'alamat_penjual' => 'Seller Address',
+                'letak_tanah' => 'Land Location',
+                'luas_tanah' => 'Land Area (m²)',
+                'harga_tanah' => 'Land Price',
+                'keterangan' => 'Remarks'
+            ];
+
+            foreach ($fields as $field => $label) {
+                if (isset($newData[$field])) {
+                    $value = $newData[$field];
+
+                    // Format currency fields
+                    if (in_array($field, ['harga_tanah', 'luas_tanah'])) {
+                        $value = $this->formatCurrency($value);
+                    }
+
+                    $details[] = [
+                        'field' => $label,
+                        'value' => $value ?: 'N/A'
+                    ];
+                }
+            }
+        }
+
+        return $details;
     }
 
     public function getInterestChangeDetails($approval)
@@ -284,17 +371,17 @@ class MergedApprovals extends Component
         $changes = [];
         $oldData = $approval->old_data ?? [];
         $newData = $approval->new_data ?? [];
-        
+
         $oldInterestsById = collect($oldData)->keyBy('id');
         $newInterestsById = collect($newData)->keyBy('id')->filter(fn($item) => !empty($item['id']));
-        
+
         $allInterestIds = collect($oldData)->pluck('id')->merge(collect($newData)->pluck('id'))->filter()->unique();
-        
+
         // Check for new interests
         $newInterestsWithoutId = collect($newData)->filter(function ($interest) {
             return empty($interest['id']) || is_null($interest['id']);
         });
-        
+
         foreach ($newInterestsWithoutId as $newInterest) {
             $startDate = isset($newInterest['start_date']) ? \Carbon\Carbon::parse($newInterest['start_date'])->format('d/m/Y') : 'N/A';
             $endDate = isset($newInterest['end_date']) ? \Carbon\Carbon::parse($newInterest['end_date'])->format('d/m/Y') : 'N/A';
@@ -302,7 +389,7 @@ class MergedApprovals extends Component
             if (isset($newInterest['start_date']) && isset($newInterest['end_date'])) {
                 $days = \Carbon\Carbon::parse($newInterest['start_date'])->diffInDays(\Carbon\Carbon::parse($newInterest['end_date']));
             }
-            
+
             $changes[] = [
                 'type' => 'added',
                 'start_date' => $startDate,
@@ -313,16 +400,16 @@ class MergedApprovals extends Component
                 'remarks' => $newInterest['remarks'] ?? '',
             ];
         }
-        
+
         // Check for modifications and deletions
         foreach ($allInterestIds as $interestId) {
             $oldInterest = $oldInterestsById->get($interestId);
             $newInterest = $newInterestsById->get($interestId);
-            
+
             if ($oldInterest && $newInterest) {
                 $hasChanges = false;
                 $changeDetails = [];
-                
+
                 if ($oldInterest['start_date'] != $newInterest['start_date']) {
                     $hasChanges = true;
                     $changeDetails['start_date'] = [
@@ -330,7 +417,7 @@ class MergedApprovals extends Component
                         'new' => \Carbon\Carbon::parse($newInterest['start_date'])->format('d/m/Y')
                     ];
                 }
-                
+
                 if ($oldInterest['end_date'] != $newInterest['end_date']) {
                     $hasChanges = true;
                     $changeDetails['end_date'] = [
@@ -338,7 +425,7 @@ class MergedApprovals extends Component
                         'new' => \Carbon\Carbon::parse($newInterest['end_date'])->format('d/m/Y')
                     ];
                 }
-                
+
                 if ($oldInterest['harga_perolehan'] != $newInterest['harga_perolehan']) {
                     $hasChanges = true;
                     $changeDetails['harga_perolehan'] = [
@@ -346,7 +433,7 @@ class MergedApprovals extends Component
                         'new' => $this->formatCurrency($newInterest['harga_perolehan'])
                     ];
                 }
-                
+
                 if ($oldInterest['bunga'] != $newInterest['bunga']) {
                     $hasChanges = true;
                     $changeDetails['interest_rate'] = [
@@ -354,7 +441,7 @@ class MergedApprovals extends Component
                         'new' => number_format($newInterest['bunga'], 2) . '%'
                     ];
                 }
-                
+
                 if (($oldInterest['remarks'] ?? '') != ($newInterest['remarks'] ?? '')) {
                     $hasChanges = true;
                     $changeDetails['remarks'] = [
@@ -362,23 +449,22 @@ class MergedApprovals extends Component
                         'new' => $newInterest['remarks'] ?? '-'
                     ];
                 }
-                
+
                 if ($hasChanges) {
                     $startDate = \Carbon\Carbon::parse($newInterest['start_date'])->format('d/m/Y');
                     $endDate = \Carbon\Carbon::parse($newInterest['end_date'])->format('d/m/Y');
-                    
+
                     $changes[] = [
                         'type' => 'modified',
                         'period' => "{$startDate} - {$endDate}",
                         'changes' => $changeDetails
                     ];
                 }
-                
             } elseif ($oldInterest && !$newInterest) {
                 $startDate = \Carbon\Carbon::parse($oldInterest['start_date'])->format('d/m/Y');
                 $endDate = \Carbon\Carbon::parse($oldInterest['end_date'])->format('d/m/Y');
                 $days = \Carbon\Carbon::parse($oldInterest['start_date'])->diffInDays(\Carbon\Carbon::parse($oldInterest['end_date']));
-                
+
                 $changes[] = [
                     'type' => 'deleted',
                     'start_date' => $startDate,
@@ -390,7 +476,7 @@ class MergedApprovals extends Component
                 ];
             }
         }
-        
+
         return $changes;
     }
 
@@ -403,17 +489,16 @@ class MergedApprovals extends Component
             'deleted' => 0,
             'total_changes' => count($changes)
         ];
-        
+
         foreach ($changes as $change) {
             $summary[$change['type']]++;
         }
-        
+
         return $summary;
     }
 
     private function getLandChangeDetails($approval)
     {
-        // Reuse logic from LandApprovals component
         $details = [];
 
         if (in_array($approval->change_type, ['updated', 'details'])) {
@@ -457,7 +542,6 @@ class MergedApprovals extends Component
 
     private function getSoilChangeDetails($approval)
     {
-        // Reuse logic from SoilApprovals component
         if ($approval->change_type === 'details') {
             return $this->getSoilDetailChanges($approval);
         } elseif ($approval->change_type === 'costs') {
@@ -467,7 +551,7 @@ class MergedApprovals extends Component
         } elseif ($approval->change_type === 'create') {
             return $this->getSoilCreateChanges($approval);
         }
-        
+
         return [];
     }
 
@@ -476,19 +560,16 @@ class MergedApprovals extends Component
         $changes = [];
         $oldData = $approval->old_data ?? [];
         $newData = $approval->new_data ?? [];
-        
-        // Create lookup arrays for easier comparison
+
         $oldCostsById = collect($oldData)->keyBy('id');
         $newCostsById = collect($newData)->keyBy('id');
-        
-        // Track all cost IDs from both old and new data
+
         $allCostIds = collect($oldData)->pluck('id')->merge(collect($newData)->pluck('id'))->filter()->unique();
-        
-        // Check for new costs (costs without an ID in new data)
+
         $newCostsWithoutId = collect($newData)->filter(function ($cost) {
             return empty($cost['id']) || is_null($cost['id']);
         });
-        
+
         foreach ($newCostsWithoutId as $newCost) {
             $changes[] = [
                 'type' => 'added',
@@ -499,26 +580,26 @@ class MergedApprovals extends Component
                 'old_amount' => null
             ];
         }
-        
-        // Check for modifications and deletions
+
         foreach ($allCostIds as $costId) {
             $oldCost = $oldCostsById->get($costId);
             $newCost = $newCostsById->get($costId);
-            
+
             if ($oldCost && $newCost) {
-                // MODIFIED COST - check if any field has changed
                 $hasChanges = false;
                 $changeDetails = [];
-                
-                if ($oldCost['description_id'] != $newCost['description_id'] || 
-                    $oldCost['description'] != $newCost['description']) {
+
+                if (
+                    $oldCost['description_id'] != $newCost['description_id'] ||
+                    $oldCost['description'] != $newCost['description']
+                ) {
                     $hasChanges = true;
                     $changeDetails['description'] = [
                         'old' => $oldCost['description'] ?? 'Unknown',
                         'new' => $newCost['description'] ?? 'Unknown'
                     ];
                 }
-                
+
                 if ($oldCost['harga'] != $newCost['harga']) {
                     $hasChanges = true;
                     $changeDetails['amount'] = [
@@ -526,7 +607,7 @@ class MergedApprovals extends Component
                         'new' => $this->formatCurrency($newCost['harga'])
                     ];
                 }
-                
+
                 if ($oldCost['cost_type'] != $newCost['cost_type']) {
                     $hasChanges = true;
                     $changeDetails['cost_type'] = [
@@ -534,7 +615,7 @@ class MergedApprovals extends Component
                         'new' => ucfirst(str_replace('_', ' ', $newCost['cost_type']))
                     ];
                 }
-                
+
                 if ($oldCost['date_cost'] != $newCost['date_cost']) {
                     $hasChanges = true;
                     $changeDetails['date'] = [
@@ -542,7 +623,7 @@ class MergedApprovals extends Component
                         'new' => $newCost['date_cost']
                     ];
                 }
-                
+
                 if ($hasChanges) {
                     $changes[] = [
                         'type' => 'modified',
@@ -550,9 +631,7 @@ class MergedApprovals extends Component
                         'changes' => $changeDetails
                     ];
                 }
-                
             } elseif ($oldCost && !$newCost) {
-                // DELETED COST
                 $changes[] = [
                     'type' => 'deleted',
                     'description' => $oldCost['description'] ?? 'Unknown Description',
@@ -562,11 +641,10 @@ class MergedApprovals extends Component
                 ];
             }
         }
-        
+
         return $changes;
     }
-    
-    // Helper method to get cost change summary for display
+
     public function getCostChangeSummary($approval)
     {
         $changes = $this->getSoilCostChangeDetails($approval);
@@ -576,23 +654,22 @@ class MergedApprovals extends Component
             'deleted' => 0,
             'total_changes' => count($changes)
         ];
-        
+
         foreach ($changes as $change) {
             $summary[$change['type']]++;
         }
-        
+
         return $summary;
     }
-    
-    // Helper method to calculate total cost difference
+
     public function getCostDifference($approval)
     {
         $oldData = $approval->old_data ?? [];
         $newData = $approval->new_data ?? [];
-        
+
         $oldTotal = collect($oldData)->sum('harga');
         $newTotal = collect($newData)->sum('harga');
-        
+
         return [
             'old_total' => $this->formatCurrency($oldTotal),
             'new_total' => $this->formatCurrency($newTotal),
@@ -606,7 +683,7 @@ class MergedApprovals extends Component
         $changes = [];
         $oldData = $approval->old_data;
         $newData = $approval->new_data;
-        
+
         foreach ($newData as $field => $newValue) {
             if (isset($oldData[$field]) && $oldData[$field] != $newValue) {
                 $changes[] = [
@@ -616,40 +693,25 @@ class MergedApprovals extends Component
                 ];
             }
         }
-        
-        return $changes;
-    }
 
-    private function getSoilCostChanges($approval)
-    {
-        // Return summary for display
-        $oldData = $approval->old_data ?? [];
-        $newData = $approval->new_data ?? [];
-        
-        return [
-            'type' => 'costs',
-            'old_count' => count($oldData),
-            'new_count' => count($newData),
-            'old_total' => collect($oldData)->sum('harga'),
-            'new_total' => collect($newData)->sum('harga'),
-        ];
+        return $changes;
     }
 
     private function getSoilDeleteChanges($approval)
     {
         $details = [];
         $oldData = $approval->old_data;
-        
+
         if ($oldData) {
             $details[] = ['field' => 'Seller Name', 'value' => $oldData['nama_penjual'] ?? 'N/A'];
             $details[] = ['field' => 'Location', 'value' => $oldData['letak_tanah'] ?? 'N/A'];
             $details[] = ['field' => 'PPJB Number', 'value' => $oldData['nomor_ppjb'] ?? 'N/A'];
         }
-        
+
         if (isset($approval->new_data['deletion_reason'])) {
             $details[] = ['field' => 'Deletion Reason', 'value' => $approval->new_data['deletion_reason']];
         }
-        
+
         return $details;
     }
 
@@ -657,11 +719,11 @@ class MergedApprovals extends Component
     {
         $details = [];
         $newData = $approval->new_data;
-        
+
         if (!$newData) return [];
-        
+
         $fields = ['nama_penjual', 'alamat_penjual', 'nomor_ppjb', 'letak_tanah', 'luas', 'harga'];
-        
+
         foreach ($fields as $field) {
             if (isset($newData[$field])) {
                 $details[] = [
@@ -670,7 +732,7 @@ class MergedApprovals extends Component
                 ];
             }
         }
-        
+
         return $details;
     }
 
@@ -691,17 +753,16 @@ class MergedApprovals extends Component
     {
         if (is_null($value) || $value === '') return 'N/A';
 
-        // Handle business_unit_id - show the business unit name
         if ($key === 'business_unit_id' && is_numeric($value)) {
             $businessUnit = \App\Models\BusinessUnit::find($value);
             return $businessUnit ? "{$businessUnit->name} ({$businessUnit->code})" : "ID: {$value}";
         }
-        
+
         $moneyFields = ['nilai_perolehan', 'njop', 'est_harga_pasar'];
         if (in_array($key, $moneyFields)) {
             return 'Rp ' . number_format((float)$value, 0, ',', '.');
         }
-        
+
         return $value;
     }
 
@@ -721,11 +782,23 @@ class MergedApprovals extends Component
     private function formatSoilValue($key, $value)
     {
         if (is_null($value) || $value === '') return 'N/A';
-        
+
         if (in_array($key, ['luas', 'harga'])) {
             return 'Rp ' . number_format($value, 0, ',', '.');
         }
-        
+
         return $value;
+    }
+
+
+    public function openPreSoilBuy($id)
+    {
+        $this->selectedPreSoilBuy = PreSoilBuy::with(['createdBy', 'updatedBy'])->findOrFail($id);
+        $this->showModalPreSoilBuy = true;
+    }
+
+    public function closeModalSoilBuy()
+    {
+        $this->showModalPreSoilBuy = false;
     }
 }

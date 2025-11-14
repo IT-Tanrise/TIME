@@ -6,9 +6,9 @@
         @include('livewire.partners.show')
     @else
         <!-- Compact Header -->
-        <div class="bg-white shadow-sm border-b border-gray-200 sticky top-0 z-10">
-            <div class="mx-auto px-4 sm:px-6 lg:px-8">
-                <div class="flex justify-between items-center py-3">
+        <div class="sticky top-0 z-10 bg-white border-b border-gray-200 shadow-sm">
+            <div class="px-4 mx-auto sm:px-6 lg:px-8">
+                <div class="flex items-center justify-between py-3">
                     <div class="flex items-center space-x-3">
                         <button onclick="history.back()" 
                                 class="inline-flex items-center px-4 py-2.5 bg-gray-600 border border-transparent rounded-lg font-medium text-sm text-white hover:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-gray-500 focus:ring-offset-2 transition ease-in-out duration-150 mr-4">
@@ -19,7 +19,7 @@
                         <h1 class="text-xl font-semibold text-gray-900">
                             Ownerships
                             @if($businessUnit)
-                                <span class="text-base text-blue-600 font-normal">- <a href="{{ route('business-units', ['view' => 'show', 'id' => $businessUnit->id]) }}" class="hover:text-blue-800">{{ $businessUnit->name }} ({{ $businessUnit->code }})</a></span>
+                                <span class="text-base font-normal text-blue-600">- <a href="{{ route('business-units', ['view' => 'show', 'id' => $businessUnit->id]) }}" class="hover:text-blue-800">{{ $businessUnit->name }} ({{ $businessUnit->code }})</a></span>
                             @endif
                         </h1>
                     </div>
@@ -45,11 +45,11 @@
         </div>
 
         <!-- Main Content -->
-        <div class="mx-auto px-4 sm:px-6 lg:px-8 py-4">
+        <div class="px-4 py-4 mx-auto sm:px-6 lg:px-8">
             <!-- Compact Search Section -->
             @if(!$this->isFiltered())
-                <div class="bg-white rounded-lg shadow-sm border border-gray-200 p-4 mb-4">
-                    <div class="grid grid-cols-1 md:grid-cols-3 gap-3">
+                <div class="p-4 mb-4 bg-white border border-gray-200 rounded-lg shadow-sm">
+                    <div class="grid grid-cols-1 gap-3 md:grid-cols-3">
                         <!-- Search -->
                         <div class="md:col-span-2">
                             <input type="text" 
@@ -60,14 +60,14 @@
                     </div>
                 </div>
             @else
-                <div class="bg-white rounded-lg shadow-sm border border-gray-200 p-3 mb-4">
-                    <div class="flex justify-between items-center">
+                <div class="p-3 mb-4 bg-white border border-gray-200 rounded-lg shadow-sm">
+                    <div class="flex items-center justify-between">
                         <input wire:model.live="search" 
                             type="text" 
                             placeholder="Search ownerships by name..." 
-                            class="flex-1 px-3 py-2 text-sm border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500 mr-4">
+                            class="flex-1 px-3 py-2 mr-4 text-sm border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500">
                         @if($businessUnit)
-                            <span class="bg-blue-100 text-blue-800 px-3 py-1 rounded-full text-sm font-medium">
+                            <span class="px-3 py-1 text-sm font-medium text-blue-800 bg-blue-100 rounded-full">
                                 {{ $businessUnit->name }}
                             </span>
                         @endif
@@ -77,28 +77,28 @@
 
             <!-- Alert Messages -->
             @if (session()->has('message'))
-                <div class="bg-green-100 border-l-4 border-green-500 text-green-700 p-3 mb-4 rounded">
+                <div class="p-3 mb-4 text-green-700 bg-green-100 border-l-4 border-green-500 rounded">
                     {{ session('message') }}
                 </div>
             @endif
 
             @if (session()->has('error'))
-                <div class="bg-red-100 border-l-4 border-red-500 text-red-700 p-3 mb-4 rounded">
+                <div class="p-3 mb-4 text-red-700 bg-red-100 border-l-4 border-red-500 rounded">
                     {{ session('error') }}
                 </div>
             @endif
 
             <!-- Compact Table -->
-            <div class="bg-white rounded-lg shadow-sm border border-gray-200 overflow-hidden">
+            <div class="overflow-hidden bg-white border border-gray-200 rounded-lg shadow-sm">
                 <div class="overflow-x-auto">
                     <table class="min-w-full divide-y divide-gray-200">
                         <thead class="bg-gray-50">
                             <tr>
-                                <th class="px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">BU</th>
-                                <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Partner Name</th>
-                                <th class="px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Percentage</th>
-                                <th class="px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Lembar Saham</th>
-                                <th class="px-2 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
+                                <th class="px-3 py-3 text-xs font-medium tracking-wider text-left text-gray-500 uppercase">BU</th>
+                                <th class="px-4 py-3 text-xs font-medium tracking-wider text-left text-gray-500 uppercase">Partner Name</th>
+                                <th class="px-3 py-3 text-xs font-medium tracking-wider text-left text-gray-500 uppercase">Percentage</th>
+                                <th class="px-3 py-3 text-xs font-medium tracking-wider text-left text-gray-500 uppercase">Lembar Saham</th>
+                                <th class="px-2 py-3 text-xs font-medium tracking-wider text-left text-gray-500 uppercase">Actions</th>
                             </tr>
                         </thead>
                         <tbody class="bg-white divide-y divide-gray-200">
@@ -120,7 +120,7 @@
                                         <div class="flex items-center space-x-1">
                                             <!-- View Button -->
                                             <button wire:click="showDetail({{ $partner->id }})" 
-                                                    class="text-blue-600 hover:text-blue-900 p-1 rounded hover:bg-blue-50"
+                                                    class="p-1 text-blue-600 rounded hover:text-blue-900 hover:bg-blue-50"
                                                     title="View Details">
                                                 <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path>
@@ -131,7 +131,7 @@
                                             <!-- Edit Button -->
                                             @can('ownerships.edit')
                                             <button wire:click="showEditForm({{ $partner->id }})" 
-                                                    class="text-yellow-600 hover:text-yellow-900 p-1 rounded hover:bg-yellow-50"
+                                                    class="p-1 text-yellow-600 rounded hover:text-yellow-900 hover:bg-yellow-50"
                                                     title="Edit">
                                                 <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"></path>
@@ -143,7 +143,7 @@
                                             @can('ownerships.delete')
                                             <button wire:click="delete({{ $partner->id }})" 
                                                     wire:confirm="Are you sure you want to delete this ownership record?"
-                                                    class="text-red-600 hover:text-red-900 p-1 rounded hover:bg-red-50"
+                                                    class="p-1 text-red-600 rounded hover:text-red-900 hover:bg-red-50"
                                                     title="Delete">
                                                 <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path>
