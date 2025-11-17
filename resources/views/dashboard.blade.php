@@ -20,7 +20,7 @@
                     </div>
 
                     {{-- Pending Approvals Summary Badge --}}
-                    @canany(['pre-soil-buy.approval', 'land-data.approval', 'soil-data.approval',
+                    @canany(['fields.approval', 'pre-soil-buy.approval', 'land-data.approval', 'soil-data.approval',
                         'soil-data-costs.approval'])
                         @php
                             $totalLandPending = 0;
@@ -119,7 +119,8 @@
 
                 <div class="grid grid-cols-2 gap-2 md:grid-cols-3 lg:grid-cols-5">
                     {{-- ADEM --}}
-                    @canany(['lands.access', 'soils.access', 'ownerships.access', 'pre-soil-buy.access'])
+                    @canany(['fields.access', 'lands.access', 'soils.access', 'ownerships.access',
+                        'pre-soil-buy.access'])
                         <div class="relative">
                             <button onclick="toggleMenu('adem')"
                                 class="flex items-center justify-between w-full p-2 text-left transition-colors rounded-lg bg-blue-50 hover:bg-blue-100">
@@ -145,28 +146,53 @@
                             </button>
                             <div id="adem-menu"
                                 class="absolute left-0 right-0 z-10 hidden mt-1 bg-white border border-gray-200 rounded-lg shadow-lg top-full min-w-max">
+
+                                {{-- Ownerships --}}
                                 @can('ownerships.access')
                                     <a href="{{ route('partners.index') }}"
-                                        class="block px-3 py-1.5 text-xs text-gray-700 hover:bg-blue-50 rounded-t-lg">🏢
-                                        Ownerships</a>
-                                @endcan
-                                @can('lands.access')
-                                    <button onclick="showBusinessUnitModal('lands')"
-                                        class="w-full text-left px-3 py-1.5 text-xs text-gray-700 hover:bg-blue-50">🏞️
-                                        Lands</button>
-                                @endcan
-                                @can('soils.access')
-                                    <button onclick="showBusinessUnitModal('soils')"
-                                        class="w-full text-left px-3 py-1.5 text-xs text-gray-700 hover:bg-blue-50 rounded-b-lg">🌱
-                                        Soils</button>
+                                        class="block px-3 py-1.5 text-xs text-gray-700 hover:bg-blue-50 rounded-t-lg">
+                                        <i class="mr-1 fa-solid fa-user-tie"></i>
+                                        Ownerships
+                                    </a>
                                 @endcan
 
+                                {{-- Lands --}}
+                                @can('lands.access')
+                                    <button onclick="showBusinessUnitModal('lands')"
+                                        class="w-full text-left px-3 py-1.5 text-xs text-gray-700 hover:bg-blue-50">
+                                        <i class="mr-1 fa-solid fa-mountain-city"></i>
+                                        Lands
+                                    </button>
+                                @endcan
+
+                                {{-- Soils --}}
+                                @can('soils.access')
+                                    <button onclick="showBusinessUnitModal('soils')"
+                                        class="w-full text-left px-3 py-1.5 text-xs text-gray-700 hover:bg-blue-50">
+                                        <i class="mr-1 fa-solid fa-seedling"></i>
+                                        Soils
+                                    </button>
+                                @endcan
+
+                                {{-- Internal Memo --}}
                                 @can('pre-soil-buy.access')
                                     <a href="{{ route('preSoilBuy.index') }}"
-                                        class="block px-3 py-1.5 text-xs text-gray-700 hover:bg-blue-50 rounded-t-lg">📄
-                                        Pre Soil Buy</a>
+                                        class="block px-3 py-1.5 text-xs text-gray-700 hover:bg-blue-50">
+                                        <i class="mr-1 fa-solid fa-file"></i>
+                                        Internal Memo
+                                    </a>
+                                @endcan
+
+                                {{-- Fields --}}
+                                @can('fields.access')
+                                    <a href="{{ route('fields.index') }}"
+                                        class="block px-3 py-1.5 text-xs text-gray-700 hover:bg-blue-50 rounded-b-lg">
+                                        <i class="mr-1 fa-solid fa-chart-area"></i>
+                                        Fields
+                                    </a>
                                 @endcan
                             </div>
+
                         </div>
                     @endcanany
 
@@ -203,7 +229,8 @@
                                 <a href="#" class="block px-3 py-1.5 text-xs text-gray-700 hover:bg-green-50">💰
                                     Payment Tracking</a>
                                 <a href="#"
-                                    class="block px-3 py-1.5 text-xs text-gray-700 hover:bg-green-50 rounded-b-lg">📅 Rental
+                                    class="block px-3 py-1.5 text-xs text-gray-700 hover:bg-green-50 rounded-b-lg">📅
+                                    Rental
                                     Schedule</a>
                             </div>
                         </div>

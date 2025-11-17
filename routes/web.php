@@ -15,18 +15,21 @@ use App\Livewire\SoilApprovals;
 use App\Livewire\VendorsIFCA;
 use App\Livewire\PreSoilsBuy;
 use App\Livewire\PreSoilBuyApprovalController;
-   
+use App\Livewire\Fields;
+use App\Livewire\FieldApprovals;
+use App\Livewire\FieldHistories;
 
 use App\Http\Controllers\RoleController;
 use App\Http\Controllers\PermissionController;
 use App\Http\Controllers\UserController;
+
 
 Route::get('posts', Posts::class)->name('posts')->middleware('auth');
 Route::get('tasks', Tasks::class)->name('tasks')->middleware('auth');
 
 Route::middleware(['auth'])->group(function () {
     // Approval Routes
-    Route::get('/approvals', function() {
+    Route::get('/approvals', function () {
         return view('approvals');
     })->name('approvals');
 
@@ -46,7 +49,7 @@ Route::middleware(['auth'])->group(function () {
         Route::get('/lands/{landId}/history', \App\Livewire\LandHistories::class)
             ->name('lands.history');
         Route::get('/land-certificates/{businessUnit?}/{land?}', \App\Livewire\LandCertificates::class)
-        ->name('land-certificates');
+            ->name('land-certificates');
     });
 
     // Land Interest Rates
@@ -70,21 +73,30 @@ Route::middleware(['auth'])->group(function () {
         Route::get('/soils', Soils::class)->name('soils');
         Route::get('/soils/{soilId}/show', Soils::class)->name('soils.show');
         Route::get('/soils/business-unit/{businessUnit}/{soilId?}', Soils::class)->name('soils.by-business-unit')
-        ->where('businessUnit', '[0-9]+');
+            ->where('businessUnit', '[0-9]+');
         // Soil history routes
         Route::get('/soils/{soilId}/history', SoilHistories::class)->name('soils.history');
         //csv
         Route::post('/soils/export', [App\Http\Controllers\SoilExportController::class, 'exportCsv'])
-        ->name('soils.export');
+            ->name('soils.export');
     });
 
 
-    
+
     // Pre-Soil-Buy Routes
     Route::middleware(['permission:pre-soil-buy.access'])->group(function () {
         Route::get('/preSoilBuy', preSoilsBuy::class)->name('preSoilBuy.index');
-
     });
+
+
+    // Field Routes
+    Route::middleware(['permission:fields.access'])->group(function () {
+        Route::get('/fields', Fields::class)->name('fields.index');
+    });
+
+    Route::get('/field-approvals', FieldApprovals::class)->name('field-approvals');
+    Route::get('/field-histories', FieldHistories::class)->name('field-histories');
+
 
     // Rent Routes
     Route::prefix('rents')->name('rents.')->group(function () {
@@ -117,7 +129,7 @@ Route::middleware([
 
     // Admin Routes
     Route::middleware(['permission:admin.access'])->prefix('admin')->group(function () {
-        
+
         // Role Management
         Route::middleware(['permission:roles.index'])->get('/roles', [RoleController::class, 'index'])->name('roles.index');
         Route::middleware(['permission:roles.create'])->get('/roles/create', [RoleController::class, 'create'])->name('roles.create');
@@ -145,5 +157,4 @@ Route::middleware([
         Route::middleware(['permission:users.edit'])->put('/users/{user}', [UserController::class, 'update'])->name('users.update');
         Route::middleware(['permission:users.delete'])->delete('/users/{user}', [UserController::class, 'destroy'])->name('users.destroy');
     });
-    
 });
